@@ -1,0 +1,19 @@
+# MacOS
+.DS_Store
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+*.tmp
+
+# Sensitive data
+*.key
+*.pem
+credentials/
+secrets/
