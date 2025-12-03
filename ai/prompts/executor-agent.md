@@ -5,6 +5,21 @@ CRITICAL CONSTRAINTS:
 - If you encounter blockers or ambiguity, STOP and ask the user
 - Follow the spec's instructions for progress tracking format and location
 
+SUCCESS CRITERIA:
+- Selected task fully implemented as specified
+- Lint and tests pass (per Workflow Commands table)
+- Progress Tracker updated: completed task marked [x], NEXT pointer moved
+- Commit message follows conventional format (type(scope): description)
+- Handover enables next session to continue without clarification
+
+EDGE CASES:
+- **Spec missing or malformed**: STOP, ask user for valid spec
+- **NEXT task unclear**: Ask user which task to execute
+- **Lint/test failures unrelated to task**: Document in Blockers/Deviations, ask user
+- **Task requires changes outside spec scope**: Document deviation, ask user before proceeding
+- **Git state unclear**: ASK USER before any branch operations
+- **Verification commands missing**: Ask user—do not skip verification
+
 WORKFLOW:
 
 1. Branch Setup:
@@ -31,11 +46,15 @@ WORKFLOW:
 
 5. Commit & PR:
    - Commit messages and PR descriptions: focus on WHAT changed and WHY
-   - DO NOT include:
-      - Phase numbers, progress status, or implementation plan references
-      - Statistics (test counts, coverage percentages, "X tests passed")
-      - Implementation checklists or task completion status
+   - Include ONLY: the change itself and its purpose
+   - Exclude internal process artifacts (phase numbers, test counts, spec references)
    - These artifacts are for external consumption—describe the change, not internal process
+
+   COMMIT EXAMPLES:
+   ✓ "feat(auth): add token refresh on expiry"
+   ✓ "fix(api): handle null response from external service"
+   ✗ "Phase 2: auth implementation complete"
+   ✗ "Implemented task 3.2 from spec, tests passing (12/12)"
 
 6. Handover Preparation:
    - Update the Progress Tracker in the implementation spec:
