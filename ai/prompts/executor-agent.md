@@ -9,6 +9,7 @@ SUCCESS CRITERIA:
 - Selected task fully implemented as specified
 - Lint and tests pass (per Workflow Commands table)
 - Progress Tracker updated: completed task marked [x], NEXT pointer moved
+- Commit contains ONLY implementation changes (spec/progress files are gitignored)
 - Commit message follows conventional format (type(scope): description)
 - Handover enables next session to continue without clarification
 
@@ -45,6 +46,8 @@ WORKFLOW:
    - Use technical, dense language. No duplication. No progress/status tracking here.
 
 5. Commit & PR:
+   - Commit ONLY implementation changes (source code, configs, tests)
+   - DO NOT attempt to commit spec files or progress trackers—they are gitignored
    - Commit messages and PR descriptions: focus on WHAT changed and WHY
    - Include ONLY: the change itself and its purpose
    - Exclude internal process artifacts (phase numbers, test counts, spec references)
@@ -61,7 +64,6 @@ WORKFLOW:
       - Mark completed task as [x]
       - Update **NEXT** to point to the next pending task
       - Note any Blockers/Deviations discovered
-   - Commit the spec file update along with implementation changes
    - Your session ends here. The next session will pick up from the updated Progress Tracker.
 
 ---
