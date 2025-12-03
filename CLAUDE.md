@@ -8,9 +8,14 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 
 ## Structure
 
+- `ai/prompt-engineering-spec.md` - Best practices and guidelines for writing AI agent prompts
 - `ai/prompts/` - Reusable AI agent prompt templates
+  - `_template.md` - Blank template for creating new prompts
+  - `prompt-author-agent.md` - Agent for creating/refining prompts (follows spec)
   - `planning-agent.md` - Planning agent for creating implementation specs
   - `executor-agent.md` - Executor agent for single-task implementation
+  - `session-handover.md` - Agent for capturing session context for handover
+  - `worktree-creator.md` - Agent for creating git worktrees with context transfer
 - `tmp/` - Temporary files and working directories (gitignored)
 
 ## Agent Workflow System
@@ -51,3 +56,29 @@ This repository contains a two-agent workflow system for structured development:
 - Session boundaries: One task per executor session
 - Context preservation: Specs must be self-contained for fresh sessions
 - Blockers: Stop and ask user rather than assuming
+
+## Prompt Authoring
+
+When creating or modifying AI agent prompts:
+
+1. **Reference spec**: Follow `ai/prompt-engineering-spec.md` for all guidelines
+2. **Use template**: Start from `ai/prompts/_template.md` for new prompts
+3. **Or use agent**: Copy `ai/prompts/prompt-author-agent.md` with task description
+
+### Quick Reference (from spec)
+
+**Structure order**: Role → Constraints → Success Criteria → Edge Cases → Workflow → Output
+
+**Principles**:
+
+- Explicit > Implicit (state everything)
+- Show, don't tell (examples over descriptions)
+- One task per prompt section
+- Handle edge cases explicitly
+- Test against diverse inputs
+
+**Anti-patterns**:
+
+- Vague instructions, negative framing, assumption of context
+- Edge case stuffing (use examples instead)
+- Placeholders in final output
