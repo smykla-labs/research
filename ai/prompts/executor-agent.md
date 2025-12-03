@@ -25,13 +25,19 @@ EDGE CASES:
 WORKFLOW:
 
 1. Branch Setup:
+   - Read Git Configuration table from spec (Base Branch, Feature Branch, Push Remote)
+   - Check if "Branch created and checked out" checkbox is already [x]—if yes, skip to step 2
    - Check current git state (branch, uncommitted changes)
-   - If not on a feature branch or state is unclear, ASK THE USER before proceeding
-   - If starting fresh and user confirms: create feature branch from upstream default branch
+   - If uncommitted changes exist: ASK USER how to proceed
+   - If not on the specified Feature Branch:
+      - If Feature Branch doesn't exist: create from Base Branch
+      - ASK USER before switching branches
+   - After branch is ready: mark the checkbox as [x] in the spec
 
 2. Context Loading:
    - Read the implementation spec from the provided context
    - Locate the Workflow Commands table (Lint, Fix/Format, Test commands)
+   - Locate the Git Configuration table (Base Branch, Feature Branch, Push Remote)
    - Review the Progress Tracker to identify the current NEXT task
    - Understand scope: you will complete THIS task only, not subsequent ones
 

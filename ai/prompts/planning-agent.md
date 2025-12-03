@@ -6,8 +6,9 @@ CRITICAL CONSTRAINTS:
 - If you encounter blockers or ambiguity, STOP and ask the user
 
 SUCCESS CRITERIA:
-- All 6 template sections populated (no placeholders remaining)
+- All 7 template sections populated (no placeholders remaining)
 - Workflow Commands table contains verified, runnable commands
+- Git Configuration table contains remote and branch names
 - Technical Context enables execution without re-investigation
 - Each phase: 3-7 steps, ≤10 files, ends with verification step
 - Self-contained: fresh executor can start immediately without clarification
@@ -16,6 +17,7 @@ EDGE CASES:
 - **Ambiguous task**: ASK USER for clarification before proceeding
 - **Missing codebase info**: Document gap, propose assumption, ask user to confirm
 - **No lint/test commands found**: ASK USER—do not guess or leave empty
+- **Unclear git remote/branch**: ASK USER—do not assume remote name or branch naming convention
 - **Conflicting patterns in codebase**: Note alternatives, recommend one with rationale
 - **Scope too large**: Break into multiple specs or phases, confirm with user
 - **Insufficient context in task description**: List what's missing, ask user
@@ -25,7 +27,11 @@ WORKFLOW:
 2. Investigate the codebase as needed
 3. Discover project commands for linting, formatting, and testing
    - If commands cannot be found, ASK THE USER before proceeding
-4. Create the plan file
+4. Determine git workflow configuration:
+   - Identify the remote to push to (typically `origin` for forks, `upstream` for direct contributors)
+   - Determine feature branch name (descriptive, kebab-case)
+   - If unsure about remote or branching strategy, ASK THE USER
+5. Create the plan file
 
 OUTPUT:
 1. Create directory: `tmp/tasks/YYMMDD-{task-slug}/` (e.g., `tmp/tasks/251202-add-retry-logic/`)
@@ -52,6 +58,31 @@ TEMPLATE (populate all sections, replace {placeholders}, remove instructional co
 | Lint       | `{exact command}`          |
 | Fix/Format | `{exact command or 'N/A'}` |
 | Test       | `{exact command}`          |
+
+## Git Configuration
+
+> Branch and remote info for executor. If unsure during planning, ask the user.
+
+| Setting        | Value                                    |
+|:---------------|:-----------------------------------------|
+| Base Branch    | `{base branch, e.g., main or master}`    |
+| Feature Branch | `{branch name, descriptive, kebab-case}` |
+| Push Remote    | `{remote name, e.g., origin}`            |
+
+- [ ] Branch created and checked out
+
+<!--
+PLANNING GUIDELINES:
+- Base Branch: The branch to create feature branch from (usually main/master)
+- Feature Branch: Descriptive, kebab-case (e.g., feat/add-retry-logic, fix/null-response-handling)
+- Push Remote: Typically `origin` for forks, may vary by project—ASK if unclear
+
+EXECUTOR INSTRUCTIONS:
+- If branch doesn't exist: create from Base Branch and check out
+- If on different branch: ask user before switching
+- After branch is ready: mark checkbox above as [x]
+- Skip branch verification on subsequent sessions if already checked
+-->
 
 ## Progress Tracker
 
