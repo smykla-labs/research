@@ -35,9 +35,12 @@ This repository contains a two-agent workflow system for structured development:
 - **Workflow**:
   1. Branch setup (confirms with user if unclear)
   2. Load spec and identify NEXT task
-  3. Implement and verify (lint/test)
-  4. Update Progress Tracker (mark done, update NEXT)
-  5. Commit spec updates with implementation
+  3. Implement code changes
+  4. **Update Progress Tracker** (mark done, update NEXT) — BEFORE verification
+  5. Verify (lint/test)
+  6. Knowledge capture (if applicable)
+  7. Commit implementation changes only
+- **Progress update ordering**: Progress reflects work done, not verification status—update immediately after implementation, before lint/test/commit
 - **Knowledge capture**: Updates CLAUDE.md or `.claude/session-{topic}.md` for insights
 - **Commit/PR style**: Focus on WHAT/WHY, exclude phase numbers and task completion status
 

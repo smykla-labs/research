@@ -57,7 +57,8 @@ TEMPLATE (populate all sections, replace {placeholders}, remove instructional co
 
 <!--
 PURPOSE: Track what's done and what's next. Max 20 lines.
-UPDATE: Executor must update after each phase.
+UPDATE: Executor updates IMMEDIATELY after implementation, BEFORE running lint/test/commit.
+        Progress reflects work done, not verification status.
 -->
 
 - [x] Investigation: {Brief outcome}
