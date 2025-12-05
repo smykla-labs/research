@@ -39,8 +39,10 @@ WORKFLOW:
    - If type cannot be determined from task description, ASK THE USER
 
 5. Worktree Creation:
+   - Sanitize project name: remove leading dots and other non-alphanumeric characters except hyphens
+     - Examples: `.dotfiles` → `dotfiles`, `.github` → `github`, `my.project` → `myproject`
    - Sanitize branch name for directory: replace `/` with `-`
-   - Worktree path: `../{project-name}-{sanitized-branch-name}`
+   - Worktree path: `../{sanitized-project-name}-{sanitized-branch-name}`
    - Create worktree: `git worktree add -b {branch-name} {worktree-path} {remote}/{default-branch}`
    - Verify creation succeeded
 
