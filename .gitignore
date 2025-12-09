@@ -17,3 +17,6 @@ tmp/
 *.pem
 credentials/
 secrets/
+
+# Klaudiush project level configuration
+.klaudiush/
