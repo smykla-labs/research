@@ -22,11 +22,11 @@
 
 Context is a finite resource with diminishing returns. Goal: **minimum high-signal tokens that maximize desired outcome**.
 
-| Principle | Description |
-|:----------|:------------|
-| Start minimal | Begin with minimal prompt, add instructions based on observed failures |
-| Progressive disclosure | Allow agents to discover context through exploration |
-| Just-in-time retrieval | Fetch information dynamically vs. pre-loading everything |
+| Principle              | Description                                                            |
+|:-----------------------|:-----------------------------------------------------------------------|
+| Start minimal          | Begin with minimal prompt, add instructions based on observed failures |
+| Progressive disclosure | Allow agents to discover context through exploration                   |
+| Just-in-time retrieval | Fetch information dynamically vs. pre-loading everything               |
 
 ### 2. Clarity Over Complexity
 
@@ -93,6 +93,7 @@ OUTPUT:
 ### Information Positioning
 
 Models attend to information in this order:
+
 1. **User message** (highest attention)
 2. **Beginning of system prompt**
 3. **End of system prompt**
@@ -106,11 +107,11 @@ Models attend to information in this order:
 
 ### Structure Choice: XML vs. Markdown
 
-| Format | Best For | Trade-offs |
-|:-------|:---------|:-----------|
-| XML | Complex prompts, tool definitions, Claude | +15% tokens, clearer boundaries |
-| Markdown | Readability, simple prompts, GPT models | Fewer tokens, human-friendly |
-| Hybrid | Best of both | Mix headers (MD) + data delimiters (XML) |
+| Format   | Best For                                  | Trade-offs                               |
+|:---------|:------------------------------------------|:-----------------------------------------|
+| XML      | Complex prompts, tool definitions, Claude | +15% tokens, clearer boundaries          |
+| Markdown | Readability, simple prompts, GPT models   | Fewer tokens, human-friendly             |
+| Hybrid   | Best of both                              | Mix headers (MD) + data delimiters (XML) |
 
 **Recommendation**: Use Markdown headers for sections, XML tags for data/examples.
 
@@ -140,11 +141,11 @@ Models attend to information in this order:
 
 ### Emphasis Patterns
 
-| Pattern | Use For | Example |
-|:--------|:--------|:--------|
-| **Bold** | Key terms, important concepts | **NEVER** commit secrets |
-| CAPS | Critical warnings (sparingly) | CRITICAL: Do not proceed |
-| `backticks` | Code, commands, file paths | Run `make test` |
+| Pattern     | Use For                       | Example                  |
+|:------------|:------------------------------|:-------------------------|
+| **Bold**    | Key terms, important concepts | **NEVER** commit secrets |
+| CAPS        | Critical warnings (sparingly) | CRITICAL: Do not proceed |
+| `backticks` | Code, commands, file paths    | Run `make test`          |
 
 ---
 
@@ -154,11 +155,11 @@ Models attend to information in this order:
 
 LLMs are stateless. Explicitly manage:
 
-| Memory Type | Implementation |
-|:------------|:---------------|
-| Short-term | In-context: conversation history, current state |
-| Long-term | External: files (NOTES.md), vector stores, databases |
-| Structured notes | To-do lists, progress trackers, session handovers |
+| Memory Type      | Implementation                                       |
+|:-----------------|:-----------------------------------------------------|
+| Short-term       | In-context: conversation history, current state      |
+| Long-term        | External: files (NOTES.md), vector stores, databases |
+| Structured notes | To-do lists, progress trackers, session handovers    |
 
 ### Tool Design
 
@@ -214,11 +215,11 @@ Return descriptive errors; models self-correct better than crash recovery:
 
 Request step-by-step reasoning for complex tasks.
 
-| Implementation | When to Use |
-|:---------------|:------------|
-| Zero-shot | Add "Think step-by-step" for simple reasoning |
-| Guided | Define specific reasoning stages |
-| Structured | Use tags: `<thinking>`, `<answer>` |
+| Implementation | When to Use                                   |
+|:---------------|:----------------------------------------------|
+| Zero-shot      | Add "Think step-by-step" for simple reasoning |
+| Guided         | Define specific reasoning stages              |
+| Structured     | Use tags: `<thinking>`, `<answer>`            |
 
 **Warning**: CoT can reduce performance on simple tasks by overcomplicating.
 
@@ -241,6 +242,7 @@ Output: Branch name: feat/add-dark-mode-toggle
 ```
 
 **Rules**:
+
 - Start with 1 example; add more only if needed
 - Diverse examples > many similar examples
 - Examples must perfectly match desired behavior
@@ -279,16 +281,16 @@ If information is insufficient, state what's missing rather than guessing.
 
 ### ❌ Avoid These
 
-| Anti-Pattern | Problem | Fix |
-|:-------------|:--------|:----|
-| Vague instructions | Generic responses | Add specificity, examples |
-| Negative framing | "Don't use X" less effective | Say what TO do instead |
-| Overloaded prompts | Multiple unrelated tasks | One focused task per prompt |
-| Edge case stuffing | Bloated, brittle prompts | Curate diverse examples instead |
-| Tool overlap | Agent confusion | Distinct, unambiguous tools |
-| No iteration | Suboptimal results | Test, refine, repeat |
-| Role over-assignment | Over-constrained responses | Be explicit about perspective |
-| Context assumption | Missing information | State all relevant context |
+| Anti-Pattern         | Problem                      | Fix                             |
+|:---------------------|:-----------------------------|:--------------------------------|
+| Vague instructions   | Generic responses            | Add specificity, examples       |
+| Negative framing     | "Don't use X" less effective | Say what TO do instead          |
+| Overloaded prompts   | Multiple unrelated tasks     | One focused task per prompt     |
+| Edge case stuffing   | Bloated, brittle prompts     | Curate diverse examples instead |
+| Tool overlap         | Agent confusion              | Distinct, unambiguous tools     |
+| No iteration         | Suboptimal results           | Test, refine, repeat            |
+| Role over-assignment | Over-constrained responses   | Be explicit about perspective   |
+| Context assumption   | Missing information          | State all relevant context      |
 
 ### ❌ Common Mistakes
 
@@ -348,6 +350,7 @@ If information is insufficient, state what's missing rather than guessing.
 
 ## Version History
 
-| Date | Version | Changes |
-|:-----|:--------|:--------|
-| 2025-12-03 | 1.0 | Initial specification |
+| Date       | Version | Changes               |
+|:-----------|:--------|:----------------------|
+| 2025-12-09 | 1.0.1   | Table formatting      |
+| 2025-12-03 | 1.0     | Initial specification |
