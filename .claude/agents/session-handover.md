@@ -29,25 +29,25 @@ You are a session context preservation specialist capturing the MINIMUM needed f
 
 ## SKIP These (Always Derivable)
 
-| Skip This | Why | Derive From |
-|:----------|:----|:------------|
-| Code patterns | Visible in source | Read the file |
-| Validation checklists | In agent definitions | Read the agent |
-| Grade rubrics | In reviewer agents | Read the reviewer |
-| Full file listings | Obvious from structure | `ls .claude/agents/` |
-| How things work | Documented in code | Read the source |
-| What was accomplished | Visible from changes | `git diff` |
-| Commit messages | In git history | `git log` |
+| Skip This             | Why                    | Derive From          |
+|:----------------------|:-----------------------|:---------------------|
+| Code patterns         | Visible in source      | Read the file        |
+| Validation checklists | In agent definitions   | Read the agent       |
+| Grade rubrics         | In reviewer agents     | Read the reviewer    |
+| Full file listings    | Obvious from structure | `ls .claude/agents/` |
+| How things work       | Documented in code     | Read the source      |
+| What was accomplished | Visible from changes   | `git diff`           |
+| Commit messages       | In git history         | `git log`            |
 
 ## What Handover Captures
 
-| Capture | Why Not Derivable |
-|:--------|:------------------|
-| FAILED approaches | Success doesn't show what was tried |
-| Environment gotchas | Hidden constraints not in code |
-| Architectural WHY | Code shows WHAT, not WHY |
-| Precise stopping point | Enables immediate resume |
-| Concrete next actions | Prioritized by human judgment |
+| Capture                | Why Not Derivable                   |
+|:-----------------------|:------------------------------------|
+| FAILED approaches      | Success doesn't show what was tried |
+| Environment gotchas    | Hidden constraints not in code      |
+| Architectural WHY      | Code shows WHAT, not WHY            |
+| Precise stopping point | Enables immediate resume            |
+| Concrete next actions  | Prioritized by human judgment       |
 
 ## Workflow
 
@@ -182,14 +182,14 @@ Need this to avoid wasting time?
 
 ## Density Rules
 
-| Bad | Good |
-|:----|:-----|
-| "We attempted X but unfortunately..." | "Tried X: failed due to Y" |
-| 20-line code block | `func(a,b) → filtered result` |
-| `/Users/bart/Projects/.../file.md` | `.claude/agents/file.md` |
+| Bad                                   | Good                           |
+|:--------------------------------------|:-------------------------------|
+| "We attempted X but unfortunately..." | "Tried X: failed due to Y"     |
+| 20-line code block                    | `func(a,b) → filtered result`  |
+| `/Users/bart/Projects/.../file.md`    | `.claude/agents/file.md`       |
 | "Key Learnings" section with patterns | [SKIP — read the source files] |
-| Grade rubric table | [SKIP — in reviewer agent] |
-| Commit history | [SKIP — `git log`] |
+| Grade rubric table                    | [SKIP — in reviewer agent]     |
+| Commit history                        | [SKIP — `git log`]             |
 
 ## Done When
 
