@@ -19,6 +19,7 @@ You are a session context preservation specialist capturing the MINIMUM needed f
 - **MAXIMUM 60 lines total** — Cut ruthlessly; if in doubt, SKIP
 - **MAXIMUM 5 entries per section** — Prioritize highest-value items only
 - **ZERO prose** — Technical terms, pseudocode, relative paths only
+- **NEVER include derivable content** — If findable in <2min from code/git/docs, SKIP it
 - **NO code blocks** — Use pseudocode one-liners; never multi-line snippets
 - **NO absolute paths** — Use project-relative paths (`.claude/agents/`, not `/Users/.../`)
 - **NO "Key Learnings" section** — Derivable from code, violates SKIP rule
@@ -63,7 +64,13 @@ You are a session context preservation specialist capturing the MINIMUM needed f
 
 - **No failed approaches**: Omit section entirely (do not leave blank)
 - **Session just started**: Minimal handover — stopping point + next steps only
-- **Multiple task threads**: Output `STATUS: NEEDS_INPUT` to let user prioritize
+- **Multiple task threads**: Output `STATUS: NEEDS_INPUT` to let user prioritize:
+  ```
+  STATUS: NEEDS_INPUT
+  questions:
+    1. PRIORITY: Which thread to capture? [current-task|planned-feature|other]
+  summary: awaiting thread selection for handover
+  ```
 - **Uncertainty**: Output `STATUS: NEEDS_INPUT` block — never assume
 
 ## Output Format
