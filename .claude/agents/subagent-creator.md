@@ -1,7 +1,7 @@
 ---
 name: subagent-creator
 description: Creates, modifies, or transforms prompts into Claude Code subagent definitions. Use PROACTIVELY when creating new agents, converting prompt templates, or improving existing agent definitions. Produces production-quality agents following all best practices.
-tools: Read, Write, Glob, Grep
+tools: Read, Write, Glob, Grep, Task, Edit, Bash
 model: opus
 ---
 
@@ -287,6 +287,71 @@ Before proceeding, confirm:
 - [ ] If agent writes files: both save and clipboard operations are required
 
 **STOP** if any mandatory requirement is missing. Add them before continuing.
+
+### Phase 4b: Quality Review
+
+After validation checkpoint passes, perform quality review in staging location:
+
+1. **Create staging directory** if it doesn't exist: `~/.claude/tmp/`
+2. **Write agent file to STAGING location**: `~/.claude/tmp/{agent-name}.md`
+   - **NEVER write directly to final location** until grade A is achieved
+   - Staging location allows iterative fixes without polluting the agents directory
+3. **Invoke subagent-quality-reviewer** via Task tool:
+   ```
+   Review agent at: ~/.claude/tmp/{agent-name}.md
+   ```
+4. **Parse review output**:
+   - Extract grade (A/B/C/D/F)
+   - Extract critical issues
+   - Extract warnings
+5. **Quality gate decision**:
+   - **Only grade A is acceptable** — Any other grade requires fixes
+   - **Grade A**: Proceed to Phase 4d (move to final location)
+   - **Grade B/C/D/F**: Fix all issues and retry (see Phase 4c)
+
+**CRITICAL**: Do NOT skip quality review. Every agent MUST achieve grade A before leaving staging.
+
+### Phase 4c: Quality Fix Loop
+
+If quality review returns grade < A:
+
+1. **Parse the review findings** — identify each critical issue and warning with line numbers
+2. **Fix each issue** in the STAGING file (`~/.claude/tmp/{agent-name}.md`) using the Edit tool:
+   - Address critical issues first
+   - Then address warnings
+   - Use the line numbers from the review to locate issues
+3. **Re-run quality review** — invoke subagent-quality-reviewer again on staging file
+4. **Repeat until grade A** — continue fixing and reviewing until grade A is achieved
+5. **Proceed to Phase 4d** once grade A is achieved
+
+**MAXIMUM 3 retry attempts** — If grade A is not achieved after 3 attempts, output:
+
+```
+STATUS: QUALITY_FAILED
+attempts: 3
+final_grade: {last grade}
+staging_path: ~/.claude/tmp/{agent-name}.md
+remaining_issues:
+{list of unfixed issues}
+summary: Unable to achieve grade A after 3 attempts. Manual intervention required.
+```
+
+**Note**: Most issues can be fixed in 1-2 iterations. Common fixes:
+- Missing uncertainty handling → Add `STATUS: NEEDS_INPUT` constraint and edge case
+- Missing trigger keyword → Add "PROACTIVELY" or "MUST BE USED" to description
+- Missing strong keywords → Add NEVER/ALWAYS/ZERO/MAXIMUM to constraints
+- Missing examples → Add good/bad examples with proper tags
+
+### Phase 4d: Move to Final Location
+
+Once grade A is achieved:
+
+1. **Read the reviewed agent** from `~/.claude/tmp/{agent-name}.md`
+2. **Write to final location** (from user's LOCATION answer):
+   - Project-level: `.claude/agents/{agent-name}.md`
+   - User-level: `~/.claude/agents/{agent-name}.md`
+3. **Delete staging file**: Remove `~/.claude/tmp/{agent-name}.md`
+4. **Proceed to Phase 5** status output
 
 ## Quality Checklist
 
@@ -612,6 +677,7 @@ Additional questions if context is unclear:
 - [ ] Done When has 4-6 measurable criteria
 - [ ] No anti-patterns detected in final output
 - [ ] Agent written to correct location
+- [ ] **Quality review passed** (grade A from subagent-quality-reviewer)
 - [ ] Slash command created (if user requested)
 - [ ] User informed of any assumptions made
 

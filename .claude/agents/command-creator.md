@@ -1,7 +1,7 @@
 ---
 name: command-creator
 description: Creates production-quality slash commands for Claude Code. Use PROACTIVELY when creating new commands, after creating a subagent that needs a command, or when user requests a slash command.
-tools: Read, Write, Glob, Grep
+tools: Read, Write, Glob, Grep, Task, Edit, Bash
 model: sonnet
 ---
 
@@ -398,6 +398,65 @@ For commands that invoke subagents, these elements are **required**:
 - [ ] If using bash pre-exec: `allowed-tools` includes required permissions
 
 **Do NOT write the file if any mandatory requirement is missing.**
+
+### Phase 4: Quality Review
+
+After validation checkpoint passes, perform quality review in staging location:
+
+1. **Create staging directory** if it doesn't exist: `~/.claude/tmp/`
+2. **Write command file to STAGING location**: `~/.claude/tmp/{command-name}.md`
+   - **NEVER write directly to final location** until PASS status is achieved
+   - Staging location allows iterative fixes without polluting the commands directory
+3. **Invoke command-quality-reviewer** via Task tool:
+   ```
+   Review command at: ~/.claude/tmp/{command-name}.md
+   ```
+4. **Parse review output**:
+   - Extract status (PASS/WARN/FAIL)
+   - Extract critical issues
+   - Extract warnings
+5. **Quality gate decision**:
+   - **Only PASS is acceptable** — Any other status requires fixes
+   - **PASS**: Proceed to Phase 5 (move to final location)
+   - **WARN or FAIL**: Fix all issues and retry (see Phase 4b)
+
+**CRITICAL**: Do NOT skip quality review. Every command MUST achieve PASS before leaving staging.
+
+### Phase 4b: Quality Fix Loop
+
+If quality review returns WARN or FAIL:
+
+1. **Parse the review findings** — identify each critical issue and warning with line numbers
+2. **Fix each issue** in the STAGING file (`~/.claude/tmp/{command-name}.md`) using the Edit tool:
+   - Address critical issues first
+   - Then address warnings
+   - Use the line numbers from the review to locate issues
+3. **Re-run quality review** — invoke command-quality-reviewer again on staging file
+4. **Repeat until PASS** — continue fixing and reviewing until PASS is achieved
+5. **Proceed to Phase 5** once PASS is achieved
+
+**MAXIMUM 3 retry attempts** — If PASS is not achieved after 3 attempts, output:
+
+```
+STATUS: QUALITY_FAILED
+attempts: 3
+final_status: {WARN or FAIL}
+staging_path: ~/.claude/tmp/{command-name}.md
+remaining_issues:
+{list of unfixed issues}
+summary: Unable to achieve PASS after 3 attempts. Manual intervention required.
+```
+
+### Phase 5: Move to Final Location
+
+Once PASS is achieved:
+
+1. **Read the reviewed command** from `~/.claude/tmp/{command-name}.md`
+2. **Write to final location**:
+   - Project-level: `.claude/commands/{command-name}.md`
+   - User-level: `~/.claude/commands/{command-name}.md`
+3. **Delete staging file**: Remove `~/.claude/tmp/{command-name}.md`
+4. **Proceed to status output**
 
 ## Output
 

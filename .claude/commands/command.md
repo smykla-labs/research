@@ -35,8 +35,13 @@ Parse the status block from subagent output:
 3. Format answers: `ANSWERS: KEY=value, ...`
 4. Resume subagent with `resume` parameter
 
+**If `STATUS: QUALITY_FAILED`**:
+- Quality review failed after 3 automatic fix attempts
+- Present the `remaining_issues:` to the user
+- Report that manual intervention is required to achieve PASS
+
 **If `STATUS: COMPLETED`**:
-- Command creation is done
+- Command creation is done (passed quality review)
 - Report success with command name and test example
 
 ## Status Flow
@@ -44,7 +49,11 @@ Parse the status block from subagent output:
 ```
 command-creator
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
-└── STATUS: COMPLETED → done
+├── STATUS: QUALITY_FAILED → present remaining issues → manual intervention needed
+└── STATUS: COMPLETED → done (quality review passed)
 ```
+
+**Note**: Quality review and fixes happen automatically inside command-creator (Phase 4/4b).
+`STATUS: QUALITY_FAILED` only appears if automatic fixes fail after 3 attempts.
 
 **CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print as text.
