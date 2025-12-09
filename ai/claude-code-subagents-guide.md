@@ -59,10 +59,12 @@ Source: [Subagents Docs][docs]
 ### Available Tools
 
 ```
-Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch
+Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch, AskUserQuestion*
 ```
 
 Plus any MCP tools registered in settings. ([Subagents Docs][docs])
+
+**\*AskUserQuestion Limitation**: This tool is filtered out at the system level when spawning subagents ([GitHub Issue #12890][gh-12890]). Even if listed in `tools:`, subagents cannot use it. See §11 for workaround.
 
 ---
 
@@ -218,19 +220,42 @@ You are a [role] specializing in [domain].
 
 ## Constraints
 
-- [What NOT to do]
-- [Scope limitations]
+- **KEYWORD** — explanation of constraint
+- **KEYWORD** — explanation of constraint
 
 ## Output Format
 
 [Expected deliverable format]
 
+## Edge Cases
+
+- **Empty input**: Action to take
+- **Multiple items**: How to handle
+- **Uncertainty**: Output `STATUS: NEEDS_INPUT` block — never guess
+
 ## Examples
 
-<example>
-Input: [sample]
-Output: [expected result]
+<example type="good">
+<input>[sample input]</input>
+<output>[expected output]</output>
 </example>
+
+<example type="bad">
+<input>[problematic input]</input>
+<why_bad>
+- [Problem 1]
+- [Problem 2]
+</why_bad>
+<correct>
+[What to do instead]
+</correct>
+</example>
+
+## Done When
+
+- [ ] [Completion criterion 1]
+- [ ] [Completion criterion 2]
+- [ ] [Verification passed]
 ```
 
 ### Best Practices
@@ -246,6 +271,105 @@ Output: [expected result]
 > "Give each subagent one clear goal, input, output, and handoff rule. Keep descriptions action-oriented." — [PubNub Best Practices][pubnub]
 
 > "Provide positive/negative examples in your system prompts. LLMs excel at pattern recognition and repetition." — [ClaudeLog Custom Agents][clog]
+
+### Constraint Formatting
+
+Use strong keywords with em-dash formatting for maximum clarity:
+
+```markdown
+## Constraints
+
+- **NEVER assume** — If uncertain about requirements, output STATUS: NEEDS_INPUT block
+- **ALWAYS verify** — Run lint/test before marking task complete
+- **ZERO tolerance** — No hardcoded secrets or credentials in code
+- **MAXIMUM 3 files** — Per commit to keep changes reviewable
+```
+
+#### Constraint Keywords
+
+| Keyword               | Use For               |
+|:----------------------|:----------------------|
+| `NEVER`               | Absolute prohibitions |
+| `ALWAYS`              | Mandatory actions     |
+| `ZERO`                | No exceptions allowed |
+| `MAXIMUM` / `MINIMUM` | Numeric limits        |
+| `ONLY`                | Scope restrictions    |
+| `MUST`                | Required steps        |
+
+#### Mandatory Constraint: Uncertainty Handling
+
+Every agent MUST include uncertainty handling in the Constraints section:
+
+```markdown
+- **NEVER assume** — If requirements are unclear, output `STATUS: NEEDS_INPUT` block
+```
+
+This ensures agents ask for clarification instead of guessing wrong.
+
+### Edge Cases Section
+
+Every agent MUST include an Edge Cases section covering:
+
+| Edge Case               | Why Required                               |
+|:------------------------|:-------------------------------------------|
+| **Empty/missing input** | Prevents errors on incomplete requests     |
+| **Partial completion**  | Defines behavior when blocked mid-task     |
+| **Multiple items**      | Clarifies batch vs sequential handling     |
+| **Uncertainty**         | MANDATORY — triggers `STATUS: NEEDS_INPUT` |
+
+#### Mandatory Edge Case: Uncertainty
+
+```markdown
+## Edge Cases
+
+- **Uncertainty about requirements**: Output `STATUS: NEEDS_INPUT` block — never assume or guess
+```
+
+This mirrors the constraint and ensures uncertainty is handled in both decision flow and edge case handling.
+
+### Examples Section
+
+Use typed examples with good/bad patterns:
+
+```markdown
+## Examples
+
+<example type="good">
+<input>Review pkg/auth/handler.go</input>
+<output>
+**Critical**: SQL injection at line 45...
+**Warnings**: Missing error context at line 23...
+</output>
+</example>
+
+<example type="bad">
+<input>Review the code</input>
+<why_bad>
+- No file path specified
+- Would require guessing which files to review
+</why_bad>
+<correct>
+Output `STATUS: NEEDS_INPUT` asking for specific file path
+</correct>
+</example>
+```
+
+The `<why_bad>` and `<correct>` tags help the agent learn from counter-examples.
+
+### Done When Section
+
+Every agent SHOULD end with a completion checklist:
+
+```markdown
+## Done When
+
+- [ ] Primary deliverable created
+- [ ] All verification steps passed
+- [ ] No TODO comments left in output
+- [ ] Status block includes all required fields
+```
+
+This provides clear success criteria and prevents premature completion.
 
 ### Anti-Patterns
 
@@ -300,23 +424,76 @@ behave differently than this?
 
 ---
 
-## 7. Agent Invocation
+## 7. Slash Commands Integration
+
+Slash commands provide a user-friendly interface to invoke subagents. For comprehensive command documentation, see **[Claude Code Commands Guide](claude-code-commands-guide.md)**.
+
+### Quick Reference
+
+| Aspect         | Slash Commands               | Subagents                |
+|:---------------|:-----------------------------|:-------------------------|
+| **Location**   | `.claude/commands/`          | `.claude/agents/`        |
+| **Invocation** | Explicit (`/command`)        | Automatic or explicit    |
+| **Context**    | Inline (main conversation)   | Isolated window          |
+| **Use case**   | Quick prompts, orchestration | Complex autonomous tasks |
+
+### Key Patterns for Subagent Orchestration
+
+Commands orchestrate subagents using these patterns:
+
+1. **Mode Detection** — Determine subagent mode from input before invoking
+2. **Status-Based Handoff** — Parse `STATUS:` blocks to handle questions, chaining, and completion
+3. **User Input Relay** — Handle `STATUS: NEEDS_INPUT` via `AskUserQuestion` tool
+
+See [Commands Guide §7](claude-code-commands-guide.md#7-command--subagent-orchestration) for detailed patterns and examples.
+
+---
+
+## 8. Agent Invocation
 
 ### Automatic Delegation
 
-Claude invokes agents based on `description` matching the current task. Strengthen triggers with keywords:
+Claude invokes agents based on `description` matching the current task.
 
-```yaml
-description: Use PROACTIVELY after code changes to review for quality issues
+#### Description Formula
+
+High-quality descriptions follow this pattern:
+
+```
+{What the agent does}. Use {TRIGGER} {scenario1}, {scenario2}, {scenario3}. {Value proposition}.
 ```
 
-```yaml
-description: MUST BE USED when creating implementation specifications
-```
+| Component     | Purpose                 | Examples                                                |
+|:--------------|:------------------------|:--------------------------------------------------------|
+| **What**      | Primary capability      | "Summarizes code files", "Creates implementation plans" |
+| **Trigger**   | When to invoke          | `PROACTIVELY`, `MUST BE USED`, `immediately after`      |
+| **Scenarios** | 2-3 specific situations | "after code changes", "when exploring unfamiliar code"  |
+| **Value**     | Benefit to user         | "Accelerates comprehension", "Prevents rework"          |
+
+#### Trigger Keywords
+
+| Keyword                 | Strength  | Use When                                       |
+|:------------------------|:----------|:-----------------------------------------------|
+| `Use PROACTIVELY`       | Strong    | Agent should auto-invoke in matching scenarios |
+| `MUST BE USED`          | Strongest | Critical workflow step, never skip             |
+| `Use immediately after` | Strong    | Post-action trigger                            |
+| `Use when`              | Medium    | Conditional invocation                         |
+
+#### Examples
+
+**Strong description:**
 
 ```yaml
-description: Use immediately after completing any coding task
+description: Summarizes code files into concise descriptions. Use PROACTIVELY when user asks "what does this file do?", when exploring unfamiliar code, or when needing quick orientation. Accelerates comprehension without reading entire files.
 ```
+
+**Weak description (avoid):**
+
+```yaml
+description: Helps with code analysis
+```
+
+Problems: No trigger keywords, no scenarios, no value proposition.
 
 > "Use phrases like 'use PROACTIVELY' or 'MUST BE USED' in description to encourage automatic delegation." — [Subagents Docs][docs]
 
@@ -338,7 +515,7 @@ description: Use immediately after completing any coding task
 
 ---
 
-## 8. Example Agents
+## 9. Example Agents
 
 ### Planning Agent
 
@@ -484,9 +661,89 @@ You are a research specialist. Investigate questions thoroughly and provide conc
 
 ---
 
-## 9. Orchestration Patterns
+## 10. Orchestration Patterns
 
-### Pipeline Architecture
+### Status-Based Handoff (Recommended)
+
+The most common and reliable pattern for multi-agent workflows. Agents output structured status blocks that parent agents/commands parse to determine next steps.
+
+Sources: [PubNub Best Practices][pubnub], [wshobson/agents][wshobson], [Delegation Setup Gist][delegation-gist], [Agent Design Lessons][agent-design]
+
+#### Status Block Format
+
+```
+STATUS: {COMPLETED|READY_FOR_NEXT|NEEDS_INPUT}
+key1: value1
+key2: value2
+summary: one-line description
+```
+
+#### Status Values
+
+| Status            | Meaning                              | Parent Action                        |
+|:------------------|:-------------------------------------|:-------------------------------------|
+| `COMPLETED`       | Task finished successfully           | Report to user, done                 |
+| `READY_FOR_NEXT`  | Chain to another agent               | Invoke specified `next_agent`        |
+| `NEEDS_INPUT`     | Requires user clarification          | Use `AskUserQuestion`, then resume   |
+
+#### Example: Agent Chaining
+
+```
+subagent-creator
+├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
+├── STATUS: COMPLETED → done
+└── STATUS: READY_FOR_COMMAND → invoke command-creator
+                                  └── STATUS: COMPLETED → done
+```
+
+#### Implementation in Subagent
+
+```markdown
+## Output
+
+Always end with a status block:
+
+**If work is complete:**
+```
+STATUS: COMPLETED
+result_path: {path}
+summary: {description}
+```
+
+**If user clarification is needed:**
+```
+STATUS: NEEDS_INPUT
+questions:
+  1. QUESTION_KEY: Question text? [option1|option2 (recommended)|option3]
+  2. ANOTHER_KEY: Another question? [yes|no]
+summary: awaiting user clarification on {topic}
+```
+
+**If another agent should continue:**
+```
+STATUS: READY_FOR_NEXT
+next_agent: {agent-name}
+context: {what the next agent needs}
+summary: {what was done}
+```
+```
+
+#### Implementation in Command
+
+```markdown
+## Workflow
+
+1. Invoke subagent with Task tool
+2. Parse status block from output:
+   - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with answers
+   - `STATUS: READY_FOR_NEXT` → Invoke specified `next_agent` with context
+   - `STATUS: COMPLETED` → Report success to user, done
+3. Repeat until final `STATUS: COMPLETED`
+
+**CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print questions as text.
+```
+
+### Pipeline Architecture (Alternative)
 
 Chain agents through status flags in shared files:
 
@@ -530,7 +787,7 @@ Safe to parallelize when:
 
 ---
 
-## 10. Context Management
+## 11. Context Management
 
 ### Why Subagents Help
 
@@ -561,17 +818,18 @@ Safe to parallelize when:
 
 ---
 
-## 11. Debugging & Troubleshooting
+## 12. Debugging & Troubleshooting
 
-| Issue                      | Cause                          | Fix                            |
-|----------------------------|--------------------------------|--------------------------------|
-| Agent not invoked          | Description doesn't match task | Make description more specific |
-| Agent has wrong tools      | `tools` field misconfigured    | Check comma-separated list     |
-| Hooks not running          | Invalid JSON in settings       | Validate with `jq`             |
-| Agent does unexpected work | Missing constraints in prompt  | Add explicit "do NOT" rules    |
-| Context exhausted quickly  | Inherited all tools            | Restrict to needed tools only  |
+| Issue                       | Cause                           | Fix                                    |
+|-----------------------------|---------------------------------|----------------------------------------|
+| Agent not invoked           | Description doesn't match task  | Make description more specific         |
+| Agent has wrong tools       | `tools` field misconfigured     | Check comma-separated list             |
+| Hooks not running           | Invalid JSON in settings        | Validate with `jq`                     |
+| Agent does unexpected work  | Missing constraints in prompt   | Add explicit "do NOT" rules            |
+| Context exhausted quickly   | Inherited all tools             | Restrict to needed tools only          |
+| AskUserQuestion not working | Tool is filtered from subagents | Use parent agent relay pattern (§11.1) |
 
-Source: [PubNub Best Practices][pubnub]
+Source: [PubNub Best Practices][pubnub], [GitHub Issue #12890][gh-12890]
 
 ### Iterative Refinement
 
@@ -582,9 +840,79 @@ Source: [PubNub Best Practices][pubnub]
 
 > "Use iterative prompting to refine behavior: Supply context on failed actions (what vs. expected), explain desired outcome, pass in the .md config for Claude to suggest modifications." — [PubNub Best Practices][pubnub]
 
+### AskUserQuestion Limitation
+
+**Known Bug**: `AskUserQuestion` is explicitly filtered out when spawning subagents at the system level, regardless of what you configure in the `tools:` field. ([GitHub Issue #12890][gh-12890])
+
+This is a **regression introduced in v2.0.56** (worked in v2.0.55). Related issues track broader parent-child communication needs ([GitHub Issue #1770][gh-1770], [GitHub Issue #5812][gh-5812]).
+
+#### Symptoms
+
+- Subagent lists `AskUserQuestion` in tools but cannot use it
+- Subagent outputs questions as text instead of interactive UI
+- User cannot respond to subagent's questions
+
+#### Workaround: Status-Based Relay Pattern
+
+Since subagents cannot interact with users directly, use the status-based pattern for consistency:
+
+```text
+User ↔ Parent Agent ↔ Sub-Agent
+```
+
+**Step 1**: Subagent outputs `STATUS: NEEDS_INPUT` block:
+
+```text
+STATUS: NEEDS_INPUT
+questions:
+  1. MODEL: Which model? [haiku|sonnet (recommended)|opus]
+  2. TOOLS: Suggested tools: Read, Grep, Glob. Add or remove? [accept|modify]
+  3. PERMISSION: Permission mode? [default (recommended)|acceptEdits|bypassPermissions]
+  4. LOCATION: Save location? [.claude/agents/ (recommended)|~/.claude/agents/]
+  5. SLASH_COMMAND: Create slash command? [yes: /name|no]
+summary: awaiting configuration choices
+```
+
+**Step 2**: Parent agent recognizes `NEEDS_INPUT` status and calls `AskUserQuestion` tool
+
+**Step 3**: Parent agent resumes subagent with formatted answers:
+
+```text
+ANSWERS: MODEL=sonnet, TOOLS=Read,Grep,Glob, PERMISSION=default, LOCATION=.claude/agents/, SLASH_COMMAND=/myagent
+```
+
+#### Implementation in Subagent
+
+```markdown
+## Constraints
+
+- **CANNOT use AskUserQuestion** — Tool is filtered at system level
+- **MUST output STATUS: NEEDS_INPUT block** — Parent agent handles user interaction
+- **MUST STOP after status block** — Wait for parent agent to resume with answers
+```
+
+#### Implementation in Slash Command
+
+```markdown
+## Workflow
+
+1. Invoke subagent with Task tool
+2. Parse status block from output:
+   - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with `ANSWERS:`
+   - `STATUS: COMPLETED` → Report success to user
+   - `STATUS: READY_FOR_NEXT` → Invoke next agent
+3. Repeat until final `STATUS: COMPLETED`
+
+**CRITICAL**: You MUST use `AskUserQuestion` tool. Do NOT print questions as text.
+```
+
+This approach aligns with PubNub's HITL (Human-in-the-Loop) pattern: "If acceptance criteria are ambiguous, ask numbered questions and WAIT for human answers." ([PubNub Best Practices][pubnub])
+
+> "A community response suggested an indirect approach: Tell the sub-agent to request the use of AskUserQuestion. The primary agent can then use the tool to propagate questions back to the user." — [GitHub Issue #12890][gh-12890]
+
 ---
 
-## 12. Advanced Patterns
+## 13. Advanced Patterns
 
 ### Definition of Done (DoD)
 
@@ -629,7 +957,7 @@ Use MCP tool `external_review` to get GPT-5 review of the spec
 
 ---
 
-## 13. Community Resources
+## 14. Community Resources
 
 ### Agent Collections
 
@@ -647,7 +975,7 @@ Use MCP tool `external_review` to get GPT-5 review of the spec
 
 ---
 
-## 14. Quick Start Checklist
+## 15. Quick Start Checklist
 
 Converting your prompt templates to subagents:
 
@@ -665,23 +993,29 @@ Converting your prompt templates to subagents:
 
 ## Sources
 
-| Key              | Source                                                 |
-|------------------|--------------------------------------------------------|
-| `[docs]`         | [Claude Code Subagents Documentation][docs]            |
-| `[bp]`           | [Claude Code Best Practices][bp]                       |
-| `[pubnub]`       | [Best Practices for Claude Code Subagents][pubnub]     |
-| `[clog]`         | [ClaudeLog Custom Agents Guide][clog]                  |
-| `[medianeth]`    | [Claude Code Frameworks & Sub-Agents 2025][medianeth]  |
-| `[awesome]`      | [awesome-claude-code-subagents][awesome]               |
-| `[sdk]`          | [Claude Agent SDK Engineering Blog][sdk]               |
-| `[cc101]`        | [ClaudeCode101 Context Management][cc101]              |
-| `[wshobson]`     | [wshobson/agents][wshobson]                            |
-| `[orch]`         | [claude-orchestration][orch]                           |
-| `[arxiv-format]` | [The Hidden Cost of Readability (arXiv)][arxiv-format] |
-| `[commonmark]`   | [CommonMark Specification][commonmark]                 |
-| `[mdguide]`      | [Markdown Guide - Basic Syntax][mdguide]               |
-| `[cc-thinking]`  | [Claude Code Thinking Guide][cc-thinking]              |
-| `[ext-thinking]` | [Extended Thinking Documentation][ext-thinking]        |
+| Key                 | Source                                                           |
+|---------------------|------------------------------------------------------------------|
+| `[docs]`            | [Claude Code Subagents Documentation][docs]                      |
+| `[bp]`              | [Claude Code Best Practices][bp]                                 |
+| `[pubnub]`          | [Best Practices for Claude Code Subagents][pubnub]               |
+| `[clog]`            | [ClaudeLog Custom Agents Guide][clog]                            |
+| `[medianeth]`       | [Claude Code Frameworks & Sub-Agents 2025][medianeth]            |
+| `[awesome]`         | [awesome-claude-code-subagents][awesome]                         |
+| `[sdk]`             | [Claude Agent SDK Engineering Blog][sdk]                         |
+| `[cc101]`           | [ClaudeCode101 Context Management][cc101]                        |
+| `[wshobson]`        | [wshobson/agents][wshobson]                                      |
+| `[orch]`            | [claude-orchestration][orch]                                     |
+| `[arxiv-format]`    | [The Hidden Cost of Readability (arXiv)][arxiv-format]           |
+| `[commonmark]`      | [CommonMark Specification][commonmark]                           |
+| `[mdguide]`         | [Markdown Guide - Basic Syntax][mdguide]                         |
+| `[cc-thinking]`     | [Claude Code Thinking Guide][cc-thinking]                        |
+| `[ext-thinking]`    | [Extended Thinking Documentation][ext-thinking]                  |
+| `[gh-12890]`        | [AskUserQuestion Bug - GitHub Issue #12890][gh-12890]            |
+| `[gh-1770]`         | [Parent-Child Agent Communication - GitHub Issue #1770][gh-1770] |
+| `[gh-5812]`         | [Context Bridging Between Agents - GitHub Issue #5812][gh-5812]  |
+| `[agent-design]`    | [Agent Design Lessons from Claude Code][agent-design]            |
+| `[cmd-guide]`       | [Claude Code Commands Guide](claude-code-commands-guide.md)      |
+| `[delegation-gist]` | [Claude Code Sub-Agent Delegation Setup][delegation-gist]        |
 
 [docs]: https://code.claude.com/docs/en/sub-agents
 [bp]: https://www.anthropic.com/engineering/claude-code-best-practices
@@ -698,3 +1032,8 @@ Converting your prompt templates to subagents:
 [mdguide]: https://www.markdownguide.org/basic-syntax/
 [cc-thinking]: https://stevekinney.com/courses/ai-development/claude-code-thinking
 [ext-thinking]: https://platform.claude.com/docs/en/build-with-claude/extended-thinking
+[gh-12890]: https://github.com/anthropics/claude-code/issues/12890
+[gh-1770]: https://github.com/anthropics/claude-code/issues/1770
+[gh-5812]: https://github.com/anthropics/claude-code/issues/5812
+[agent-design]: https://jannesklaas.github.io/ai/2025/07/20/claude-code-agent-design.html
+[delegation-gist]: https://gist.github.com/tomas-rampas/a79213bb4cf59722e45eab7aa45f155c

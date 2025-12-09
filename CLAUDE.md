@@ -13,6 +13,7 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 - `ai/prompt-engineering-spec.md` - Best practices for writing AI agent prompts (v1.0.1)
 - `ai/troubleshooting-doc-spec.md` - Guidelines for writing troubleshooting documentation (v1.1)
 - `ai/claude-code-subagents-guide.md` - Comprehensive guide for Claude Code subagents
+- `ai/claude-code-commands-guide.md` - Comprehensive guide for Claude Code slash commands
 - `ai/claude-code-settings-merge.md` - How Claude Code merges settings from multiple files
 - `ai/claude-code-thinking-modes.md` - Extended thinking modes and keyword usage
 
@@ -33,7 +34,9 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 ### Claude Code Configuration
 
 - `.claude/agents/subagent-creator.md` - Meta-agent for creating/modifying/transforming subagents
+- `.claude/agents/command-creator.md` - Creates slash commands for subagents and workflows
 - `.claude/commands/subagent.md` - Slash command to invoke subagent-creator (`/subagent`)
+- `.claude/commands/command.md` - Slash command to invoke command-creator (`/command`)
 
 ### Working Directories
 
@@ -77,6 +80,40 @@ This repository contains a two-agent workflow system for structured development:
 - Session boundaries: One task per executor session
 - Context preservation: Specs must be self-contained for fresh sessions
 - Blockers: Stop and ask user rather than assuming
+
+## Subagent Patterns
+
+### STATUS: NEEDS_INPUT Relay Pattern
+
+Subagents cannot use `AskUserQuestion` directly ([GitHub Issue #12890](https://github.com/anthropics/claude-code/issues/12890)). Use status-based relay:
+
+1. **Subagent** outputs `STATUS: NEEDS_INPUT` block with questions
+2. **Parent agent/command** parses questions, uses `AskUserQuestion` tool
+3. **Parent** resumes subagent with `ANSWERS: KEY1=value, KEY2=value`
+
+```
+STATUS: NEEDS_INPUT
+questions:
+  1. KEY: Question? [option1|option2 (recommended)]
+summary: awaiting {what}
+```
+
+### Mandatory Agent Requirements
+
+Every production-quality subagent MUST include:
+
+1. **Uncertainty in Constraints**: `**NEVER assume** — output STATUS: NEEDS_INPUT if unclear`
+2. **Uncertainty in Edge Cases**: `**Uncertainty**: Output STATUS: NEEDS_INPUT — never guess`
+3. **Strong keywords**: NEVER, ALWAYS, ZERO, MAXIMUM in constraints
+4. **Done When checklist**: Clear completion criteria
+
+### Mandatory Command Requirements
+
+Commands invoking subagents MUST include:
+
+1. **Full STATUS workflow** with all three cases (NEEDS_INPUT, COMPLETED, READY_FOR_NEXT)
+2. **CRITICAL warning** about using `AskUserQuestion` tool
+3. **Mode detection** if agent has multiple modes
 
 ## Prompt Authoring
 
