@@ -319,7 +319,7 @@ Sources: [PubNub Best Practices][pubnub], [wshobson/agents][wshobson], [Delegati
 Subagents end their output with:
 
 ```
-STATUS: {NEEDS_INPUT|COMPLETED|READY_FOR_NEXT}
+STATUS: {NEEDS_INPUT|COMPLETED|READY_FOR_NEXT|QUALITY_FAILED}
 key1: value1
 key2: value2
 summary: one-line description
@@ -345,6 +345,7 @@ summary: awaiting {what user needs to provide}
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion`, resume with `ANSWERS:`
    - `STATUS: COMPLETED` → Report success, done
    - `STATUS: READY_FOR_NEXT` → Invoke next agent with provided context
+   - `STATUS: QUALITY_FAILED` → Present remaining issues, request manual intervention
 3. **Repeat** until final `STATUS: COMPLETED`
 ```
 
@@ -519,7 +520,50 @@ $ARGUMENTS
 
 ---
 
-## 11. Mandatory Requirements
+## 11. Quality Review Integration
+
+The `command-creator` agent includes automatic quality review before saving commands:
+
+### Quality Workflow
+
+```
+Construction → Write to ~/.claude/tmp/{name}.md
+            → Invoke command-quality-reviewer
+            → Status != PASS? → Fix issues → Re-review (max 3x)
+            → PASS? → Move to final location → STATUS: COMPLETED
+            → 3 failures? → STATUS: QUALITY_FAILED
+```
+
+### STATUS: QUALITY_FAILED
+
+If automatic fixes fail after 3 attempts:
+
+```
+STATUS: QUALITY_FAILED
+attempts: 3
+final_status: {WARN|FAIL}
+staging_path: ~/.claude/tmp/{command-name}.md
+remaining_issues:
+{list of unfixed issues}
+summary: Unable to achieve PASS after 3 attempts. Manual intervention required.
+```
+
+Commands must handle this status:
+
+```markdown
+**If `STATUS: QUALITY_FAILED`**:
+- Quality review failed after 3 automatic fix attempts
+- Present `remaining_issues:` to user
+- Report that manual intervention is required
+```
+
+### Setup Required
+
+See [Subagents Guide §10](claude-code-subagents-guide.md#10-quality-review-integration) for `~/.claude/tmp/` setup.
+
+---
+
+## 12. Mandatory Requirements
 
 Commands that invoke subagents MUST include these elements:
 
@@ -563,7 +607,7 @@ Before finalizing a command, verify:
 
 ---
 
-## 12. Best Practices
+## 13. Best Practices
 
 ### Design
 
@@ -593,7 +637,7 @@ Before finalizing a command, verify:
 
 ---
 
-## 13. Debugging
+## 14. Debugging
 
 | Issue                     | Cause                    | Fix                                   |
 |:--------------------------|:-------------------------|:--------------------------------------|
@@ -605,7 +649,7 @@ Before finalizing a command, verify:
 
 ---
 
-## 14. Community Resources
+## 15. Community Resources
 
 ### Command Collections
 

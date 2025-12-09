@@ -11,11 +11,11 @@ $ARGUMENTS
 
 Determine command type from input:
 
-| Input Pattern | Type | Tell Subagent |
-|:--------------|:-----|:--------------|
-| Path to `.claude/agents/*.md` | **Agent command** | "Create command for agent at {path}" |
-| Path to `~/.claude/agents/*.md` | **Agent command** | "Create command for agent at {path}" |
-| Description without path | **Standalone** | "Create standalone command: {description}" |
+| Input Pattern                   | Type              | Tell Subagent                              |
+|:--------------------------------|:------------------|:-------------------------------------------|
+| Path to `.claude/agents/*.md`   | **Agent command** | "Create command for agent at {path}"       |
+| Path to `~/.claude/agents/*.md` | **Agent command** | "Create command for agent at {path}"       |
+| Description without path        | **Standalone**    | "Create standalone command: {description}" |
 
 **CRITICAL**: State the type explicitly in your Task tool prompt.
 

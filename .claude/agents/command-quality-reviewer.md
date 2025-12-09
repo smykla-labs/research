@@ -2,7 +2,7 @@
 name: command-quality-reviewer
 description: Reviews slash command files for quality compliance against the commands guide. Use PROACTIVELY after creating commands, before committing command changes, or when requested. Prevents malformed commands and ensures consistent quality.
 tools: Read, Grep, Glob
-model: claude-3-5-haiku-20241022
+model: haiku
 ---
 
 You are a slash command quality reviewer specializing in validating Claude Code command files against established standards.
@@ -49,12 +49,12 @@ You are a slash command quality reviewer specializing in validating Claude Code 
 
 ### Content Validation
 
-| Element                 | Check                                                   |
-|:------------------------|:--------------------------------------------------------|
-| `$ARGUMENTS`            | Present if command accepts free-form input              |
-| `$1`, `$2`, etc.        | Used consistently with `argument-hint`                  |
-| Bash pre-exec (`` !` ``)| Has matching `allowed-tools: Bash(...)` in frontmatter  |
-| File inclusion (`@path`)| Path is relative to project root                        |
+| Element                  | Check                                                  |
+|:-------------------------|:-------------------------------------------------------|
+| `$ARGUMENTS`             | Present if command accepts free-form input             |
+| `$1`, `$2`, etc.         | Used consistently with `argument-hint`                 |
+| Bash pre-exec (`` !` ``) | Has matching `allowed-tools: Bash(...)` in frontmatter |
+| File inclusion (`@path`) | Path is relative to project root                       |
 
 ### Subagent Commands
 

@@ -661,7 +661,93 @@ You are a research specialist. Investigate questions thoroughly and provide conc
 
 ---
 
-## 10. Orchestration Patterns
+## 10. Quality Review Integration
+
+### Automatic Quality Gating
+
+The `subagent-creator` and `command-creator` agents include automatic quality review:
+
+```
+Construction → Write to ~/.claude/tmp/{name}.md
+            → Invoke quality reviewer
+            → Grade < A? → Fix issues → Re-review (max 3x)
+            → Grade A? → Move to final location → STATUS: COMPLETED
+            → 3 failures? → STATUS: QUALITY_FAILED
+```
+
+### Staging Location
+
+Agents use `~/.claude/tmp/` as a staging directory:
+
+- **Write first to staging**: `~/.claude/tmp/{name}.md`
+- **Review in staging**: Quality reviewer analyzes the file
+- **Fix issues in place**: Edit tool fixes issues in staging file
+- **Move when passing**: Only moved to final location after grade A
+
+**Why staging?**
+- Prevents low-quality agents from being saved to production locations
+- Allows iterative fixes without polluting `.claude/agents/`
+- Works without permission prompts (requires one-time setup)
+
+### Setup Required
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Edit(~/.claude/tmp/**)",
+      "Write(~/.claude/tmp/**)",
+      "Bash(mkdir ~/.claude/tmp:*)",
+      "Bash(rm ~/.claude/tmp/*:*)"
+    ]
+  }
+}
+```
+
+Create the directory:
+
+```bash
+mkdir -p ~/.claude/tmp
+```
+
+### Quality Grades
+
+| Grade | subagent-quality-reviewer | command-quality-reviewer |
+|:------|:--------------------------|:-------------------------|
+| **A** | All requirements, 0 critical, ≤2 warnings | — |
+| **B** | All requirements, 0 critical, 3-5 warnings | — |
+| **C** | All requirements, 1-2 critical | — |
+| **D** | Missing requirements OR 3+ critical | — |
+| **F** | Missing 3+ requirements OR invalid | — |
+| **PASS** | — | All checks pass |
+| **WARN** | — | Passes with warnings |
+| **FAIL** | — | Critical issues present |
+
+**Acceptance criteria:**
+- `subagent-creator`: Only grade **A** is acceptable
+- `command-creator`: Only **PASS** is acceptable
+
+### STATUS: QUALITY_FAILED
+
+If automatic fixes fail after 3 attempts:
+
+```
+STATUS: QUALITY_FAILED
+attempts: 3
+final_grade: {B|C|D|F}
+staging_path: ~/.claude/tmp/{name}.md
+remaining_issues:
+{list of unfixed issues}
+summary: Unable to achieve grade A after 3 attempts. Manual intervention required.
+```
+
+Parent commands present this to the user and request manual intervention.
+
+---
+
+## 11. Orchestration Patterns
 
 ### Status-Based Handoff (Recommended)
 
@@ -685,6 +771,7 @@ summary: one-line description
 | `COMPLETED`       | Task finished successfully           | Report to user, done                 |
 | `READY_FOR_NEXT`  | Chain to another agent               | Invoke specified `next_agent`        |
 | `NEEDS_INPUT`     | Requires user clarification          | Use `AskUserQuestion`, then resume   |
+| `QUALITY_FAILED`  | Auto-fix failed after 3 attempts     | Present issues, request manual fix   |
 
 #### Example: Agent Chaining
 
@@ -787,7 +874,7 @@ Safe to parallelize when:
 
 ---
 
-## 11. Context Management
+## 12. Context Management
 
 ### Why Subagents Help
 
@@ -818,7 +905,7 @@ Safe to parallelize when:
 
 ---
 
-## 12. Debugging & Troubleshooting
+## 13. Debugging & Troubleshooting
 
 | Issue                       | Cause                           | Fix                                    |
 |-----------------------------|---------------------------------|----------------------------------------|
@@ -912,7 +999,7 @@ This approach aligns with PubNub's HITL (Human-in-the-Loop) pattern: "If accepta
 
 ---
 
-## 13. Advanced Patterns
+## 14. Advanced Patterns
 
 ### Definition of Done (DoD)
 
@@ -957,7 +1044,7 @@ Use MCP tool `external_review` to get GPT-5 review of the spec
 
 ---
 
-## 14. Community Resources
+## 15. Community Resources
 
 ### Agent Collections
 
@@ -975,7 +1062,7 @@ Use MCP tool `external_review` to get GPT-5 review of the spec
 
 ---
 
-## 15. Quick Start Checklist
+## 16. Quick Start Checklist
 
 Converting your prompt templates to subagents:
 

@@ -87,12 +87,12 @@ You are a subagent quality auditor specializing in reviewing Claude Code subagen
 
 ## Summary
 
-| Metric | Value |
-|:-------|:------|
-| **Overall Grade** | {A/B/C/D/F} |
-| **Critical Issues** | {count} |
-| **Warnings** | {count} |
-| **Suggestions** | {count} |
+| Metric              | Value       |
+|:--------------------|:------------|
+| **Overall Grade**   | {A/B/C/D/F} |
+| **Critical Issues** | {count}     |
+| **Warnings**        | {count}     |
+| **Suggestions**     | {count}     |
 
 ## Critical Issues (MUST fix)
 
@@ -127,13 +127,13 @@ You are a subagent quality auditor specializing in reviewing Claude Code subagen
 
 ## Grading Rubric
 
-| Grade | Criteria |
-|:------|:---------|
+| Grade | Criteria                                                         |
+|:------|:-----------------------------------------------------------------|
 | **A** | All mandatory requirements met, no critical issues, <=2 warnings |
 | **B** | All mandatory requirements met, no critical issues, 3-5 warnings |
-| **C** | All mandatory requirements met, 1-2 critical issues |
-| **D** | Missing 1-2 mandatory requirements OR 3+ critical issues |
-| **F** | Missing 3+ mandatory requirements OR invalid structure |
+| **C** | All mandatory requirements met, 1-2 critical issues              |
+| **D** | Missing 1-2 mandatory requirements OR 3+ critical issues         |
+| **F** | Missing 3+ mandatory requirements OR invalid structure           |
 
 ## Examples
 
@@ -144,12 +144,12 @@ You are a subagent quality auditor specializing in reviewing Claude Code subagen
 
 ## Summary
 
-| Metric | Value |
-|:-------|:------|
-| **Overall Grade** | A |
-| **Critical Issues** | 0 |
-| **Warnings** | 1 |
-| **Suggestions** | 2 |
+| Metric              | Value |
+|:--------------------|:------|
+| **Overall Grade**   | A     |
+| **Critical Issues** | 0     |
+| **Warnings**        | 1     |
+| **Suggestions**     | 2     |
 
 ## Critical Issues (MUST fix)
 
@@ -210,11 +210,11 @@ Output Grade F with critical issue: "Missing frontmatter entirely — this is no
 
 ## Density Rules
 
-| Bad | Good |
-|:----|:-----|
-| "The description field is missing a trigger keyword which means Claude won't know when to invoke it" | "description: missing trigger keyword" |
-| "Consider adding more edge cases to handle various scenarios" | "[LINE 45] Edge Cases: missing uncertainty handling" |
-| "The agent looks mostly good overall" | "Grade B: 0 critical, 4 warnings" |
+| Bad                                                                                                  | Good                                                 |
+|:-----------------------------------------------------------------------------------------------------|:-----------------------------------------------------|
+| "The description field is missing a trigger keyword which means Claude won't know when to invoke it" | "description: missing trigger keyword"               |
+| "Consider adding more edge cases to handle various scenarios"                                        | "[LINE 45] Edge Cases: missing uncertainty handling" |
+| "The agent looks mostly good overall"                                                                | "Grade B: 0 critical, 4 warnings"                    |
 
 ## Done When
 

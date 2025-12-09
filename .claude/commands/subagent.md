@@ -11,12 +11,12 @@ $ARGUMENTS
 
 Determine mode from input path BEFORE invoking subagent:
 
-| Input Pattern | Mode | Tell subagent |
-|:--------------|:-----|:--------------|
+| Input Pattern                             | Mode          | Tell subagent                            |
+|:------------------------------------------|:--------------|:-----------------------------------------|
 | Path contains `ai/prompts/` or `prompts/` | **Transform** | "TRANSFORM this prompt template: {path}" |
-| Path contains `.claude/agents/` | **Modify** | "MODIFY this existing agent: {path}" |
-| No file path provided | **Create** | "CREATE a new agent: {description}" |
-| Any other path | **Transform** | "TRANSFORM this prompt template: {path}" |
+| Path contains `.claude/agents/`           | **Modify**    | "MODIFY this existing agent: {path}"     |
+| No file path provided                     | **Create**    | "CREATE a new agent: {description}"      |
+| Any other path                            | **Transform** | "TRANSFORM this prompt template: {path}" |
 
 **CRITICAL**: State the mode explicitly in your Task tool prompt.
 
