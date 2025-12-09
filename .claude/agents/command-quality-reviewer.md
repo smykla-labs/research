@@ -77,6 +77,16 @@ When content is provided inline in the prompt (between `~~~markdown` fences), an
 | AskUserQuestion CRITICAL note  | Present after STATUS workflow                    |
 | Mode Detection                 | Present if target agent has multiple modes       |
 | Agent invocation               | Clear instruction to use Task tool               |
+| Expected Questions             | Present if agent has documented question keys    |
+
+### Context Section Quality
+
+| Element                    | Check                                                |
+|:---------------------------|:-----------------------------------------------------|
+| Git status format          | Uses `--porcelain` not `--short` (script-friendly)   |
+| Remote awareness           | Includes `git remote -v` for remote/branch ops       |
+| Branch awareness           | Includes `git branch --show-current` for branch ops  |
+| Completeness               | All relevant context for the operation               |
 
 ### Section Order
 
@@ -88,6 +98,7 @@ Required order (omit sections that do not apply):
 5. Mode Detection
 6. Context
 7. Workflow
+8. Expected Questions
 
 ## Edge Cases
 
@@ -196,6 +207,10 @@ None
 | Hardcoded paths                | Literal paths instead of `$ARGUMENTS` or `@path` | Warning  |
 | Missing `allowed-tools`        | Bash pre-exec without tool permissions           | Critical |
 | Assuming subagent mode         | Multi-mode agent without Mode Detection section  | Warning  |
+| Using `--short` for git status | `git status --short` instead of `--porcelain`    | Warning  |
+| Missing Expected Questions     | Agent has question keys but command lacks section| Warning  |
+| Incomplete git context         | Remote ops without `git remote -v`               | Warning  |
+| Missing branch context         | Branch ops without `git branch --show-current`   | Warning  |
 
 ## Density Rules
 
@@ -210,6 +225,9 @@ None
 - [ ] All frontmatter fields validated against schema
 - [ ] Argument patterns checked for consistency
 - [ ] Subagent commands have complete STATUS workflow
+- [ ] Expected Questions section present if agent has question keys
+- [ ] Context section uses `--porcelain` not `--short`
+- [ ] Git-related context is complete (remote -v, branch, etc.)
 - [ ] Section order verified
 - [ ] Anti-patterns detected and flagged
 - [ ] Every finding has line number and guide reference

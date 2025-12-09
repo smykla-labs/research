@@ -63,16 +63,20 @@ Based on analysis, determine:
 
 Include Context section when the command benefits from runtime information:
 
-| Context Type          | Bash Command                  | Use When                        |
-|:----------------------|:------------------------------|:--------------------------------|
-| Working directory     | `pwd`                         | Path-sensitive operations       |
-| Git status            | `git status --short`          | Any git or file change workflow |
-| Current branch        | `git branch --show-current`   | Branch-aware operations         |
-| Recent commits        | `git log --oneline -5`        | Commit message generation       |
-| Staged changes        | `git diff --cached --stat`    | Pre-commit workflows            |
-| Environment           | `printenv \| grep PATTERN`    | Environment-sensitive commands  |
+| Context Type          | Bash Command                  | Use When                            |
+|:----------------------|:------------------------------|:------------------------------------|
+| Working directory     | `pwd`                         | Path-sensitive operations           |
+| Git status            | `git status --porcelain`      | Any git or file change workflow     |
+| Current branch        | `git branch --show-current`   | Branch-aware operations             |
+| Available remotes     | `git remote -v`               | Remote/upstream-aware operations    |
+| Recent commits        | `git log --oneline -5`        | Commit message generation           |
+| Staged changes        | `git diff --cached --stat`    | Pre-commit workflows                |
+| Environment           | `printenv \| grep PATTERN`    | Environment-sensitive commands      |
 
-**Rule**: If a subagent or task would benefit from knowing current state, include it.
+**Rules**:
+- Use `--porcelain` instead of `--short` for git status (script-friendly, stable format)
+- Include `git remote -v` for any operation involving remotes or upstream branches
+- If a subagent or task would benefit from knowing current state, include it
 
 #### "When to Use" Section Decision
 
@@ -80,6 +84,18 @@ Include "When to Use" for commands that:
 - Have natural language trigger phrases ("handover", "end session")
 - Should be invoked proactively in certain situations
 - Need explicit trigger conditions documented
+
+#### "Expected Questions" Section Decision
+
+Include "Expected Questions" section when:
+- Target agent uses `STATUS: NEEDS_INPUT` with specific question keys
+- Users benefit from knowing what questions may be asked
+- Question keys follow a pattern (TYPE, ACTION, REMOTE, etc.)
+
+Extract question keys from agent's Edge Cases section or STATUS: NEEDS_INPUT examples. Document:
+- The key name (e.g., TYPE, ACTION)
+- What it asks about
+- Available options if specified
 
 ### Phase 3: Construction
 
@@ -133,6 +149,13 @@ Determine mode from input BEFORE invoking subagent:
 3. **Repeat** until final `STATUS: COMPLETED`
 
 **CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print questions as text.
+
+## Expected Questions (if agent uses STATUS: NEEDS_INPUT with documented keys)
+
+The agent may request input for:
+
+- **{KEY}**: {Description of what this asks} ({options if known})
+- **{KEY}**: {Description} ({options})
 ```
 
 ### Section Order
@@ -146,6 +169,7 @@ Sections MUST appear in this order (omit sections that don't apply):
 5. Mode Detection (if applicable)
 6. Context (if applicable)
 7. Workflow
+8. Expected Questions (if applicable)
 
 ## Frontmatter Reference
 
@@ -268,7 +292,7 @@ $ARGUMENTS
 ## Context
 
 - Current directory: !`pwd`
-- Recent file changes: !`git status --short`
+- Recent file changes: !`git status --porcelain`
 
 ## Workflow
 
@@ -292,9 +316,72 @@ $ARGUMENTS
 This example demonstrates:
 - `allowed-tools` with bash for Context section
 - "When to Use" section with natural language triggers
-- Context section with runtime information
+- Context section with runtime information (using --porcelain)
 - Full STATUS: NEEDS_INPUT relay workflow
 - Specific verification steps in workflow
+</commentary>
+</example>
+
+<example type="complete-with-expected-questions">
+<input>Create command for worktree-creator agent</input>
+<output>
+
+````markdown
+---
+allowed-tools: Bash(pwd:*), Bash(git:*)
+argument-hint: [task-description]
+description: Create git worktree with context transfer for feature branches
+---
+
+Create a git worktree with context transfer via the worktree-creator agent.
+
+$ARGUMENTS
+
+## When to Use
+
+- Starting new feature branches requiring isolation
+- Before multi-task work to enable parallel development
+- Isolating experiments without affecting main worktree
+- When user says "create worktree", "new worktree", "wt"
+
+## Context
+
+- Current directory: !`pwd`
+- Git status: !`git status --porcelain`
+- Available remotes: !`git remote -v`
+- Current branch: !`git branch --show-current`
+
+## Workflow
+
+1. **Invoke worktree-creator** with the Task tool
+   - Include full task description: $ARGUMENTS
+   - Include context from above (directory, git status, remotes, current branch)
+   - If no task description provided, ask agent to prompt user for details
+2. **Parse status block** from output:
+   - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with `ANSWERS:`
+   - `STATUS: COMPLETED` → Report worktree path, branch name, and clipboard contents
+3. **Repeat** until final `STATUS: COMPLETED`
+
+**CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print questions as text.
+
+## Expected Questions
+
+The agent may request input for:
+
+- **TYPE**: Branch type selection when task description is ambiguous (feat|fix|chore|docs|test|refactor|ci|build)
+- **ACTION**: How to handle uncommitted changes (commit|stash|abort)
+- **REMOTE**: Which remote to use if multiple exist
+- **BRANCH**: Default branch name if auto-detection fails
+````
+
+</output>
+<commentary>
+This example demonstrates the complete production pattern:
+- Complete context gathering (pwd, status --porcelain, remote -v, branch)
+- "When to Use" with natural language triggers
+- "Expected Questions" documenting the keys from agent's STATUS: NEEDS_INPUT
+- Full STATUS workflow with CRITICAL warning
+- Keys match the agent's NEEDS_INPUT format exactly
 </commentary>
 </example>
 
@@ -369,8 +456,11 @@ Context section provides runtime info upfront, reducing tool calls and improving
 - [ ] `argument-hint` matches expected input format
 - [ ] Mode detection included if agent has multiple modes
 - [ ] Context section included if agent benefits from runtime info
+- [ ] Context uses `--porcelain` not `--short` for git status
+- [ ] Context includes `git remote -v` for remote-aware operations
 - [ ] "When to Use" included if command has natural language triggers
 - [ ] Full `STATUS: NEEDS_INPUT` workflow included if agent uses it
+- [ ] "Expected Questions" included if agent has documented question keys
 - [ ] `allowed-tools` includes bash permissions if Context uses `!`backtick``
 - [ ] `allowed-tools` restricts permissions if security matters
 
@@ -390,6 +480,13 @@ For commands that invoke subagents, these elements are **required**:
 
 3. **Context section** — If command uses `!`backtick`` syntax, MUST include `allowed-tools` with appropriate `Bash(...)` permissions
 
+4. **Expected Questions section** — If target agent has documented question keys in its Edge Cases or STATUS: NEEDS_INPUT examples, MUST include Expected Questions section documenting those keys
+
+5. **Context completeness** — For git-related commands:
+   - MUST use `git status --porcelain` (not `--short`)
+   - MUST include `git remote -v` for remote/upstream operations
+   - MUST include `git branch --show-current` for branch operations
+
 ### Validation Checkpoint
 
 **STOP before writing the command file.** Verify:
@@ -397,7 +494,9 @@ For commands that invoke subagents, these elements are **required**:
 - [ ] If invoking a subagent: Workflow section has full STATUS handling (all three cases)
 - [ ] If invoking a subagent: CRITICAL warning present about AskUserQuestion
 - [ ] If agent has modes: Mode Detection section present
+- [ ] If agent has question keys: Expected Questions section present
 - [ ] If using bash pre-exec: `allowed-tools` includes required permissions
+- [ ] If git-related: Context uses `--porcelain` and includes all relevant git commands
 
 **Do NOT write the file if any mandatory requirement is missing.**
 
