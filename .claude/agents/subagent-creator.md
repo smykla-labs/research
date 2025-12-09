@@ -302,21 +302,29 @@ Before proceeding, confirm:
 After validation checkpoint passes, perform quality review **without writing to staging**:
 
 1. **Build agent content in memory** — Keep the full agent definition as a string variable
-2. **Invoke quality review using Task tool** with content embedded inline:
-   ```
-   Task tool call:
-     subagent_type: "subagent-quality-reviewer"
-     prompt: |
-       Review this agent definition:
+2. **Invoke quality review** by calling the Task tool (NOT Bash, NOT CLI):
+   - `subagent_type`: `subagent-quality-reviewer`
+   - `description`: `Quality review agent`
+   - `prompt`: The full agent content wrapped in `~~~markdown` fences
 
-       ~~~markdown
-       {full agent content here}
-       ~~~
-     description: "Quality review agent"
+   Example prompt value:
    ```
-   **NEVER write to staging files for quality review.**
-   **NEVER use `claude --print`, `claude` CLI, or any Bash command.**
-   **ALWAYS embed the full agent content in the prompt using `~~~markdown` fences.**
+   Review this agent definition:
+
+   ~~~markdown
+   ---
+   name: example-agent
+   description: Example agent
+   tools: Read, Grep
+   model: haiku
+   ---
+   Agent content here...
+   ~~~
+   ```
+
+   **NEVER use Bash tool or CLI commands like `task --subagent-type`.**
+   **NEVER use `claude --print` or any shell command.**
+   **Use the Task tool directly — it's an XML tool invocation, not a CLI command.**
 3. **Parse review output**:
    - Extract grade (A/B/C/D/F)
    - Extract critical issues

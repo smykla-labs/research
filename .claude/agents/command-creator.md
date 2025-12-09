@@ -406,21 +406,26 @@ For commands that invoke subagents, these elements are **required**:
 After validation checkpoint passes, perform quality review **without writing to staging**:
 
 1. **Build command content in memory** — Keep the full command definition as a string variable
-2. **Invoke quality review using Task tool** with content embedded inline:
-   ```
-   Task tool call:
-     subagent_type: "command-quality-reviewer"
-     prompt: |
-       Review this command definition:
+2. **Invoke quality review** by calling the Task tool (NOT Bash, NOT CLI):
+   - `subagent_type`: `command-quality-reviewer`
+   - `description`: `Quality review command`
+   - `prompt`: The full command content wrapped in `~~~markdown` fences
 
-       ~~~markdown
-       {full command content here}
-       ~~~
-     description: "Quality review command"
+   Example prompt value:
    ```
-   **NEVER write to staging files for quality review.**
-   **NEVER use `claude --print`, `claude` CLI, or any Bash command.**
-   **ALWAYS embed the full command content in the prompt using `~~~markdown` fences.**
+   Review this command definition:
+
+   ~~~markdown
+   ---
+   description: Example command
+   ---
+   Command content here...
+   ~~~
+   ```
+
+   **NEVER use Bash tool or CLI commands like `task --subagent-type`.**
+   **NEVER use `claude --print` or any shell command.**
+   **Use the Task tool directly — it's an XML tool invocation, not a CLI command.**
 3. **Parse review output**:
    - Extract status (PASS/WARN/FAIL)
    - Extract critical issues
