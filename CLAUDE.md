@@ -83,12 +83,21 @@ This repository contains a two-agent workflow system for structured development:
 
 ## Subagent Patterns
 
+### Subagent Limitations
+
+Two key limitations affect subagent architecture:
+
+1. **AskUserQuestion filtered**: Tool not available to subagents ([GitHub Issue #12890](https://github.com/anthropics/claude-code/issues/12890))
+2. **Task tool unavailable**: Subagents cannot spawn other subagents
+
+**Implication**: All user interaction and agent orchestration must happen at the parent level (commands or main conversation).
+
 ### STATUS: NEEDS_INPUT Relay Pattern
 
-Subagents cannot use `AskUserQuestion` directly ([GitHub Issue #12890](https://github.com/anthropics/claude-code/issues/12890)). Use status-based relay:
+For user input, use status-based relay:
 
 1. **Subagent** outputs `STATUS: NEEDS_INPUT` block with questions
-2. **Parent agent/command** parses questions, uses `AskUserQuestion` tool
+2. **Parent command** parses questions, uses `AskUserQuestion` tool
 3. **Parent** resumes subagent with `ANSWERS: KEY1=value, KEY2=value`
 
 ```
@@ -96,6 +105,27 @@ STATUS: NEEDS_INPUT
 questions:
   1. KEY: Question? [option1|option2 (recommended)]
 summary: awaiting {what}
+```
+
+### STATUS: READY_FOR_REVIEW Relay Pattern
+
+For quality review (subagents cannot invoke quality reviewers):
+
+1. **Subagent** outputs `STATUS: READY_FOR_REVIEW` with embedded content
+2. **Parent command** invokes quality reviewer with content
+3. **If pass**: Parent writes file to final location
+4. **If fail**: Parent resumes subagent with `REVIEW_FEEDBACK:` (max 3 attempts)
+
+```
+STATUS: READY_FOR_REVIEW
+agent_name: {name}
+agent_location: {.claude/agents/ or ~/.claude/agents/}
+slash_command: {yes: /command-name | no}
+content:
+~~~markdown
+{full agent definition}
+~~~
+summary: Agent ready for quality review
 ```
 
 ### Mandatory Agent Requirements
@@ -111,9 +141,10 @@ Every production-quality subagent MUST include:
 
 Commands invoking subagents MUST include:
 
-1. **Full STATUS workflow** with all three cases (NEEDS_INPUT, COMPLETED, READY_FOR_NEXT)
-2. **CRITICAL warning** about using `AskUserQuestion` tool
-3. **Mode detection** if agent has multiple modes
+1. **Full STATUS workflow** with all cases (NEEDS_INPUT, READY_FOR_REVIEW, COMPLETED)
+2. **Quality review orchestration** for creator agents (parent invokes reviewer)
+3. **CRITICAL warning** about using `AskUserQuestion` tool
+4. **Mode detection** if agent has multiple modes
 
 ## Prompt Authoring
 

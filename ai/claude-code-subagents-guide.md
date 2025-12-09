@@ -663,87 +663,92 @@ You are a research specialist. Investigate questions thoroughly and provide conc
 
 ## 10. Quality Review Integration
 
-### Automatic Quality Gating
+### Parent-Orchestrated Quality Review
 
-The `subagent-creator` and `command-creator` agents include automatic quality review:
+The `subagent-creator` and `command-creator` agents delegate quality review to their parent commands. This is required because **subagents cannot spawn other subagents** (Task tool not available to subagents).
 
 ```
-Construction → Write to ~/.claude/tmp/{name}.md
-            → Invoke quality reviewer
-            → Grade < A? → Fix issues → Re-review (max 3x)
-            → Grade A? → Move to final location → STATUS: COMPLETED
-            → 3 failures? → STATUS: QUALITY_FAILED
+Creator Agent                     Parent Command
+─────────────                     ──────────────
+Construction complete
+    │
+    └─→ STATUS: READY_FOR_REVIEW ──→ Invoke quality reviewer
+        (content embedded)              │
+                                        ├─→ Grade A/PASS → Write file → done
+                                        │
+                                        └─→ Grade < A → REVIEW_FEEDBACK ──┐
+                                                                          │
+    ┌─────────────────────────────────────────────────────────────────────┘
+    │
+Fix issues
+    │
+    └─→ STATUS: READY_FOR_REVIEW ──→ Re-review (max 3 attempts)
 ```
 
-### Staging Location
+### Why Parent-Orchestrated?
 
-Agents use `~/.claude/tmp/` as a staging directory:
+- **Subagent limitation**: Subagents cannot use the Task tool (cannot spawn quality reviewers)
+- **No staging files**: Content is embedded in status block, eliminating file management
+- **Centralized retry logic**: Parent command handles the 3-attempt limit consistently
 
-- **Write first to staging**: `~/.claude/tmp/{name}.md`
-- **Review in staging**: Quality reviewer analyzes the file
-- **Fix issues in place**: Edit tool fixes issues in staging file
-- **Move when passing**: Only moved to final location after grade A
+### Quality Review Status Flow
 
-**Why staging?**
-- Prevents low-quality agents from being saved to production locations
-- Allows iterative fixes without polluting `.claude/agents/`
-- Works without permission prompts (requires one-time setup)
-
-### Setup Required
-
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Edit(~/.claude/tmp/**)",
-      "Write(~/.claude/tmp/**)",
-      "Bash(mkdir ~/.claude/tmp:*)",
-      "Bash(rm ~/.claude/tmp/*:*)"
-    ]
-  }
-}
+```
+STATUS: READY_FOR_REVIEW
+agent_name: {name}
+agent_location: {.claude/agents/ or ~/.claude/agents/}
+slash_command: {yes: /command-name | no}
+content:
+~~~markdown
+{full agent definition}
+~~~
+summary: Agent ready for quality review
 ```
 
-Create the directory:
-
-```bash
-mkdir -p ~/.claude/tmp
-```
+The parent command:
+1. Invokes quality reviewer with embedded content
+2. If grade < A: Resumes creator with `REVIEW_FEEDBACK:`
+3. If grade A: Writes file to final location
 
 ### Quality Grades
 
-| Grade | subagent-quality-reviewer | command-quality-reviewer |
-|:------|:--------------------------|:-------------------------|
-| **A** | All requirements, 0 critical, ≤2 warnings | — |
-| **B** | All requirements, 0 critical, 3-5 warnings | — |
-| **C** | All requirements, 1-2 critical | — |
-| **D** | Missing requirements OR 3+ critical | — |
-| **F** | Missing 3+ requirements OR invalid | — |
-| **PASS** | — | All checks pass |
-| **WARN** | — | Passes with warnings |
-| **FAIL** | — | Critical issues present |
+| Grade    | subagent-quality-reviewer                  | command-quality-reviewer |
+|:---------|:-------------------------------------------|:-------------------------|
+| **A**    | All requirements, 0 critical, ≤2 warnings  | —                        |
+| **B**    | All requirements, 0 critical, 3-5 warnings | —                        |
+| **C**    | All requirements, 1-2 critical             | —                        |
+| **D**    | Missing requirements OR 3+ critical        | —                        |
+| **F**    | Missing 3+ requirements OR invalid         | —                        |
+| **PASS** | —                                          | All checks pass          |
+| **WARN** | —                                          | Passes with warnings     |
+| **FAIL** | —                                          | Critical issues present  |
 
 **Acceptance criteria:**
 - `subagent-creator`: Only grade **A** is acceptable
 - `command-creator`: Only **PASS** is acceptable
 
-### STATUS: QUALITY_FAILED
+### Review Feedback Format
 
-If automatic fixes fail after 3 attempts:
+When quality review fails, parent resumes creator agent with:
 
 ```
-STATUS: QUALITY_FAILED
-attempts: 3
-final_grade: {B|C|D|F}
-staging_path: ~/.claude/tmp/{name}.md
-remaining_issues:
-{list of unfixed issues}
-summary: Unable to achieve grade A after 3 attempts. Manual intervention required.
+REVIEW_FEEDBACK:
+grade: {B|C|D|F}
+critical_issues:
+- Issue 1 at line X
+- Issue 2 at line Y
+warnings:
+- Warning 1
+- Warning 2
 ```
 
-Parent commands present this to the user and request manual intervention.
+### Max 3 Attempts
+
+After 3 failed quality reviews, the parent command reports to user:
+- Final grade and remaining issues
+- Manual intervention required
+
+**Note**: There is no `STATUS: QUALITY_FAILED` from creator agents—the parent command handles retry limit enforcement.
 
 ---
 
@@ -758,7 +763,7 @@ Sources: [PubNub Best Practices][pubnub], [wshobson/agents][wshobson], [Delegati
 #### Status Block Format
 
 ```
-STATUS: {COMPLETED|READY_FOR_NEXT|NEEDS_INPUT}
+STATUS: {COMPLETED|READY_FOR_NEXT|NEEDS_INPUT|READY_FOR_REVIEW}
 key1: value1
 key2: value2
 summary: one-line description
@@ -766,21 +771,25 @@ summary: one-line description
 
 #### Status Values
 
-| Status            | Meaning                              | Parent Action                        |
-|:------------------|:-------------------------------------|:-------------------------------------|
-| `COMPLETED`       | Task finished successfully           | Report to user, done                 |
-| `READY_FOR_NEXT`  | Chain to another agent               | Invoke specified `next_agent`        |
-| `NEEDS_INPUT`     | Requires user clarification          | Use `AskUserQuestion`, then resume   |
-| `QUALITY_FAILED`  | Auto-fix failed after 3 attempts     | Present issues, request manual fix   |
+| Status             | Meaning                         | Parent Action                               |
+|:-------------------|:--------------------------------|:--------------------------------------------|
+| `COMPLETED`        | Task finished successfully      | Report to user, done                        |
+| `READY_FOR_NEXT`   | Chain to another agent          | Invoke specified `next_agent`               |
+| `NEEDS_INPUT`      | Requires user clarification     | Use `AskUserQuestion`, then resume          |
+| `READY_FOR_REVIEW` | Content ready for quality check | Invoke quality reviewer, write if passed    |
 
-#### Example: Agent Chaining
+**Note**: `STATUS: READY_FOR_REVIEW` is used when subagents need quality review but cannot spawn reviewers themselves (Task tool not available to subagents). See §10 for details.
+
+#### Example: Agent Chaining with Quality Review
 
 ```
 subagent-creator
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
-├── STATUS: COMPLETED → done
-└── STATUS: READY_FOR_COMMAND → invoke command-creator
-                                  └── STATUS: COMPLETED → done
+└── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
+    ├── Grade A → write file → check slash_command
+    │   ├── yes → invoke command-creator → quality review → write → done
+    │   └── no → done
+    └── Grade < A → resume with REVIEW_FEEDBACK (max 3x)
 ```
 
 #### Implementation in Subagent
@@ -813,6 +822,18 @@ next_agent: {agent-name}
 context: {what the next agent needs}
 summary: {what was done}
 ```
+
+**If content needs quality review (subagent cannot spawn reviewers):**
+```
+STATUS: READY_FOR_REVIEW
+artifact_name: {name}
+artifact_location: {path}
+content:
+~~~markdown
+{full content here}
+~~~
+summary: Ready for quality review
+```
 ```
 
 #### Implementation in Command
@@ -824,6 +845,7 @@ summary: {what was done}
 2. Parse status block from output:
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with answers
    - `STATUS: READY_FOR_NEXT` → Invoke specified `next_agent` with context
+   - `STATUS: READY_FOR_REVIEW` → Invoke quality reviewer, write if passed, resume with feedback if not
    - `STATUS: COMPLETED` → Report success to user, done
 3. Repeat until final `STATUS: COMPLETED`
 
@@ -907,18 +929,19 @@ Safe to parallelize when:
 
 ## 13. Debugging & Troubleshooting
 
-| Issue                       | Cause                           | Fix                                    |
-|-----------------------------|---------------------------------|----------------------------------------|
-| Agent not invoked           | Description doesn't match task  | Make description more specific         |
-| Agent has wrong tools       | `tools` field misconfigured     | Check comma-separated list             |
-| Hooks not running           | Invalid JSON in settings        | Validate with `jq`                     |
-| Agent does unexpected work  | Missing constraints in prompt   | Add explicit "do NOT" rules            |
-| Context exhausted quickly   | Inherited all tools             | Restrict to needed tools only          |
-| AskUserQuestion not working | Tool is filtered from subagents | Use parent agent relay pattern (§11.1) |
+| Issue                       | Cause                           | Fix                                      |
+|-----------------------------|---------------------------------|------------------------------------------|
+| Agent not invoked           | Description doesn't match task  | Make description more specific           |
+| Agent has wrong tools       | `tools` field misconfigured     | Check comma-separated list               |
+| Hooks not running           | Invalid JSON in settings        | Validate with `jq`                       |
+| Agent does unexpected work  | Missing constraints in prompt   | Add explicit "do NOT" rules              |
+| Context exhausted quickly   | Inherited all tools             | Restrict to needed tools only            |
+| AskUserQuestion not working | Tool is filtered from subagents | Use parent relay pattern (§13.2)         |
+| Task tool not working       | Tool unavailable to subagents   | Use parent orchestration pattern (§13.3) |
 
 Source: [PubNub Best Practices][pubnub], [GitHub Issue #12890][gh-12890]
 
-### Iterative Refinement
+### 13.1 Iterative Refinement
 
 1. Run agent on task
 2. Note what went wrong vs. expected
@@ -927,7 +950,7 @@ Source: [PubNub Best Practices][pubnub], [GitHub Issue #12890][gh-12890]
 
 > "Use iterative prompting to refine behavior: Supply context on failed actions (what vs. expected), explain desired outcome, pass in the .md config for Claude to suggest modifications." — [PubNub Best Practices][pubnub]
 
-### AskUserQuestion Limitation
+### 13.2 AskUserQuestion Limitation
 
 **Known Bug**: `AskUserQuestion` is explicitly filtered out when spawning subagents at the system level, regardless of what you configure in the `tools:` field. ([GitHub Issue #12890][gh-12890])
 
@@ -996,6 +1019,88 @@ ANSWERS: MODEL=sonnet, TOOLS=Read,Grep,Glob, PERMISSION=default, LOCATION=.claud
 This approach aligns with PubNub's HITL (Human-in-the-Loop) pattern: "If acceptance criteria are ambiguous, ask numbered questions and WAIT for human answers." ([PubNub Best Practices][pubnub])
 
 > "A community response suggested an indirect approach: Tell the sub-agent to request the use of AskUserQuestion. The primary agent can then use the tool to propagate questions back to the user." — [GitHub Issue #12890][gh-12890]
+
+### 13.3 Task Tool Limitation
+
+**Subagents cannot spawn other subagents.** The Task tool (used to invoke subagents) is not available to subagents themselves. This is an architectural constraint, not a bug.
+
+#### Symptoms
+
+- Subagent attempts to call Task tool but tool is not available
+- Subagent tries to invoke quality reviewer but nothing happens
+- Subagent outputs instructions like "Use the Task tool to..." but cannot execute them
+
+#### Architectural Impact
+
+This limitation affects workflows that require subagents to chain other subagents:
+
+| Workflow                    | Blocked Approach                     | Working Approach                        |
+|:----------------------------|:-------------------------------------|:----------------------------------------|
+| Quality review integration  | Subagent invokes quality reviewer    | Parent command orchestrates review      |
+| Multi-agent pipelines       | Subagent chains to next subagent     | Parent command chains agents            |
+| Delegation within subagents | Subagent delegates to specialist     | Parent handles all delegation           |
+
+#### Workaround: Parent-Orchestrated Pattern
+
+Since subagents cannot spawn subagents, all multi-agent orchestration must happen at the parent level (slash commands or main conversation):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Parent (Command or Main Conversation)                       │
+│   • Has Task tool access                                    │
+│   • Can spawn subagents                                     │
+│   • Orchestrates multi-agent workflows                      │
+│   • Handles quality review loops                            │
+└─────────────────────────────────────────────────────────────┘
+         │                    │                    │
+         ▼                    ▼                    ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ Subagent A      │  │ Subagent B      │  │ Quality Reviewer│
+│ (no Task tool)  │  │ (no Task tool)  │  │ (no Task tool)  │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+```
+
+#### Implementation Pattern
+
+Subagent outputs status block signaling need for external action:
+
+```markdown
+## Output
+
+**If work needs external action (quality review, next agent):**
+```
+STATUS: READY_FOR_REVIEW
+artifact_name: {name}
+artifact_location: {path}
+content:
+~~~markdown
+{full content here}
+~~~
+summary: Ready for quality review
+```
+```
+
+Parent command parses status and orchestrates:
+
+```markdown
+## Workflow
+
+1. Invoke creator subagent
+2. Parse status block:
+   - `STATUS: READY_FOR_REVIEW` → Invoke quality reviewer → write if passed
+   - `STATUS: COMPLETED` → done
+3. Handle quality fix loop if needed (max 3 attempts)
+```
+
+#### Key Insight
+
+**Commands are the orchestration layer.** Design subagents to be single-purpose units that output structured status blocks. Commands parse these blocks and handle:
+- User interaction (`AskUserQuestion`)
+- Agent chaining (`Task` tool)
+- Quality review loops
+- File writing after approval
+
+This separation of concerns makes workflows more maintainable and testable.
 
 ---
 

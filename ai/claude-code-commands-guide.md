@@ -319,7 +319,7 @@ Sources: [PubNub Best Practices][pubnub], [wshobson/agents][wshobson], [Delegati
 Subagents end their output with:
 
 ```
-STATUS: {NEEDS_INPUT|COMPLETED|READY_FOR_NEXT|QUALITY_FAILED}
+STATUS: {NEEDS_INPUT|COMPLETED|READY_FOR_NEXT|READY_FOR_REVIEW}
 key1: value1
 key2: value2
 summary: one-line description
@@ -335,6 +335,21 @@ questions:
 summary: awaiting {what user needs to provide}
 ```
 
+For `READY_FOR_REVIEW`, include embedded content:
+
+```
+STATUS: READY_FOR_REVIEW
+artifact_name: {name}
+artifact_location: {path}
+content:
+~~~markdown
+{full content here}
+~~~
+summary: Ready for quality review
+```
+
+**Why `READY_FOR_REVIEW`?** Subagents cannot spawn other subagents (Task tool not available). Commands must orchestrate quality review. See [Subagents Guide §13.3](claude-code-subagents-guide.md#133-task-tool-limitation).
+
 #### Command Implementation
 
 ```markdown
@@ -345,18 +360,20 @@ summary: awaiting {what user needs to provide}
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion`, resume with `ANSWERS:`
    - `STATUS: COMPLETED` → Report success, done
    - `STATUS: READY_FOR_NEXT` → Invoke next agent with provided context
-   - `STATUS: QUALITY_FAILED` → Present remaining issues, request manual intervention
+   - `STATUS: READY_FOR_REVIEW` → Invoke quality reviewer, write if passed, resume with feedback if not
 3. **Repeat** until final `STATUS: COMPLETED`
 ```
 
-#### Example: Agent Chain
+#### Example: Agent Chain with Quality Review
 
 ```
 subagent-creator
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
-├── STATUS: COMPLETED → done
-└── STATUS: READY_FOR_COMMAND → invoke command-creator
-                                  └── STATUS: COMPLETED → done
+└── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
+    ├── Grade A → write file → check slash_command
+    │   ├── yes → invoke command-creator → quality review → write → done
+    │   └── no → done
+    └── Grade < A → resume with REVIEW_FEEDBACK (max 3x)
 ```
 
 #### Full Example Command
@@ -376,18 +393,24 @@ $ARGUMENTS
 1. **Invoke subagent-creator** with Task tool, stating mode explicitly
 2. **Parse status block** from output:
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion`, resume with `ANSWERS:`
-   - `STATUS: COMPLETED` → Report success, done
-   - `STATUS: READY_FOR_COMMAND` → Continue to step 3
-3. **If `STATUS: READY_FOR_COMMAND`**:
-   - Parse: `agent_path`, `command_name`, `command_location`
-   - Invoke **command-creator** with context
-   - Handle any `STATUS: NEEDS_INPUT` from command-creator
-   - When `STATUS: COMPLETED`, report both agent and command
+   - `STATUS: READY_FOR_REVIEW` → Continue to step 3
+3. **If `STATUS: READY_FOR_REVIEW`**:
+   - Parse: `agent_name`, `agent_location`, `slash_command`, `content`
+   - Invoke **subagent-quality-reviewer** with embedded content
+   - If grade < A: Resume subagent-creator with `REVIEW_FEEDBACK:` (max 3 attempts)
+   - If grade A: Write agent to `{agent_location}/{agent_name}.md`
+4. **If `slash_command: yes: /command-name`**:
+   - Invoke **command-creator** for the agent
+   - Handle `STATUS: READY_FOR_REVIEW` from command-creator (same quality review flow)
+   - Report both agent and command to user
+5. **If `slash_command: no`**:
+   - Report success with agent path
 ```
 
 This pattern is more reliable than ad-hoc delegation blocks because:
 - Status format is standardized and parseable
 - Commands know exactly what to expect
+- Commands orchestrate quality review (subagents cannot spawn subagents)
 - Easy to add new status types for complex workflows
 
 ---
