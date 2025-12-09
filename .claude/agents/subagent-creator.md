@@ -301,24 +301,24 @@ Before proceeding, confirm:
 
 After validation checkpoint passes, perform quality review in staging location:
 
-1. **Create staging directory** if it doesn't exist using Bash: `mkdir -p ~/.claude/tmp/`
-2. **Write agent file to STAGING location**: `~/.claude/tmp/{agent-name}.md`
+1. **Write agent file to STAGING location**: `tmp/{agent-name}.md` (project-local tmp directory)
    - **NEVER write directly to final location** until grade A is achieved
    - Staging location allows iterative fixes without polluting the agents directory
-3. **Invoke quality review using Task tool** with these EXACT parameters:
+   - If write fails due to missing directory, create it with `mkdir -p tmp/` and retry
+2. **Invoke quality review using Task tool** with these EXACT parameters:
    ```
    Task tool call:
      subagent_type: "subagent-quality-reviewer"
-     prompt: "Review the subagent definition at ~/.claude/tmp/{agent-name}.md"
+     prompt: "Review the subagent definition at tmp/{agent-name}.md"
      description: "Quality review agent"
    ```
    **NEVER use `claude --print`, `claude` CLI, or any Bash command to invoke quality review.**
    **ALWAYS use the Task tool with subagent_type: "subagent-quality-reviewer".**
-4. **Parse review output**:
+3. **Parse review output**:
    - Extract grade (A/B/C/D/F)
    - Extract critical issues
    - Extract warnings
-5. **Quality gate decision**:
+4. **Quality gate decision**:
    - **Only grade A is acceptable** — Any other grade requires fixes
    - **Grade A**: Proceed to Phase 4d (move to final location)
    - **Grade B/C/D/F**: Fix all issues and retry (see Phase 4c)
@@ -331,7 +331,7 @@ After validation checkpoint passes, perform quality review in staging location:
 If quality review returns grade < A:
 
 1. **Parse the review findings** — identify each critical issue and warning with line numbers
-2. **Fix each issue** in the STAGING file (`~/.claude/tmp/{agent-name}.md`) using the Edit tool:
+2. **Fix each issue** in the STAGING file (`tmp/{agent-name}.md`) using the Edit tool:
    - Address critical issues first
    - Then address warnings
    - Use the line numbers from the review to locate issues
@@ -345,7 +345,7 @@ If quality review returns grade < A:
 STATUS: QUALITY_FAILED
 attempts: 3
 final_grade: {last grade}
-staging_path: ~/.claude/tmp/{agent-name}.md
+staging_path: tmp/{agent-name}.md
 remaining_issues:
 {list of unfixed issues}
 summary: Unable to achieve grade A after 3 attempts. Manual intervention required.
@@ -361,11 +361,11 @@ summary: Unable to achieve grade A after 3 attempts. Manual intervention require
 
 Once grade A is achieved:
 
-1. **Read the reviewed agent** from `~/.claude/tmp/{agent-name}.md`
+1. **Read the reviewed agent** from `tmp/{agent-name}.md`
 2. **Write to final location** (from user's LOCATION answer):
    - Project-level: `.claude/agents/{agent-name}.md`
    - User-level: `~/.claude/agents/{agent-name}.md`
-3. **Delete staging file**: Remove `~/.claude/tmp/{agent-name}.md`
+3. **Delete staging file**: Remove `tmp/{agent-name}.md`
 4. **Proceed to Phase 5** status output
 
 ## Quality Checklist
