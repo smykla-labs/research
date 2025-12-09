@@ -297,45 +297,48 @@ Before proceeding, confirm:
 
 **STOP** if any mandatory requirement is missing. Add them before continuing.
 
-### Phase 4b: Quality Review
+### Phase 4b: Quality Review (In-Memory)
 
-After validation checkpoint passes, perform quality review in staging location:
+After validation checkpoint passes, perform quality review **without writing to staging**:
 
-1. **Write agent file to STAGING location**: `tmp/{agent-name}.md` (project-local tmp directory)
-   - **NEVER write directly to final location** until grade A is achieved
-   - Staging location allows iterative fixes without polluting the agents directory
-   - If write fails due to missing directory, create it with `mkdir -p tmp/` and retry
-2. **Invoke quality review using Task tool** with these EXACT parameters:
+1. **Build agent content in memory** — Keep the full agent definition as a string variable
+2. **Invoke quality review using Task tool** with content embedded inline:
    ```
    Task tool call:
      subagent_type: "subagent-quality-reviewer"
-     prompt: "Review the subagent definition at tmp/{agent-name}.md"
+     prompt: |
+       Review this agent definition:
+
+       ~~~markdown
+       {full agent content here}
+       ~~~
      description: "Quality review agent"
    ```
-   **NEVER use `claude --print`, `claude` CLI, or any Bash command to invoke quality review.**
-   **ALWAYS use the Task tool with subagent_type: "subagent-quality-reviewer".**
+   **NEVER write to staging files for quality review.**
+   **NEVER use `claude --print`, `claude` CLI, or any Bash command.**
+   **ALWAYS embed the full agent content in the prompt using `~~~markdown` fences.**
 3. **Parse review output**:
    - Extract grade (A/B/C/D/F)
    - Extract critical issues
    - Extract warnings
 4. **Quality gate decision**:
    - **Only grade A is acceptable** — Any other grade requires fixes
-   - **Grade A**: Proceed to Phase 4d (move to final location)
-   - **Grade B/C/D/F**: Fix all issues and retry (see Phase 4c)
+   - **Grade A**: Proceed to Phase 4d (write to final location)
+   - **Grade B/C/D/F**: Fix issues in memory and retry (see Phase 4c)
 
-**CRITICAL**: Do NOT skip quality review. Every agent MUST achieve grade A before leaving staging.
-**CRITICAL**: Quality review MUST use Task tool, NEVER `claude` CLI commands.
+**CRITICAL**: Do NOT skip quality review. Every agent MUST achieve grade A before writing.
+**CRITICAL**: Quality review receives content INLINE via prompt, NOT via file.
 
-### Phase 4c: Quality Fix Loop
+### Phase 4c: Quality Fix Loop (In-Memory)
 
 If quality review returns grade < A:
 
 1. **Parse the review findings** — identify each critical issue and warning with line numbers
-2. **Fix each issue** in the STAGING file (`tmp/{agent-name}.md`) using the Edit tool:
+2. **Fix each issue in memory** — modify your agent content string:
    - Address critical issues first
    - Then address warnings
    - Use the line numbers from the review to locate issues
-3. **Re-run quality review** — invoke subagent-quality-reviewer again on staging file
+3. **Re-run quality review** — pass the updated content inline via prompt
 4. **Repeat until grade A** — continue fixing and reviewing until grade A is achieved
 5. **Proceed to Phase 4d** once grade A is achieved
 
@@ -345,7 +348,6 @@ If quality review returns grade < A:
 STATUS: QUALITY_FAILED
 attempts: 3
 final_grade: {last grade}
-staging_path: tmp/{agent-name}.md
 remaining_issues:
 {list of unfixed issues}
 summary: Unable to achieve grade A after 3 attempts. Manual intervention required.
@@ -357,16 +359,16 @@ summary: Unable to achieve grade A after 3 attempts. Manual intervention require
 - Missing strong keywords → Add NEVER/ALWAYS/ZERO/MAXIMUM to constraints
 - Missing examples → Add good/bad examples with proper tags
 
-### Phase 4d: Move to Final Location
+### Phase 4d: Write to Final Location
 
 Once grade A is achieved:
 
-1. **Read the reviewed agent** from `tmp/{agent-name}.md`
-2. **Write to final location** (from user's LOCATION answer):
+1. **Write agent to final location** (from user's LOCATION answer):
    - Project-level: `.claude/agents/{agent-name}.md`
    - User-level: `~/.claude/agents/{agent-name}.md`
-3. **Delete staging file**: Remove `tmp/{agent-name}.md`
-4. **Proceed to Phase 5** status output
+2. **Proceed to Phase 5** status output
+
+**Note**: No staging files to clean up — content was reviewed in-memory.
 
 ## Quality Checklist
 

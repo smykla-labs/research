@@ -401,45 +401,48 @@ For commands that invoke subagents, these elements are **required**:
 
 **Do NOT write the file if any mandatory requirement is missing.**
 
-### Phase 4: Quality Review
+### Phase 4: Quality Review (In-Memory)
 
-After validation checkpoint passes, perform quality review in staging location:
+After validation checkpoint passes, perform quality review **without writing to staging**:
 
-1. **Write command file to STAGING location**: `tmp/{command-name}.md` (project-local tmp directory)
-   - **NEVER write directly to final location** until PASS status is achieved
-   - Staging location allows iterative fixes without polluting the commands directory
-   - If write fails due to missing directory, create it with `mkdir -p tmp/` and retry
-2. **Invoke quality review using Task tool** with these EXACT parameters:
+1. **Build command content in memory** — Keep the full command definition as a string variable
+2. **Invoke quality review using Task tool** with content embedded inline:
    ```
    Task tool call:
      subagent_type: "command-quality-reviewer"
-     prompt: "Review the command definition at tmp/{command-name}.md"
+     prompt: |
+       Review this command definition:
+
+       ~~~markdown
+       {full command content here}
+       ~~~
      description: "Quality review command"
    ```
-   **NEVER use `claude --print`, `claude` CLI, or any Bash command to invoke quality review.**
-   **ALWAYS use the Task tool with subagent_type: "command-quality-reviewer".**
+   **NEVER write to staging files for quality review.**
+   **NEVER use `claude --print`, `claude` CLI, or any Bash command.**
+   **ALWAYS embed the full command content in the prompt using `~~~markdown` fences.**
 3. **Parse review output**:
    - Extract status (PASS/WARN/FAIL)
    - Extract critical issues
    - Extract warnings
 4. **Quality gate decision**:
    - **Only PASS is acceptable** — Any other status requires fixes
-   - **PASS**: Proceed to Phase 5 (move to final location)
-   - **WARN or FAIL**: Fix all issues and retry (see Phase 4b)
+   - **PASS**: Proceed to Phase 5 (write to final location)
+   - **WARN or FAIL**: Fix issues in memory and retry (see Phase 4b)
 
-**CRITICAL**: Do NOT skip quality review. Every command MUST achieve PASS before leaving staging.
-**CRITICAL**: Quality review MUST use Task tool, NEVER `claude` CLI commands.
+**CRITICAL**: Do NOT skip quality review. Every command MUST achieve PASS before writing.
+**CRITICAL**: Quality review receives content INLINE via prompt, NOT via file.
 
-### Phase 4b: Quality Fix Loop
+### Phase 4b: Quality Fix Loop (In-Memory)
 
 If quality review returns WARN or FAIL:
 
 1. **Parse the review findings** — identify each critical issue and warning with line numbers
-2. **Fix each issue** in the STAGING file (`tmp/{command-name}.md`) using the Edit tool:
+2. **Fix each issue in memory** — modify your command content string:
    - Address critical issues first
    - Then address warnings
    - Use the line numbers from the review to locate issues
-3. **Re-run quality review** — invoke command-quality-reviewer again on staging file
+3. **Re-run quality review** — pass the updated content inline via prompt
 4. **Repeat until PASS** — continue fixing and reviewing until PASS is achieved
 5. **Proceed to Phase 5** once PASS is achieved
 
@@ -449,22 +452,21 @@ If quality review returns WARN or FAIL:
 STATUS: QUALITY_FAILED
 attempts: 3
 final_status: {WARN or FAIL}
-staging_path: tmp/{command-name}.md
 remaining_issues:
 {list of unfixed issues}
 summary: Unable to achieve PASS after 3 attempts. Manual intervention required.
 ```
 
-### Phase 5: Move to Final Location
+### Phase 5: Write to Final Location
 
 Once PASS is achieved:
 
-1. **Read the reviewed command** from `tmp/{command-name}.md`
-2. **Write to final location**:
+1. **Write command to final location**:
    - Project-level: `.claude/commands/{command-name}.md`
    - User-level: `~/.claude/commands/{command-name}.md`
-3. **Delete staging file**: Remove `tmp/{command-name}.md`
-4. **Proceed to status output**
+2. **Proceed to status output**
+
+**Note**: No staging files to clean up — content was reviewed in-memory.
 
 ## Output
 
