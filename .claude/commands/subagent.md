@@ -26,7 +26,7 @@ Determine mode from input path BEFORE invoking subagent:
 
 ## Workflow
 
-Due to Claude Code limitation (AskUserQuestion is filtered from subagents), follow this status-based flow:
+Due to Claude Code limitations (AskUserQuestion filtered from subagents, Task tool not available to subagents), follow this status-based flow:
 
 ### Step 1: Invoke subagent-creator
 
@@ -42,39 +42,69 @@ Parse the status block from subagent output:
 3. Format answers: `ANSWERS: MODEL=X, TOOLS=X, PERMISSION=X, LOCATION=X, SLASH_COMMAND=X`
 4. Resume subagent with `resume` parameter
 
-**If `STATUS: QUALITY_FAILED`**:
-- Quality review failed after 3 automatic fix attempts
-- Present the `remaining_issues:` to the user
-- Report that manual intervention is required to achieve grade A
+**If `STATUS: READY_FOR_REVIEW`**:
+1. Parse: `agent_name`, `agent_location`, `slash_command`, and `content` (in `~~~markdown` fences)
+2. Invoke **subagent-quality-reviewer**:
+   ```
+   Review this agent definition:
 
-**If `STATUS: COMPLETED`**:
-- Agent creation is done (passed quality review with grade A)
-- Report success to user with the summary
+   ~~~markdown
+   {content from status block}
+   ~~~
+   ```
+3. Parse review result:
+   - **Grade A**: Write agent to `{agent_location}/{agent_name}.md`, proceed to Step 3
+   - **Grade < A**: Resume subagent with `REVIEW_FEEDBACK:` (see Quality Fix Loop)
 
-**If `STATUS: READY_FOR_COMMAND`**:
-- Parse: `agent_path`, `agent_name`, `command_name`, `command_location`
-- Invoke **command-creator** subagent:
-  ```
-  Create slash command for agent at {agent_path}.
-  Agent name: {agent_name}
-  Command name: {command_name}
-  Save to: {command_location}
-  ```
-- Handle any `STATUS: NEEDS_INPUT` from command-creator
-- When command-creator returns `STATUS: COMPLETED`, report both agent and command to user
+### Quality Fix Loop (max 3 attempts)
+
+If quality review returns grade < A:
+
+1. Resume subagent with:
+   ```
+   REVIEW_FEEDBACK:
+   grade: {grade}
+   critical_issues:
+   {list from review}
+   warnings:
+   {list from review}
+   ```
+2. Subagent will fix issues and output `STATUS: READY_FOR_REVIEW` again
+3. Repeat quality review
+4. After 3 failed attempts, report to user:
+   - Final grade and remaining issues
+   - Manual intervention required
+
+### Step 3: Handle Slash Command Request
+
+After writing the agent (quality review passed):
+
+**If `slash_command: yes: /command-name`**:
+1. Invoke **command-creator** subagent:
+   ```
+   Create slash command for agent at {agent_location}/{agent_name}.md
+   Agent name: {agent_name}
+   Command name: {command-name}
+   Save to: {.claude/commands/ or ~/.claude/commands/ based on agent_location}
+   ```
+2. Handle `STATUS: READY_FOR_REVIEW` from command-creator (same quality flow)
+3. Report both agent and command to user
+
+**If `slash_command: no`**:
+- Report success with agent path and summary
 
 ## Status Chaining Summary
 
 ```
 subagent-creator
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
-├── STATUS: QUALITY_FAILED → present remaining issues → manual intervention needed
-├── STATUS: COMPLETED → done (grade A achieved)
-└── STATUS: READY_FOR_COMMAND → invoke command-creator
-                                  └── STATUS: COMPLETED → done
+└── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
+    ├── Grade A → write file → check slash_command
+    │   ├── yes → invoke command-creator → quality review → write → done
+    │   └── no → done
+    └── Grade < A → resume with REVIEW_FEEDBACK (max 3x)
 ```
 
-**Note**: Quality review and fixes happen automatically inside subagent-creator (Phase 4b/4c).
-`STATUS: QUALITY_FAILED` only appears if automatic fixes fail after 3 attempts.
+**Note**: Quality review is orchestrated here because subagents cannot spawn other subagents (Task tool not available to subagents).
 
 **CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print as text.

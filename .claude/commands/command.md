@@ -21,6 +21,8 @@ Determine command type from input:
 
 ## Workflow
 
+Due to Claude Code limitations (AskUserQuestion filtered from subagents, Task tool not available to subagents), follow this status-based flow:
+
 ### Step 1: Invoke command-creator
 
 Use the Task tool with the detected type stated explicitly.
@@ -35,25 +37,49 @@ Parse the status block from subagent output:
 3. Format answers: `ANSWERS: KEY=value, ...`
 4. Resume subagent with `resume` parameter
 
-**If `STATUS: QUALITY_FAILED`**:
-- Quality review failed after 3 automatic fix attempts
-- Present the `remaining_issues:` to the user
-- Report that manual intervention is required to achieve PASS
+**If `STATUS: READY_FOR_REVIEW`**:
+1. Parse: `command_name`, `command_location`, `for_agent`, and `content` (in `~~~markdown` fences)
+2. Invoke **command-quality-reviewer**:
+   ```
+   Review this command definition:
 
-**If `STATUS: COMPLETED`**:
-- Command creation is done (passed quality review)
-- Report success with command name and test example
+   ~~~markdown
+   {content from status block}
+   ~~~
+   ```
+3. Parse review result:
+   - **PASS**: Write command to `{command_location}/{command_name}.md`, report success
+   - **WARN or FAIL**: Resume subagent with `REVIEW_FEEDBACK:` (see Quality Fix Loop)
+
+### Quality Fix Loop (max 3 attempts)
+
+If quality review returns WARN or FAIL:
+
+1. Resume subagent with:
+   ```
+   REVIEW_FEEDBACK:
+   status: {WARN or FAIL}
+   critical_issues:
+   {list from review}
+   warnings:
+   {list from review}
+   ```
+2. Subagent will fix issues and output `STATUS: READY_FOR_REVIEW` again
+3. Repeat quality review
+4. After 3 failed attempts, report to user:
+   - Final status and remaining issues
+   - Manual intervention required
 
 ## Status Flow
 
 ```
 command-creator
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
-├── STATUS: QUALITY_FAILED → present remaining issues → manual intervention needed
-└── STATUS: COMPLETED → done (quality review passed)
+└── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
+    ├── PASS → write file → done
+    └── WARN/FAIL → resume with REVIEW_FEEDBACK (max 3x)
 ```
 
-**Note**: Quality review and fixes happen automatically inside command-creator (Phase 4/4b).
-`STATUS: QUALITY_FAILED` only appears if automatic fixes fail after 3 attempts.
+**Note**: Quality review is orchestrated here because subagents cannot spawn other subagents (Task tool not available to subagents).
 
 **CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print as text.

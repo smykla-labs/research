@@ -401,100 +401,66 @@ For commands that invoke subagents, these elements are **required**:
 
 **Do NOT write the file if any mandatory requirement is missing.**
 
-### Phase 4: Quality Review (In-Memory)
+### Phase 4: Output for Quality Review
 
-After validation checkpoint passes, perform quality review **without writing to staging**:
+After validation checkpoint passes, output the command content for quality review by the parent command:
 
-1. **Build command content in memory** — Keep the full command definition as a string variable
-2. **Invoke quality review** by calling the Task tool (NOT Bash, NOT CLI):
-   - `subagent_type`: `command-quality-reviewer`
-   - `description`: `Quality review command`
-   - `prompt`: The full command content wrapped in `~~~markdown` fences
+1. **Build command content** — Have the full command definition ready
+2. **Output `STATUS: READY_FOR_REVIEW`** with the content embedded:
 
-   Example prompt value:
-   ```
-   Review this command definition:
+```
+STATUS: READY_FOR_REVIEW
+command_name: {command-name}
+command_location: {.claude/commands/ or ~/.claude/commands/}
+for_agent: {agent name if for an agent, or "standalone"}
+content:
+~~~markdown
+{full command definition here}
+~~~
+summary: Command ready for quality review
+```
 
-   ~~~markdown
-   ---
-   description: Example command
-   ---
-   Command content here...
-   ~~~
-   ```
+The parent command will:
+1. Invoke the quality reviewer with the embedded content
+2. If status != PASS: Resume this agent with `REVIEW_FEEDBACK:` containing issues to fix
+3. If PASS: Write the command to the final location
 
-   **NEVER use Bash tool or CLI commands like `task --subagent-type`.**
-   **NEVER use `claude --print` or any shell command.**
-   **Use the Task tool directly — it's an XML tool invocation, not a CLI command.**
-3. **Parse review output**:
-   - Extract status (PASS/WARN/FAIL)
-   - Extract critical issues
-   - Extract warnings
-4. **Quality gate decision**:
-   - **Only PASS is acceptable** — Any other status requires fixes
-   - **PASS**: Proceed to Phase 5 (write to final location)
-   - **WARN or FAIL**: Fix issues in memory and retry (see Phase 4b)
+### Phase 4b: Handle Review Feedback
 
-**CRITICAL**: Do NOT skip quality review. Every command MUST achieve PASS before writing.
-**CRITICAL**: Quality review receives content INLINE via prompt, NOT via file.
+If resumed with `REVIEW_FEEDBACK:`:
 
-### Phase 4b: Quality Fix Loop (In-Memory)
-
-If quality review returns WARN or FAIL:
-
-1. **Parse the review findings** — identify each critical issue and warning with line numbers
-2. **Fix each issue in memory** — modify your command content string:
+1. **Parse the feedback** — identify critical issues and warnings with line numbers
+2. **Fix each issue** in your command content:
    - Address critical issues first
    - Then address warnings
-   - Use the line numbers from the review to locate issues
-3. **Re-run quality review** — pass the updated content inline via prompt
-4. **Repeat until PASS** — continue fixing and reviewing until PASS is achieved
-5. **Proceed to Phase 5** once PASS is achieved
+3. **Output `STATUS: READY_FOR_REVIEW`** again with the fixed content
 
-**MAXIMUM 3 retry attempts** — If PASS is not achieved after 3 attempts, output:
+**MAXIMUM 3 retry attempts** — After 3 feedback cycles, the parent command will report failure.
 
-```
-STATUS: QUALITY_FAILED
-attempts: 3
-final_status: {WARN or FAIL}
-remaining_issues:
-{list of unfixed issues}
-summary: Unable to achieve PASS after 3 attempts. Manual intervention required.
-```
-
-### Phase 5: Write to Final Location
-
-Once PASS is achieved:
-
-1. **Write command to final location**:
-   - Project-level: `.claude/commands/{command-name}.md`
-   - User-level: `~/.claude/commands/{command-name}.md`
-2. **Proceed to status output**
-
-**Note**: No staging files to clean up — content was reviewed in-memory.
+**Note**: Quality review is orchestrated by the parent command because subagents cannot spawn other subagents (Task tool not available to subagents).
 
 ## Output
 
-Write the command file to:
-- Project-level: `.claude/commands/{command-name}.md`
-- User-level: `~/.claude/commands/{command-name}.md`
-
 ### Status-Based Output
 
-Always end your response with a status block:
+Always end your response with a status block that the parent command can parse:
+
+**After Phase 4 validation (ready for quality review):**
 
 ```
-STATUS: COMPLETED
-command_path: {path to created command}
-command_name: /{command-name}
-for_agent: {agent name if created for an agent, or "standalone"}
-summary: {one-line description}
+STATUS: READY_FOR_REVIEW
+command_name: {command-name}
+command_location: {.claude/commands/ or ~/.claude/commands/}
+for_agent: {agent name if for an agent, or "standalone"}
+content:
+~~~markdown
+{full command definition}
+~~~
+summary: Command ready for quality review
 ```
 
-### Report Format
+The parent command will invoke the quality reviewer and either:
+- Resume with `REVIEW_FEEDBACK:` if fixes needed
+- Write the command to final location if PASS achieved
 
-Before the status block, provide a human-readable summary:
-
-1. **Created**: `{path}`
-2. **Command**: `/{command-name}`
-3. **Test**: `/{command-name} {example args}`
+**Note**: Do NOT output `STATUS: COMPLETED` — the parent command handles final status after quality review passes.

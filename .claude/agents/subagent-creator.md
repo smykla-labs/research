@@ -297,86 +297,43 @@ Before proceeding, confirm:
 
 **STOP** if any mandatory requirement is missing. Add them before continuing.
 
-### Phase 4b: Quality Review (In-Memory)
+### Phase 4b: Output for Quality Review
 
-After validation checkpoint passes, perform quality review **without writing to staging**:
+After validation checkpoint passes, output the agent content for quality review by the parent command:
 
-1. **Build agent content in memory** — Keep the full agent definition as a string variable
-2. **Invoke quality review** by calling the Task tool (NOT Bash, NOT CLI):
-   - `subagent_type`: `subagent-quality-reviewer`
-   - `description`: `Quality review agent`
-   - `prompt`: The full agent content wrapped in `~~~markdown` fences
+1. **Build agent content** — Have the full agent definition ready
+2. **Output `STATUS: READY_FOR_REVIEW`** with the content embedded:
 
-   Example prompt value:
-   ```
-   Review this agent definition:
+```
+STATUS: READY_FOR_REVIEW
+agent_name: {agent-name}
+agent_location: {.claude/agents/ or ~/.claude/agents/}
+slash_command: {yes: /command-name | no}
+content:
+~~~markdown
+{full agent definition here}
+~~~
+summary: Agent ready for quality review
+```
 
-   ~~~markdown
-   ---
-   name: example-agent
-   description: Example agent
-   tools: Read, Grep
-   model: haiku
-   ---
-   Agent content here...
-   ~~~
-   ```
+The parent command will:
+1. Invoke the quality reviewer with the embedded content
+2. If grade < A: Resume this agent with `REVIEW_FEEDBACK:` containing issues to fix
+3. If grade A: Write the agent to the final location
 
-   **NEVER use Bash tool or CLI commands like `task --subagent-type`.**
-   **NEVER use `claude --print` or any shell command.**
-   **Use the Task tool directly — it's an XML tool invocation, not a CLI command.**
-3. **Parse review output**:
-   - Extract grade (A/B/C/D/F)
-   - Extract critical issues
-   - Extract warnings
-4. **Quality gate decision**:
-   - **Only grade A is acceptable** — Any other grade requires fixes
-   - **Grade A**: Proceed to Phase 4d (write to final location)
-   - **Grade B/C/D/F**: Fix issues in memory and retry (see Phase 4c)
+### Phase 4c: Handle Review Feedback
 
-**CRITICAL**: Do NOT skip quality review. Every agent MUST achieve grade A before writing.
-**CRITICAL**: Quality review receives content INLINE via prompt, NOT via file.
+If resumed with `REVIEW_FEEDBACK:`:
 
-### Phase 4c: Quality Fix Loop (In-Memory)
-
-If quality review returns grade < A:
-
-1. **Parse the review findings** — identify each critical issue and warning with line numbers
-2. **Fix each issue in memory** — modify your agent content string:
+1. **Parse the feedback** — identify critical issues and warnings with line numbers
+2. **Fix each issue** in your agent content:
    - Address critical issues first
    - Then address warnings
-   - Use the line numbers from the review to locate issues
-3. **Re-run quality review** — pass the updated content inline via prompt
-4. **Repeat until grade A** — continue fixing and reviewing until grade A is achieved
-5. **Proceed to Phase 4d** once grade A is achieved
+3. **Output `STATUS: READY_FOR_REVIEW`** again with the fixed content
 
-**MAXIMUM 3 retry attempts** — If grade A is not achieved after 3 attempts, output:
+**MAXIMUM 3 retry attempts** — After 3 feedback cycles, the parent command will report failure.
 
-```
-STATUS: QUALITY_FAILED
-attempts: 3
-final_grade: {last grade}
-remaining_issues:
-{list of unfixed issues}
-summary: Unable to achieve grade A after 3 attempts. Manual intervention required.
-```
-
-**Note**: Most issues can be fixed in 1-2 iterations. Common fixes:
-- Missing uncertainty handling → Add `STATUS: NEEDS_INPUT` constraint and edge case
-- Missing trigger keyword → Add "PROACTIVELY" or "MUST BE USED" to description
-- Missing strong keywords → Add NEVER/ALWAYS/ZERO/MAXIMUM to constraints
-- Missing examples → Add good/bad examples with proper tags
-
-### Phase 4d: Write to Final Location
-
-Once grade A is achieved:
-
-1. **Write agent to final location** (from user's LOCATION answer):
-   - Project-level: `.claude/agents/{agent-name}.md`
-   - User-level: `~/.claude/agents/{agent-name}.md`
-2. **Proceed to Phase 5** status output
-
-**Note**: No staging files to clean up — content was reviewed in-memory.
+**Note**: Quality review is orchestrated by the parent command because subagents cannot spawn other subagents (Task tool not available to subagents).
 
 ## Quality Checklist
 
@@ -701,47 +658,31 @@ Additional questions if context is unclear:
 - [ ] Density rules table included
 - [ ] Done When has 4-6 measurable criteria
 - [ ] No anti-patterns detected in final output
-- [ ] Agent written to correct location
-- [ ] **Quality review passed** (grade A from subagent-quality-reviewer)
-- [ ] Slash command created (if user requested)
+- [ ] `STATUS: READY_FOR_REVIEW` output with full agent content
 - [ ] User informed of any assumptions made
 
 ## Output
 
-Write the agent definition to the appropriate location:
-- Project-level: `.claude/agents/{name}.md`
-- User-level: `~/.claude/agents/{name}.md`
-
 ### Status-Based Output
 
-Always end your response with a status block that the parent agent can parse:
+Always end your response with a status block that the parent command can parse:
 
-**If NO slash command requested:**
-
-```
-STATUS: COMPLETED
-agent_path: {path to created/modified agent}
-agent_name: {agent name}
-summary: {one-line description of what was done}
-```
-
-**If slash command WAS requested:**
+**After Phase 4 validation (ready for quality review):**
 
 ```
-STATUS: READY_FOR_COMMAND
-agent_path: {path to created/modified agent}
-agent_name: {agent name}
-command_name: {suggested command name, e.g., /my-agent}
-command_location: {.claude/commands/ or ~/.claude/commands/}
-summary: {one-line description of agent}
+STATUS: READY_FOR_REVIEW
+agent_name: {agent-name}
+agent_location: {.claude/agents/ or ~/.claude/agents/}
+slash_command: {yes: /command-name | no}
+content:
+~~~markdown
+{full agent definition}
+~~~
+summary: Agent ready for quality review
 ```
 
-The parent agent will detect `STATUS: READY_FOR_COMMAND` and invoke command-creator with the provided parameters. Do NOT create the command file yourself.
+The parent command will invoke the quality reviewer and either:
+- Resume with `REVIEW_FEEDBACK:` if fixes needed
+- Write the agent to final location if grade A achieved
 
-### Report Format
-
-Before the status block, provide a human-readable summary:
-
-1. **Created/Modified**: `{path}`
-2. **Capabilities**: {brief list}
-3. **Next step**: {if READY_FOR_COMMAND: "Command creation pending" | if COMPLETED: "Ready to use"}
+**Note**: Do NOT output `STATUS: COMPLETED` — the parent command handles final status after quality review passes.
