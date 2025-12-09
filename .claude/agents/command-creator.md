@@ -46,14 +46,14 @@ When invoked, you receive either:
 
 Based on analysis, determine:
 
-| Question                        | Default | Override When                            |
-|:--------------------------------|:--------|:-----------------------------------------|
-| STATUS: NEEDS_INPUT workflow?   | **Yes** | Only skip if agent explicitly doesn't use it |
-| Mode detection needed?          | No      | Agent has multiple modes                 |
-| Context section?                | No      | Command needs runtime info (see below)   |
-| "When to Use" section?          | No      | Command triggered by natural language    |
-| Positional args?                | No      | Structured input expected                |
-| Frontmatter tools?              | None    | Security restriction or bash pre-exec    |
+| Question                      | Default | Override When                                |
+|:------------------------------|:--------|:---------------------------------------------|
+| STATUS: NEEDS_INPUT workflow? | **Yes** | Only skip if agent explicitly doesn't use it |
+| Mode detection needed?        | No      | Agent has multiple modes                     |
+| Context section?              | No      | Command needs runtime info (see below)       |
+| "When to Use" section?        | No      | Command triggered by natural language        |
+| Positional args?              | No      | Structured input expected                    |
+| Frontmatter tools?            | None    | Security restriction or bash pre-exec        |
 
 **CRITICAL**: Default to YES for STATUS: NEEDS_INPUT workflow. Production-quality agents use this pattern for uncertainty handling.
 
