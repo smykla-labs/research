@@ -8,7 +8,20 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 
 ## Structure
 
-- `ai/prompt-engineering-spec.md` - Best practices and guidelines for writing AI agent prompts
+### Specifications & Guides
+
+- `ai/prompt-engineering-spec.md` - Best practices for writing AI agent prompts (v1.0.1)
+- `ai/troubleshooting-doc-spec.md` - Guidelines for writing troubleshooting documentation (v1.1)
+- `ai/claude-code-subagents-guide.md` - Comprehensive guide for Claude Code subagents
+- `ai/claude-code-settings-merge.md` - How Claude Code merges settings from multiple files
+- `ai/claude-code-thinking-modes.md` - Extended thinking modes and keyword usage
+
+### Examples
+
+- `ai/claude-code-wrong-shell.md` - Example troubleshooting doc (follows troubleshooting-doc-spec)
+
+### Prompt Templates
+
 - `ai/prompts/` - Reusable AI agent prompt templates
   - `_template.md` - Blank template for creating new prompts
   - `prompt-author-agent.md` - Agent for creating/refining prompts (follows spec)
@@ -16,6 +29,14 @@ Knowledge base and research artifacts for investigations, experiments, and learn
   - `executor-agent.md` - Executor agent for single-task implementation
   - `session-handover.md` - Agent for capturing session context for handover
   - `worktree-creator.md` - Agent for creating git worktrees with context transfer
+
+### Claude Code Configuration
+
+- `.claude/agents/subagent-creator.md` - Meta-agent for creating/modifying/transforming subagents
+- `.claude/commands/subagent.md` - Slash command to invoke subagent-creator (`/subagent`)
+
+### Working Directories
+
 - `tmp/` - Temporary files and working directories (gitignored)
 
 ## Agent Workflow System
