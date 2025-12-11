@@ -1,23 +1,31 @@
 ---
-argument-hint: [agent-path-or-description]
-description: Create slash commands for agents or standalone workflows
+argument-hint: [command-path-or-agent-path-or-description]
+description: Create, modify, or improve slash commands
 ---
 
-Use the command-creator agent to create a slash command.
+Use the command-creator agent to create or improve a slash command.
 
 $ARGUMENTS
 
 ## Mode Detection
 
-Determine command type from input:
+Determine mode from input path BEFORE invoking subagent:
 
-| Input Pattern                   | Type              | Tell Subagent                              |
-|:--------------------------------|:------------------|:-------------------------------------------|
-| Path to `.claude/agents/*.md`   | **Agent command** | "Create command for agent at {path}"       |
-| Path to `~/.claude/agents/*.md` | **Agent command** | "Create command for agent at {path}"       |
-| Description without path        | **Standalone**    | "Create standalone command: {description}" |
+| Input Pattern                                | Mode          | Tell Subagent                                                         |
+|:---------------------------------------------|:--------------|:----------------------------------------------------------------------|
+| Path contains `.claude/commands/`            | **Modify**    | "MODIFY this existing command IN PLACE: {path}"                       |
+| Path contains `.claude/agents/`              | **Dispatch**  | "DISPATCH: Create command for agent at {path}"                        |
+| Path contains `~/.claude/agents/`            | **Dispatch**  | "DISPATCH: Create command for agent at {path}"                        |
+| No file path provided                        | **Create**    | "CREATE a new standalone command: {description}"                      |
+| Any other path (not in commands/agents dir)  | **Transform** | "TRANSFORM this file into a NEW command in .claude/commands/: {path}" |
 
-**CRITICAL**: State the type explicitly in your Task tool prompt.
+**CRITICAL**: State the mode explicitly in your Task tool prompt.
+
+**Mode Differences**:
+- **Create**: New standalone command from scratch
+- **Modify**: Improve existing command in place (quality, structure, standards compliance)
+- **Transform**: Convert non-command file to command format (source stays untouched)
+- **Dispatch**: Create command that dispatches to an agent (invokes agent via Task tool)
 
 ## Workflow
 
