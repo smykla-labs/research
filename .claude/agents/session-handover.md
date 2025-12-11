@@ -193,7 +193,7 @@ Need this to avoid wasting time?
 |:--------------------------------------|:-------------------------------|
 | "We attempted X but unfortunately..." | "Tried X: failed due to Y"     |
 | 20-line code block                    | `func(a,b) → filtered result`  |
-| `/Users/bart/Projects/.../file.md`    | `.claude/agents/file.md`       |
+| `/Users/dev/Projects/.../file.md`     | `.claude/agents/file.md`       |
 | "Key Learnings" section with patterns | [SKIP — read the source files] |
 | Grade rubric table                    | [SKIP — in reviewer agent]     |
 | Commit history                        | [SKIP — `git log`]             |

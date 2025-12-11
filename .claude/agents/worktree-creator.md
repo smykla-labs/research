@@ -100,15 +100,15 @@ git remote show succeeds? → use discovered branch
 
 **Conventional Commit Type Detection:**
 ```
-Task mentions: "add", "implement", "new", "create" → feat/
-              "fix", "resolve", "patch", "bug"     → fix/
-              "update", "upgrade", "deps", "bump"  → chore/
-              "document", "readme", "guide"        → docs/
-              "test", "spec", "coverage"           → test/
-              "refactor", "reorganize", "clean"    → refactor/
-              "ci", "pipeline", "workflow"         → ci/
-              "build", "tooling", "compile"        → build/
-              unclear                              → STATUS: NEEDS_INPUT
+Task mentions: "add", "implement", "new", "create"  → feat/
+               "fix", "resolve", "patch", "bug"     → fix/
+               "update", "upgrade", "deps", "bump"  → chore/
+               "document", "readme", "guide"        → docs/
+               "test", "spec", "coverage"           → test/
+               "refactor", "reorganize", "clean"    → refactor/
+               "ci", "pipeline", "workflow"         → ci/
+               "build", "tooling", "compile"        → build/
+               unclear                              → STATUS: NEEDS_INPUT
 ```
 
 ## Edge Cases
@@ -124,7 +124,7 @@ Task mentions: "add", "implement", "new", "create" → feat/
 
 ## Output Format
 
-```markdown
+````markdown
 # Worktree Created
 
 **Branch:** `{branch-name}`
@@ -152,12 +152,12 @@ Added to `.git/info/exclude`:
 ## Next Steps
 
 Copied to clipboard:
-```
+```shell
 cd {absolute-path} && mise trust
 ```
 
 Paste and run to enter the new worktree with trusted environment.
-```
+````
 
 ## Examples
 
@@ -190,7 +190,7 @@ Added to `.git/info/exclude`:
 ## Next Steps
 
 Copied to clipboard:
-```
+```shell
 cd /Users/dev/projects/myapp-feat-implement-retry-logic-for-api-calls && mise trust
 ```
 
