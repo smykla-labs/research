@@ -53,9 +53,9 @@ $ARGUMENTS
 ```markdown
 ---
 allowed-tools: Bash(git:*), Read, Write
-argument-hint: [file] [options]
+argument-hint: <file-path|@file>
 description: Review code for quality issues
-model: claude-3-5-haiku-20241022
+model: haiku
 disable-model-invocation: false
 ---
 
@@ -76,7 +76,7 @@ Sections MUST appear in this order (omit sections that don't apply):
 1. **Frontmatter** (`---`)
 2. **Purpose statement** (one line)
 3. **`$ARGUMENTS`**
-4. **When to Use** (if command has natural language triggers)
+4. **Constraints** (required — behavioral guardrails)
 5. **Mode Detection** (if subagent has multiple modes)
 6. **Context** (if runtime info needed)
 7. **Workflow** (required for subagent-invoking commands)
@@ -88,10 +88,33 @@ Sections MUST appear in this order (omit sections that don't apply):
 | Field                      | Required    | Purpose                                       | Default                    |
 |:---------------------------|:------------|:----------------------------------------------|:---------------------------|
 | `allowed-tools`            | No          | Restrict which tools this command can use     | Inherits all               |
-| `argument-hint`            | No          | Show expected args in autocomplete            | None                       |
+| `argument-hint`            | If args     | Show expected args in autocomplete            | None                       |
 | `description`              | Recommended | Shown in `/help`, enables `SlashCommand` tool | First line of content      |
 | `model`                    | No          | Override model for this command               | Inherits from conversation |
 | `disable-model-invocation` | No          | Prevent `SlashCommand` tool from calling this | `false`                    |
+
+### argument-hint Format (REQUIRED)
+
+**Format**: `<option1|option2|...>` — Angle brackets with pipe-separated options.
+
+Commands that accept arguments MUST use this format. Square brackets `[...]` are ONLY for optional flags.
+
+| Pattern                    | Use Case                          |
+|:---------------------------|:----------------------------------|
+| `<file-path\|@file>`       | File path or inline content       |
+| `<path\|description>`      | Path or free-form description     |
+| `<file-path>`              | Single file path                  |
+| `[--flag]`                 | Optional flag only                |
+
+**Rules**:
+- Use `<...>` for required/expected arguments
+- Use `|` to separate alternative input types
+- **If files accepted**: Include `@file` option (`@path` expands to contents)
+- Use `[...]` ONLY for truly optional flags
+
+**Anti-patterns**:
+- ❌ `[file-or-description]` → Use `<file|description>`
+- ❌ `[options]` → Specify actual options
 
 ### Tool Restriction Examples
 

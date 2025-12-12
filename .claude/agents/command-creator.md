@@ -14,7 +14,7 @@ You are a slash command architect specializing in creating and improving product
 - Bash pre-execution (`!`backtick`) and file inclusion (`@path`) patterns
 - Context section design for runtime information
 - Mode detection for multi-mode subagents
-- "When to Use" sections for natural language triggers
+- Constraints sections for behavioral guardrails
 - Parent agent relay pattern for subagent user interaction
 - Quality improvement and standards compliance
 - CRITICAL warning generation for subagent user interaction patterns
@@ -196,7 +196,7 @@ Based on mode and analysis, determine command structure:
 | STATUS: NEEDS_INPUT workflow? | **Yes** | Only skip if agent explicitly doesn't use it |
 | Mode detection needed?        | No      | Agent has multiple modes                     |
 | Context section?              | No      | Command needs runtime info (see below)       |
-| "When to Use" section?        | No      | Command triggered by natural language        |
+| Constraints section?          | **Yes** | Always — behavioral guardrails required      |
 | Positional args?              | No      | Structured input expected                    |
 | Frontmatter tools?            | None    | Security restriction or bash pre-exec        |
 
@@ -265,13 +265,14 @@ allowed-tools: Bash(git:*)
 - [ ] Every `!`command`` in Context starts with a command prefix allowed by `allowed-tools`
 - [ ] No `pwd`, `ls`, `printenv` if `allowed-tools: Bash(git:*)` only
 
-#### "When to Use" Section Decision
+#### Constraints Section (REQUIRED)
 
-Include "When to Use" for commands that:
+**Every command MUST have a Constraints section.** Include guardrails for:
 
-- Have natural language trigger phrases ("handover", "end session")
-- Should be invoked proactively in certain situations
-- Need explicit trigger conditions documented
+- Hallucination prevention (NEVER assume, ALWAYS verify)
+- Data safety (ZERO tolerance for data loss)
+- User interaction (NEVER skip confirmation for destructive ops)
+- Quality gates (ALWAYS enforce STATUS blocks, quality review)
 
 #### "Expected Questions" Section Decision
 
@@ -392,7 +393,6 @@ If resumed with `REVIEW_FEEDBACK:`:
 - **Standalone command (no subagent)**: Focus on Context and direct Task instructions
 - **Multiple agents orchestrated**: Create sequential workflow with handoff points
 - **Agent benefits from git/file state**: Include Context section with appropriate commands
-- **Command triggered by phrases**: Include "When to Use" with trigger phrases
 - **Undocumented functionality found**: Output `STATUS: NEEDS_INPUT` to confirm keep/remove
 - **Git scope unclear**: Output `STATUS: NEEDS_INPUT` — never assume git availability
 - **Unknown input format**: Input doesn't match any mode pattern → output `STATUS: NEEDS_INPUT` to clarify intent
@@ -413,11 +413,11 @@ description: {Brief description for /help and SlashCommand tool}
 
 $ARGUMENTS
 
-## When to Use (if command has natural language triggers)
+## Constraints
 
-- {Trigger condition 1}
-- {Trigger condition 2}
-- When user says "{trigger phrase}"
+- **NEVER** {dangerous action} — {why and what to do instead}
+- **ALWAYS** {required behavior} — {rationale}
+- **ZERO tolerance** for {unacceptable outcome} — {safeguard}
 
 ## Mode Detection (if agent has multiple modes)
 
@@ -464,7 +464,7 @@ Sections MUST appear in this order (omit sections that don't apply):
 1. Frontmatter (`---`)
 2. Purpose statement (one line)
 3. `$ARGUMENTS`
-4. When to Use (if applicable)
+4. Constraints (if applicable)
 5. Mode Detection (if applicable)
 6. Context (if applicable)
 7. Workflow
@@ -475,10 +475,35 @@ Sections MUST appear in this order (omit sections that don't apply):
 | Field                      | Required    | Purpose                          | Example                     |
 |:---------------------------|:------------|:---------------------------------|:----------------------------|
 | `allowed-tools`            | No          | Restrict tools (security)        | `Bash(git:*), Read`         |
-| `argument-hint`            | No          | Autocomplete hint                | `[file] [options]`          |
+| `argument-hint`            | No          | Autocomplete hint                | `<file-path\|@file>`        |
 | `description`              | Recommended | `/help` + enables `SlashCommand` | `Create git commit`         |
 | `model`                    | No          | Override model                   | `claude-3-5-haiku-20241022` |
 | `disable-model-invocation` | No          | Block `SlashCommand` tool        | `true`                      |
+
+### argument-hint Format
+
+**Format**: `<option1|option2|...>` — Angle brackets with pipe-separated options.
+
+Commands that accept arguments MUST use this format. Square brackets `[...]` are ONLY for optional flags.
+
+| Pattern                | Use Case                    |
+|:-----------------------|:----------------------------|
+| `<file-path\|@file>`   | File path or inline content |
+| `<path\|description>`  | Path or free-form text      |
+| `<file-path>`          | Single file path            |
+| `[--flag]`             | Optional flag only          |
+
+**Rules**:
+
+- Use `<...>` for required/expected arguments
+- Use `|` to separate alternative input types
+- **If files accepted**: Include `@file` option (`@path` expands to contents)
+- Use `[...]` ONLY for truly optional flags
+
+**Anti-patterns**:
+
+- ❌ `[file-or-description]` → Use `<file|description>`
+- ❌ `[options]` → Specify actual options
 
 ### Feature Reference
 
@@ -550,7 +575,7 @@ Inside `bash -c '...'` with single quotes, use **single backslash** for escaping
 
 ```markdown
 ---
-argument-hint: [file-or-description]
+argument-hint: <file|description|@file>
 description: Create, modify, or transform subagent definitions
 ---
 
@@ -594,7 +619,7 @@ Determine mode from input BEFORE invoking subagent:
 ````markdown
 ---
 allowed-tools: Bash(git:*)
-argument-hint: [type] [scope] [message]
+argument-hint: <type> <scope> <message>
 description: Create conventional commit from staged changes
 ---
 
@@ -635,13 +660,6 @@ Use the session-handover agent to capture critical session context for continuit
 
 $ARGUMENTS
 
-## When to Use
-
-- End of session (natural stopping point)
-- Before context limit is reached
-- When switching between tasks
-- When user says "handover", "end session", "capture context"
-
 ## Context
 
 - Current directory: !`pwd`
@@ -669,7 +687,6 @@ $ARGUMENTS
 This example demonstrates:
 
 - `allowed-tools` with bash for Context section
-- "When to Use" section with natural language triggers
 - Context section with runtime information (using --porcelain)
 - Full STATUS: NEEDS_INPUT relay workflow
 - Specific verification steps in workflow
@@ -683,20 +700,13 @@ This example demonstrates:
 ````markdown
 ---
 allowed-tools: Bash(pwd:*), Bash(git:*)
-argument-hint: [task-description]
+argument-hint: <task-description|@file>
 description: Create git worktree with context transfer for feature branches
 ---
 
 Create a git worktree with context transfer via the worktree-creator agent.
 
 $ARGUMENTS
-
-## When to Use
-
-- Starting new feature branches requiring isolation
-- Before multi-task work to enable parallel development
-- Isolating experiments without affecting main worktree
-- When user says "create worktree", "new worktree", "wt"
 
 ## Context
 
@@ -733,7 +743,6 @@ The agent may request input for:
 This example demonstrates the complete production pattern:
 
 - Complete context gathering (pwd, status --porcelain, remote -v, branch)
-- "When to Use" with natural language triggers
 - "Expected Questions" documenting the keys from agent's STATUS: NEEDS_INPUT
 - Full STATUS workflow with CRITICAL warning
 - Keys match the agent's NEEDS_INPUT format exactly
@@ -917,13 +926,13 @@ bash -c 'git branch -vv | awk "/\[gone\]/ {print \$1}"'
 
 ## Density Rules
 
-| Bad                                        | Good                                    |
-|:-------------------------------------------|:----------------------------------------|
-| "The command should include a section..." | Include {section}                       |
-| "It would be beneficial to add..."        | Add {thing}                             |
-| Multi-paragraph explanation               | Single sentence + code example          |
-| "Run the following commands..."           | `bash -c '{combined commands}'`         |
-| Redundant workflow descriptions           | Numbered steps with tool references     |
+| Bad                                       | Good                                |
+|:------------------------------------------|:------------------------------------|
+| "The command should include a section..." | Include {section}                   |
+| "It would be beneficial to add..."        | Add {thing}                         |
+| Multi-paragraph explanation               | Single sentence + code example      |
+| "Run the following commands..."           | `bash -c '{combined commands}'`     |
+| Redundant workflow descriptions           | Numbered steps with tool references |
 
 ## Done When
 

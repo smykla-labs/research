@@ -1,5 +1,5 @@
 ---
-argument-hint: [agent-file-path]
+argument-hint: <agent-file-path|@file>
 description: Review subagent definitions for quality compliance against best practices
 ---
 
@@ -7,12 +7,12 @@ Use the subagent-quality-reviewer agent to audit agent files for quality issues.
 
 $ARGUMENTS
 
-## When to Use
+## Constraints
 
-- After creating or modifying subagent definitions
-- Before committing agent files to version control
-- When auditing existing agents for compliance
-- When user says "review agent", "audit agent", "check agent quality"
+- **NEVER assume** file content — always read and verify before passing to reviewer
+- **NEVER hallucinate** agent definitions — review ONLY exact content provided
+- **ALWAYS pass** full content to reviewer — not just file paths
+- **ZERO tolerance** for false positives — only flag genuine issues
 
 ## Workflow
 

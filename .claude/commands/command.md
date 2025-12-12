@@ -1,11 +1,18 @@
 ---
-argument-hint: [command-path-or-agent-path-or-description]
 description: Create, modify, or improve slash commands
+argument-hint: <path|description>
 ---
 
 Use the command-creator agent to create or improve a slash command.
 
 $ARGUMENTS
+
+## Constraints
+
+- **NEVER assume** mode — detect from input path explicitly
+- **NEVER skip** quality review — all commands must pass reviewer
+- **ALWAYS enforce** STATUS block output from subagent
+- **ZERO tolerance** for incomplete commands — retry up to 3 times
 
 ## Mode Detection
 
@@ -33,11 +40,15 @@ Due to Claude Code limitations (AskUserQuestion filtered from subagents, Task to
 
 ### Step 1: Invoke command-creator
 
-Use the Task tool with the detected type stated explicitly.
+Use the Task tool with the detected mode stated explicitly in the prompt.
 
 ### Step 2: Parse Status Block
 
-Parse the status block from subagent output:
+**CRITICAL**: The agent MUST output a `STATUS:` block. Parse the status block from subagent output.
+
+**If no STATUS block found** (agent output prose/summary instead):
+- Resume the agent with: "Output STATUS: READY_FOR_REVIEW with the command content in ~~~markdown fences. Do NOT output prose summaries."
+- The agent constraint requires STATUS block output — enforce this.
 
 **If `STATUS: NEEDS_INPUT`**:
 1. Parse questions from the `questions:` field
@@ -82,12 +93,46 @@ If quality review returns WARN or FAIL:
 
 ```
 command-creator
+├── (no STATUS block) → resume asking for STATUS block
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
 └── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
-    ├── PASS → write file → done
+    ├── PASS → write file → report success
     └── WARN/FAIL → resume with REVIEW_FEEDBACK (max 3x)
 ```
 
 **Note**: Quality review is orchestrated here because subagents cannot spawn other subagents (Task tool not available to subagents).
 
 **CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print as text.
+
+## Output to User
+
+**Show to user ONLY**:
+- Final success message when command is written (after PASS)
+- Final failure message if quality review fails after 3 attempts
+- Questions via `AskUserQuestion` when STATUS: NEEDS_INPUT
+
+**Do NOT show to user**:
+- Intermediate STATUS blocks or agent responses
+- Quality review feedback (this is for the agent to fix)
+- Prose summaries or explanations from the agent
+
+The user should see a clean flow: questions (if any) → success/failure result.
+
+## Edge Cases
+
+- **Empty input**: Report error — command requires mode detection (path or description)
+- **Ambiguous path**: Path matches multiple patterns → ask user via `STATUS: NEEDS_INPUT` to clarify
+- **Mode detection fails**: No clear pattern match → stop and ask user which mode to use
+- **Quality review fails 3 times**: Report final issues, ask for manual intervention
+- **No STATUS block from subagent**: Resume with explicit instruction, enforce output format
+- **Uncertainty about file format**: Use detection rules (contents vs path) — never assume
+
+## Done When
+
+- [ ] Mode detected from input (or user selected via question)
+- [ ] command-creator invoked with explicit mode in prompt
+- [ ] STATUS block parsed correctly
+- [ ] If NEEDS_INPUT: Questions asked, answers collected via AskUserQuestion
+- [ ] Quality review passed (or retried max 3 times)
+- [ ] Command written to final location OR failure reported to user
+- [ ] User shown only final result (no intermediate steps)

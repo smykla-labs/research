@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash(pwd:*), Bash(git:*)
-argument-hint: [task-description]
+argument-hint: <task-description|@file>
 description: Create git worktree with context transfer for feature branches
 ---
 
@@ -8,12 +8,12 @@ Create a git worktree with context transfer via the worktree-creator agent.
 
 $ARGUMENTS
 
-## When to Use
+## Constraints
 
-- Starting new feature branches requiring isolation
-- Before multi-task work to enable parallel development
-- Isolating experiments without affecting main worktree
-- When user says "create worktree", "new worktree", "wt"
+- **NEVER create** worktree without user confirmation of branch name
+- **NEVER assume** remote — detect explicitly from available remotes
+- **ALWAYS check** for uncommitted changes before creating worktree
+- **ZERO tolerance** for data loss — handle uncommitted changes explicitly
 
 ## Context
 

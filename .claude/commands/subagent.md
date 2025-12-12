@@ -1,11 +1,18 @@
 ---
-argument-hint: [file-or-description]
+argument-hint: <file|description|@file>
 description: Create, modify, or transform subagent definitions
 ---
 
 Use the subagent-creator agent to create, modify, or transform a subagent definition.
 
 $ARGUMENTS
+
+## Constraints
+
+- **NEVER assume** mode — detect from input path explicitly
+- **NEVER skip** quality review — all agents must pass reviewer with grade A
+- **ALWAYS enforce** STATUS block output from subagent
+- **ZERO tolerance** for incomplete agents — retry up to 3 times
 
 ## Mode Detection
 

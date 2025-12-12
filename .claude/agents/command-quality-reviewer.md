@@ -47,13 +47,16 @@ You are a slash command quality auditor specializing in validating Claude Code c
 
 ### Frontmatter Validation
 
-| Field           | Check                                       |
-|:----------------|:--------------------------------------------|
-| `description`   | Present (REQUIRED for SlashCommand tool)    |
-| `allowed-tools` | Present if using bash pre-exec (`!`cmd``)   |
-| `allowed-tools` | Covers ALL bash commands in Context section |
-| `argument-hint` | Present if command takes arguments          |
-| `model`         | Valid model ID if specified                 |
+| Field           | Check                                                  |
+|:----------------|:-------------------------------------------------------|
+| `description`   | Present (REQUIRED for SlashCommand tool)               |
+| `allowed-tools` | Present if using bash pre-exec (`!`cmd``)              |
+| `allowed-tools` | Covers ALL bash commands in Context section            |
+| `argument-hint` | Present if command takes arguments                     |
+| `argument-hint` | **Format**: Uses `<option\|option>` (angle brackets)   |
+| `argument-hint` | **@file**: Includes `@file` option if files accepted   |
+| `argument-hint` | **Anti-pattern**: `[...]` only for optional flags      |
+| `model`         | Valid model ID if specified                            |
 
 ### Command Section Order
 
@@ -62,7 +65,7 @@ Sections MUST appear in this order (omit sections that don't apply):
 1. Frontmatter (`---`)
 2. Purpose statement (one line)
 3. `$ARGUMENTS`
-4. When to Use
+4. Constraints
 5. Mode Detection
 6. Context
 7. Workflow
@@ -70,12 +73,13 @@ Sections MUST appear in this order (omit sections that don't apply):
 
 ### Content Validation
 
-| Element                  | Check                                      |
-|:-------------------------|:-------------------------------------------|
-| `$ARGUMENTS`             | Present if command accepts free-form input |
-| `$1`, `$2`, etc.         | Used consistently with `argument-hint`     |
-| Bash pre-exec (`!`cmd``) | Has matching `allowed-tools: Bash(...)`    |
-| File inclusion (`@path`) | Path is relative to project root           |
+| Element                  | Check                                          |
+|:-------------------------|:-----------------------------------------------|
+| `$ARGUMENTS`             | Present if command accepts free-form input     |
+| `Constraints`            | **REQUIRED** — Must have behavioral guardrails |
+| `$1`, `$2`, etc.         | Used consistently with `argument-hint`         |
+| Bash pre-exec (`!`cmd``) | Has matching `allowed-tools: Bash(...)`        |
+| File inclusion (`@path`) | Path is relative to project root               |
 
 ### Tool Consistency Validation (CRITICAL)
 
@@ -224,7 +228,7 @@ None.
 
 ## Recommendations
 
-1. Add `argument-hint: [environment]` to frontmatter
+1. Add `argument-hint: <environment>` to frontmatter
 </output>
 </example>
 
@@ -301,6 +305,7 @@ Recommendation: "Either add `Bash(pwd:*)` or use `git rev-parse --show-toplevel`
 | Anti-Pattern                 | Detection                                     | Severity |
 |:-----------------------------|:----------------------------------------------|:---------|
 | Missing `description`        | No `description:` in frontmatter              | Critical |
+| Missing `Constraints`        | No Constraints section after $ARGUMENTS       | Critical |
 | Missing code fence language  | Code fence without language (just ```)        | Critical |
 | Double-escaped bash          | `\\[`, `\\]`, `\\$` in `bash -c '...'`        | Critical |
 | Multi-line bash script       | Scripts not using `bash -c '...'` format      | Critical |
@@ -309,6 +314,8 @@ Recommendation: "Either add `Bash(pwd:*)` or use `git rev-parse --show-toplevel`
 | Missing `allowed-tools`      | Bash pre-exec without tool permissions        | Critical |
 | Tool mismatch                | Context bash cmd not covered by allowed-tools | Critical |
 | Git scope unclear            | `Bash(git:*)` but target env not specified    | Critical |
+| Wrong `argument-hint` format | Uses `[...]` instead of `<...\|...>`          | Critical |
+| Missing `@file` in hint      | Files accepted but no `@file` option          | Warning  |
 | Missing `argument-hint`      | Command accepts args but no hint              | Warning  |
 | Hardcoded paths              | Literal paths instead of `$ARGUMENTS`         | Warning  |
 | Missing Mode Detection       | Multi-mode agent without detection            | Warning  |
@@ -318,12 +325,13 @@ Recommendation: "Either add `Bash(pwd:*)` or use `git rev-parse --show-toplevel`
 
 ## Density Rules
 
-| Bad                                          | Good                                    |
-|:---------------------------------------------|:----------------------------------------|
-| "The description field appears to be absent" | "Line 2: Missing `description`"         |
-| "You might want to consider adding..."       | "Add `argument-hint: [file]`"           |
-| "There could be an issue with..."            | "Critical: STATUS workflow incomplete"  |
-| "The command seems to be missing..."         | "Line 15: Missing AskUserQuestion note" |
+| Bad                                          | Good                                       |
+|:---------------------------------------------|:-------------------------------------------|
+| "The description field appears to be absent" | "Line 2: Missing `description`"            |
+| "You might want to consider adding..."       | "Add `argument-hint: <file-path\|@file>`"  |
+| "There could be an issue with..."            | "Critical: STATUS workflow incomplete"     |
+| "The command seems to be missing..."         | "Line 15: Missing AskUserQuestion note"    |
+| "argument-hint: [file-or-description]"       | "Use `<file\|description>` format"         |
 
 ## Done When
 

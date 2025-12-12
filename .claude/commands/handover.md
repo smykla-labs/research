@@ -7,17 +7,17 @@ Use the session-handover agent to capture critical session context for continuit
 
 $ARGUMENTS
 
-## When to Use
+## Constraints
 
-- End of session (natural stopping point)
-- Before context limit is reached
-- When switching between tasks
-- When user says "handover", "end session", "capture context"
+- **NEVER assume** session scope — confirm with user if unclear
+- **NEVER include** derivable information — only non-obvious context
+- **ALWAYS verify** file was saved and clipboard copy succeeded
+- **ZERO tolerance** for incomplete handover — all required sections must be present
 
 ## Context
 
 - Current directory: !`pwd`
-- Recent file changes: !`git status --short`
+- Recent file changes: !`git status --porcelain`
 
 ## Workflow
 
