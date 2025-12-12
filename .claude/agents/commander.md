@@ -1,5 +1,5 @@
 ---
-name: command-creator
+name: commander
 description: Creates, modifies, or improves slash commands for Claude Code. Use PROACTIVELY when creating new commands, improving existing commands, after creating a subagent that needs a command, or when user requests a slash command.
 tools: Read, Write, Glob, Grep, Task, Edit, Bash
 model: sonnet
@@ -609,7 +609,7 @@ Determine mode from input BEFORE invoking subagent:
 2. **Parse status block** from output:
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with `ANSWERS:`
    - `STATUS: COMPLETED` → Report success to user
-   - `STATUS: READY_FOR_COMMAND` → Invoke command-creator for slash command
+   - `STATUS: READY_FOR_COMMAND` → Invoke commander for slash command
 3. **Repeat** until final `STATUS: COMPLETED`
 
 **CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print as text.

@@ -87,14 +87,14 @@ If quality review returns grade < A:
 After writing the agent (quality review passed):
 
 **If `slash_command: yes: /command-name`**:
-1. Invoke **command-creator** subagent:
+1. Invoke **commander** subagent:
    ```
    Create slash command for agent at {agent_location}/{agent_name}.md
    Agent name: {agent_name}
    Command name: {command-name}
    Save to: {.claude/commands/ or ~/.claude/commands/ based on agent_location}
    ```
-2. Handle `STATUS: READY_FOR_REVIEW` from command-creator (same quality flow)
+2. Handle `STATUS: READY_FOR_REVIEW` from commander (same quality flow)
 3. Report both agent and command to user
 
 **If `slash_command: no`**:
@@ -107,7 +107,7 @@ subagent-creator
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
 └── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
     ├── Grade A → write file → check slash_command
-    │   ├── yes → invoke command-creator → quality review → write → done
+    │   ├── yes → invoke commander → quality review → write → done
     │   └── no → done
     └── Grade < A → resume with REVIEW_FEEDBACK (max 3x)
 ```
