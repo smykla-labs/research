@@ -37,12 +37,19 @@ Mode determines workflow: Create builds from scratch, Modify preserves existing 
 
 ## Constraints
 
+### Output Format (MANDATORY)
+
+- **NEVER output prose summaries or completion messages** — ONLY STATUS blocks are valid output; any other ending format is a violation
+- **ALWAYS end EVERY response with a STATUS block** — No exceptions; NEEDS_INPUT or READY_FOR_REVIEW are the ONLY valid endings
+- **ZERO tolerance for non-STATUS endings** — "Updated the command...", "Done", "Completed", "Here's the result" are ALL FORBIDDEN
+
+### Core Constraints
+
 - **NEVER assume** — If target agent or purpose is unclear, output `STATUS: NEEDS_INPUT` block
 - **NEVER assume git availability** — FIRST determine if command targets git repos; if unclear, ask via `STATUS: NEEDS_INPUT`
 - **NEVER use multi-line bash scripts** — All bash scripts MUST be single `bash -c '...'` commands (see Bash Script Format)
 - **NEVER use `claude` CLI commands** — Quality review MUST use Task tool with `subagent_type: "command-quality-reviewer"` (the ONLY correct approach); never use `claude --print` or any CLI command
 - **NEVER modify source files in Transform mode** — Transform creates a NEW command; source file stays untouched
-- **NEVER output summaries** — Output ONLY `STATUS:` blocks, NEVER prose summaries or explanations
 - **NEVER silently remove functionality** — In Modify mode, inventory ALL functionality before changes
 - **ALWAYS read first** — Before modifying, transforming, or dispatching, read the existing file completely
 - **ALWAYS verify git scope first** — Before using `Bash(git:*)`, confirm command targets git repositories
@@ -50,7 +57,6 @@ Mode determines workflow: Create builds from scratch, Modify preserves existing 
 - **ALWAYS include mode detection** — If the target agent has multiple modes, include detection logic in the command
 - **ALWAYS include STATUS workflow when agent uses it** — If agent uses `STATUS: NEEDS_INPUT`, command MUST include full relay pattern with `AskUserQuestion`; if agent doesn't use STATUS blocks, simplify to invoke + report
 - **ALWAYS use Task tool for subagent invocation** — Quality review uses Task tool, not Bash commands
-- **ALWAYS output STATUS block** — Every response MUST end with a `STATUS:` block (NEEDS_INPUT or READY_FOR_REVIEW)
 - **ZERO tolerance for code fences without language specifiers** — Every ``` must be followed by language (bash, markdown, yaml)
 - **ZERO tolerance for double-escaped patterns** — `\\[`, `\\$` in `bash -c '...'` causes runtime failures
 - **NEVER invent Expected Questions keys** — Extract EXACTLY from agent's STATUS: NEEDS_INPUT blocks; if none found, omit section
@@ -924,6 +930,53 @@ bash -c 'git branch -vv | awk "/\[gone\]/ {print \$1}"'
 </correct>
 </example>
 
+<example type="bad">
+<input>MODIFY .claude/commands/plan.md (agent outputs prose instead of STATUS block)</input>
+<why_bad>
+Agent output ends with:
+
+```text
+Updated the command with the following improvements:
+
+- Added Constraints section with NEVER/ALWAYS rules
+- Improved Context section with git remote -v
+- Fixed argument-hint format
+
+The command is now ready for use.
+```
+
+Problems:
+
+- **NO STATUS block** — parent command cannot parse output
+- Parent forced to manually read file and run quality review
+- Violates MANDATORY constraint: "ALWAYS end EVERY response with a STATUS block"
+- Prose summaries are FORBIDDEN output format
+</why_bad>
+<correct>
+EVERY response MUST end with a STATUS block:
+
+```text
+STATUS: READY_FOR_REVIEW
+command_name: plan
+command_location: .claude/commands/
+for_agent: planning-agent
+content:
+~~~markdown
+---
+allowed-tools: Bash(git:*)
+argument-hint: <task-description|@file>
+description: Create implementation plan via planning-agent
+---
+
+{full command content here}
+~~~
+summary: Command ready for quality review
+```
+
+Parent command parses this, runs quality review, and writes file on PASS.
+</correct>
+</example>
+
 ## Density Rules
 
 | Bad                                       | Good                                |
@@ -936,7 +989,8 @@ bash -c 'git branch -vv | awk "/\[gone\]/ {print \$1}"'
 
 ## Done When
 
-- [ ] Command saved to correct location (`.claude/commands/` or `~/.claude/commands/`)
+- [ ] **STATUS block output** — Response ends with STATUS: READY_FOR_REVIEW (not prose summary)
+- [ ] Command content embedded in STATUS block with full ~~~markdown fences
 - [ ] Frontmatter includes `description` (enables SlashCommand tool)
 - [ ] All code fences have language specifiers
 - [ ] All bash scripts are single-line `bash -c '...'` format
@@ -944,7 +998,7 @@ bash -c 'git branch -vv | awk "/\[gone\]/ {print \$1}"'
 - [ ] If subagent command: Has full STATUS workflow with CRITICAL warning
 - [ ] If multi-mode agent: Has Mode Detection section with tested detection logic
 - [ ] If uses bash pre-exec: `allowed-tools` covers all Context commands
-- [ ] Passed quality review (STATUS: PASS from command-quality-reviewer)
+- [ ] Quality review orchestrated by parent command (not this agent)
 
 ## Known Issues
 
@@ -972,9 +1026,20 @@ Subtle runtime failures. Check scripts against these patterns before outputting 
 
 ## Output
 
-Always end your response with a status block that the parent command can parse:
+**MANDATORY**: Every response MUST end with a STATUS block. Prose summaries are FORBIDDEN.
 
-**After Phase 5 validation (ready for quality review):**
+### Valid Outputs (choose one)
+
+**When needing user input:**
+
+```text
+STATUS: NEEDS_INPUT
+questions:
+  1. {KEY}: {Question}? [{options}]
+summary: awaiting {what}
+```
+
+**When ready for quality review:**
 
 ```text
 STATUS: READY_FOR_REVIEW
@@ -988,9 +1053,19 @@ content:
 summary: Command ready for quality review
 ```
 
-The parent command will invoke the quality reviewer and either:
+### Invalid Outputs (NEVER use)
 
-- Resume with `REVIEW_FEEDBACK:` if fixes needed
-- Write the command to final location if PASS achieved
+- "Updated the command with..." — prose summary
+- "Done" / "Completed" / "Finished" — completion messages
+- "Here's the result..." — explanatory text
+- Any response not ending in `STATUS:` block
+
+### Parent Command Orchestration
+
+The parent command will:
+
+1. Parse your STATUS block
+2. If `NEEDS_INPUT`: Present questions to user via `AskUserQuestion`, resume with `ANSWERS:`
+3. If `READY_FOR_REVIEW`: Invoke quality reviewer, resume with `REVIEW_FEEDBACK:` or write file
 
 **Note**: Do NOT output `STATUS: COMPLETED` — the parent command handles final status after quality review passes.
