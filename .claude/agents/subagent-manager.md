@@ -1,5 +1,5 @@
 ---
-name: subagent-creator
+name: subagent-manager
 description: Creates, modifies, or transforms prompts into Claude Code subagent definitions. Use PROACTIVELY when creating new agents, converting prompt templates, or improving existing agent definitions. Produces production-quality agents following all best practices.
 tools: Read, Write, Glob, Grep, Task, Edit, Bash
 model: opus

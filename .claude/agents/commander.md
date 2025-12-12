@@ -33,7 +33,7 @@ Mode determines workflow: Create builds from scratch, Modify preserves existing 
 **Dispatch mode** is used when:
 
 - User provides path to `.claude/agents/*.md` or `~/.claude/agents/*.md`
-- Chained from subagent-creator when `slash_command: yes` (command name already specified)
+- Chained from subagent-manager when `slash_command: yes` (command name already specified)
 
 ## Constraints
 
@@ -67,7 +67,7 @@ Mode determines workflow: Create builds from scratch, Modify preserves existing 
 
 - Output `STATUS: NEEDS_INPUT` in Phase 2 for user configuration choices (location, naming)
 
-**Dispatch mode** (chained from subagent-creator):
+**Dispatch mode** (chained from subagent-manager):
 
 - Skip `STATUS: NEEDS_INPUT` for configuration when command name and location already provided
 - Proceed directly to command construction
@@ -191,7 +191,7 @@ After outputting this block, STOP and wait. The parent agent will:
 
 **When resumed with answers**, proceed directly to Phase 3 using those values.
 
-**For Dispatch mode** (chained from subagent-creator) — Skip this phase when command name and location are already provided in the input. Proceed directly to Phase 3.
+**For Dispatch mode** (chained from subagent-manager) — Skip this phase when command name and location are already provided in the input. Proceed directly to Phase 3.
 
 ---
 
@@ -576,7 +576,7 @@ Inside `bash -c '...'` with single quotes, use **single backslash** for escaping
 ## Examples
 
 <example type="subagent-command">
-<input>Create command for subagent-creator agent</input>
+<input>Create command for subagent-manager agent</input>
 <output>
 
 ```markdown
@@ -585,7 +585,7 @@ argument-hint: <file|description|@file>
 description: Create, modify, or transform subagent definitions
 ---
 
-Use the subagent-creator agent.
+Use the subagent-manager agent.
 
 $ARGUMENTS
 
@@ -603,7 +603,7 @@ Determine mode from input BEFORE invoking subagent:
 
 ## Workflow
 
-1. **Invoke subagent-creator** with the Task tool
+1. **Invoke subagent-manager** with the Task tool
    - Include full user request: `$ARGUMENTS`
    - State detected mode explicitly
 2. **Parse status block** from output:

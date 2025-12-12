@@ -665,7 +665,7 @@ You are a research specialist. Investigate questions thoroughly and provide conc
 
 ### Parent-Orchestrated Quality Review
 
-The `subagent-creator` and `commander` agents delegate quality review to their parent commands. This is required because **subagents cannot spawn other subagents** (Task tool not available to subagents).
+The `subagent-manager` and `commander` agents delegate quality review to their parent commands. This is required because **subagents cannot spawn other subagents** (Task tool not available to subagents).
 
 ```
 Creator Agent                     Parent Command
@@ -724,7 +724,7 @@ The parent command:
 | **FAIL** | —                                          | Critical issues present  |
 
 **Acceptance criteria:**
-- `subagent-creator`: Only grade **A** is acceptable
+- `subagent-manager`: Only grade **A** is acceptable
 - `commander`: Only **PASS** is acceptable
 
 ### Review Feedback Format
@@ -783,7 +783,7 @@ summary: one-line description
 #### Example: Agent Chaining with Quality Review
 
 ```
-subagent-creator
+subagent-manager
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
 └── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
     ├── Grade A → write file → check slash_command
