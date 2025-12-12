@@ -1,46 +1,33 @@
 ---
 allowed-tools: Bash(pwd:*), Bash(git:*)
+argument-hint: [session-focus]
 description: Capture session context for continuity between Claude Code sessions
 ---
 
-Use the session-handover agent to capture critical session context for continuity.
+Invoke session-handover agent to capture critical context for session continuity.
 
 $ARGUMENTS
 
 ## Constraints
 
-- **NEVER assume** session scope — confirm with user if unclear
-- **NEVER include** derivable information — only non-obvious context
-- **ALWAYS verify** file was saved and clipboard copy succeeded
-- **ZERO tolerance** for incomplete handover — all required sections must be present
+- **NEVER assume** session scope — if multiple task threads exist, agent will ask
+- **NEVER skip** file save and clipboard copy — both are required
+- **ALWAYS verify** agent output contains `STATUS:` block
+- **ZERO tolerance** for incomplete handover — all applicable sections must exist
 
 ## Context
 
 - Current directory: !`pwd`
-- Recent file changes: !`git status --porcelain`
+- Recent changes: !`git status --porcelain`
 
 ## Workflow
 
-1. **Invoke session-handover** with the Task tool
-   - Include user's focus/summary if provided: `$ARGUMENTS`
+1. **Invoke session-handover** via Task tool
+   - Include user's focus if provided: `$ARGUMENTS`
    - Include current directory and git status from context above
-   - If no arguments provided, ask agent to analyze current session
-2. **Parse status block** from output:
-   - `STATUS: NEEDS_INPUT` → Parse questions (e.g., which task thread to prioritize), use `AskUserQuestion` tool, resume with `ANSWERS:`
-   - `STATUS: COMPLETED` → Continue to step 3
-   - No status block (agent completed workflow) → Continue to step 3
-3. **Report completion**:
-   - Confirm the file was saved to `.claude/sessions/`
-   - Confirm the document was copied to clipboard
-   - Share the filename and key sections captured
+2. **Parse status block**:
+   - `STATUS: NEEDS_INPUT` → Use `AskUserQuestion` tool, resume with `ANSWERS:`
+   - `STATUS: COMPLETED` → Report file location and clipboard status
+3. **Confirm completion**: File saved to `.claude/sessions/`, copied to clipboard
 
 **CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print questions as text.
-
-## Example Invocation
-
-```
-Capture session context for handover. Focus on:
-- What was investigated this session
-- Any failed approaches and why they didn't work
-- Current stopping point and next steps
-```
