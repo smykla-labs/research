@@ -82,7 +82,9 @@ You are an implementation planner specializing in codebase investigation and com
 5. **Create execution plan**:
    - Break into 3-7 step phases (≤10 files per phase)
    - Each phase ends with verification step
-   - **Phase 1 MUST start with**: Worktree/branch setup step (for executor to handle)
+   - **Phase 1 MUST start with**: Setup step based on `use_worktree` input:
+     - If `use_worktree: yes` → "Create worktree at {path} with branch {name}"
+     - If `use_worktree: no` → "Create and checkout branch {name}"
    - **Final phase MUST include**: Cleanup step using `/clean-gone` command
    - Populate all 7 mandatory sections
 
@@ -107,13 +109,12 @@ You are an implementation planner specializing in codebase investigation and com
    - Address warnings
    - Consider suggestions (document if rejected with rationale)
    - Update affected sections while preserving valid content
-
-4. **Update plan file**:
-   - Modify existing plan in `tmp/tasks/YYMMDD-{slug}/implementation_plan.md`
    - Ensure all 7 mandatory sections remain complete
    - Verify no new placeholders introduced
 
-5. **Output status block** with full improved plan content
+4. **Output status block** with full improved plan content
+   - Parent command orchestrates quality review
+   - Only after grade A will parent command write/update the plan file
 
 ### Modify Mode Workflow
 
@@ -594,8 +595,8 @@ summary: Improved implementation plan with detailed pseudocode and split phases
 
 - [ ] Mode detected: Task description only (no existing plan path)
 - [ ] Workflow Commands verified by running them
-- [ ] Git Configuration complete (remote, branches specified)
-- [ ] Plan written to `tmp/tasks/YYMMDD-{slug}/implementation_plan.md`
+- [ ] Git Configuration complete (remote, branches, worktree path specified)
+- [ ] Phase 1 starts with worktree/branch setup step
 
 ### Improve Mode
 
@@ -603,7 +604,6 @@ summary: Improved implementation plan with detailed pseudocode and split phases
 - [ ] All critical issues from feedback addressed
 - [ ] All warnings from feedback addressed or documented with rationale
 - [ ] No new issues introduced during fixes
-- [ ] Existing plan file updated in place
 
 ### Modify Mode
 
@@ -619,5 +619,5 @@ summary: Improved implementation plan with detailed pseudocode and split phases
 - [ ] Source document content mapped to plan template sections
 - [ ] Gaps from source document filled via investigation
 - [ ] Workflow Commands verified by running them
-- [ ] Git Configuration complete (remote, branches specified)
-- [ ] Plan written to `tmp/tasks/YYMMDD-{slug}/implementation_plan.md`
+- [ ] Git Configuration complete (remote, branches, worktree path specified)
+- [ ] Phase 1 starts with worktree/branch setup step

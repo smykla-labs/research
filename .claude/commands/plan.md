@@ -10,8 +10,8 @@ $ARGUMENTS
 ## Constraints
 
 - **NEVER skip mode detection** — ALWAYS detect mode BEFORE invoking planner
-- **NEVER skip worktree question** (Create/Transform modes) — ALWAYS ask user first
 - **NEVER proceed without grade A** — Plan MUST achieve grade A from quality review
+- **NEVER write plan until grade A** — Pass content back and forth until quality passes
 - **ZERO tolerance for placeholder plans** — Reject plans with `{placeholder}` patterns
 - **ALWAYS orchestrate quality review** — Parent command invokes reviewer, not subagent
 - **MAXIMUM 3 review attempts** — After 3 feedback cycles, report failure to user
@@ -41,29 +41,23 @@ Determine mode from input BEFORE invoking planner:
 
 ### Create & Transform Modes
 
-1. **Ask user about worktree creation** using `AskUserQuestion` tool:
-   - Question: "Do you want to create a worktree for this implementation?"
-   - Options: [yes|no (use current directory)]
+1. **Ask user about worktree preference** using `AskUserQuestion` tool:
+   - Question: "Do you want a worktree for this implementation?"
+   - Options: [yes (recommended)|no (use current directory)]
    - Store answer for next step
 
-2. **If worktree requested** (answer = yes):
-   - Invoke worktree-creator subagent with Task tool
-   - Include full task description: `$ARGUMENTS`
-   - Parse status block from worktree-creator:
-     - `STATUS: NEEDS_INPUT` → Parse `questions:` section, use `AskUserQuestion` tool, resume with `ANSWERS: KEY1=value1, KEY2=value2`
-     - `STATUS: COMPLETED` → Extract `path:` field (worktree path), proceed to planning
-   - Repeat until `STATUS: COMPLETED`
-
-3. **Invoke implementation-planner** with Task tool:
+2. **Invoke implementation-planner** with Task tool:
    - State detected mode explicitly: "CREATE: {description}" or "TRANSFORM: {path}"
    - Include full user request: `$ARGUMENTS`
-   - Include `worktree_path: {path}` if worktree was created (else omit)
+   - Include `use_worktree: yes` or `use_worktree: no` based on user's answer
    - Parse status block from planner:
      - `STATUS: NEEDS_INPUT` → Parse `questions:` section, use `AskUserQuestion` tool, resume with `ANSWERS: KEY1=value1, KEY2=value2`
      - `STATUS: READY_FOR_REVIEW` → Extract fields: `task_slug`, `plan_location`, `content:` (full plan in ~~~markdown fences)
    - Repeat until `STATUS: READY_FOR_REVIEW`
 
-4. **Quality review loop** (see below)
+3. **Quality review loop** (see below)
+
+**Note**: The planner includes worktree/branch setup as Phase 1 based on user's preference. The executor will create the worktree when executing the plan.
 
 ### Modify Mode
 
@@ -106,7 +100,7 @@ Determine mode from input BEFORE invoking planner:
 
 3. **Report success to user**:
    - Plan location (file path)
-   - Worktree path (if created in Create/Transform modes)
+   - Worktree preference (yes/no — executor will create if yes)
    - Quality grade (A)
    - Number of review iterations
    - Brief summary (task slug, number of phases)
@@ -126,10 +120,4 @@ The implementation-planner may request input for:
 - **TYPE**: Branch type (feat|fix|chore|docs|test|refactor|ci|build)
 - **REMOTE**: Git remote (upstream|origin)
 - **BRANCH**: Default branch (main|master|custom)
-
-The worktree-creator may request input for (Create/Transform modes only):
-
-- **TYPE**: Branch type (feat|fix|chore|docs|test|refactor|ci|build)
-- **ACTION**: How to handle uncommitted changes (commit|stash|abort)
-- **REMOTE**: Which remote to use
-- **BRANCH**: Default branch name
+- **WORKTREE**: Worktree path pattern (when use_worktree: yes)
