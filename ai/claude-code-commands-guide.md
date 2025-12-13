@@ -574,7 +574,7 @@ The `command-manager` agent includes automatic quality review before saving comm
 
 ```
 Construction → Write to ~/.claude/tmp/{name}.md
-            → Invoke command-quality-reviewer
+            → Invoke command-reviewer
             → Status != PASS? → Fix issues → Re-review (max 3x)
             → PASS? → Move to final location → STATUS: COMPLETED
             → 3 failures? → STATUS: QUALITY_FAILED

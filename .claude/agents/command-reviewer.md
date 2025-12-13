@@ -1,5 +1,5 @@
 ---
-name: command-quality-reviewer
+name: command-reviewer
 description: Use PROACTIVELY after creating commands, before committing command changes, or when auditing existing commands. Reviews slash command files for quality compliance against the commands guide. Prevents malformed commands and ensures consistent quality.
 tools: Read, Grep, Glob
 model: haiku

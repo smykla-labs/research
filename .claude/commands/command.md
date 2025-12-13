@@ -58,7 +58,7 @@ Use the Task tool with the detected mode stated explicitly in the prompt.
 
 **If `STATUS: READY_FOR_REVIEW`**:
 1. Parse: `command_name`, `command_location`, `for_agent`, and `content` (in `~~~markdown` fences)
-2. Invoke **command-quality-reviewer**:
+2. Invoke **command-reviewer**:
    ```
    Review this command definition:
 

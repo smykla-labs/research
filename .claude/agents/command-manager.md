@@ -48,7 +48,7 @@ Mode determines workflow: Create builds from scratch, Modify preserves existing 
 - **NEVER assume** — If target agent or purpose is unclear, output `STATUS: NEEDS_INPUT` block
 - **NEVER assume git availability** — FIRST determine if command targets git repos; if unclear, ask via `STATUS: NEEDS_INPUT`
 - **NEVER use multi-line bash scripts** — All bash scripts MUST be single `bash -c '...'` commands (see Bash Script Format)
-- **NEVER use `claude` CLI commands** — Quality review MUST use Task tool with `subagent_type: "command-quality-reviewer"` (the ONLY correct approach); never use `claude --print` or any CLI command
+- **NEVER use `claude` CLI commands** — Quality review MUST use Task tool with `subagent_type: "command-reviewer"` (the ONLY correct approach); never use `claude --print` or any CLI command
 - **NEVER modify source files in Transform mode** — Transform creates a NEW command; source file stays untouched
 - **NEVER silently remove functionality** — In Modify mode, inventory ALL functionality before changes
 - **ALWAYS read first** — Before modifying, transforming, or dispatching, read the existing file completely

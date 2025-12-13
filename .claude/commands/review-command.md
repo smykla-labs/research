@@ -5,7 +5,7 @@ description: Review slash command quality against the commands guide
 model: haiku
 ---
 
-Use the command-quality-reviewer agent to validate slash command files.
+Use the command-reviewer agent to validate slash command files.
 
 $ARGUMENTS
 
@@ -43,7 +43,7 @@ Commands Guide: @ai/claude-code-commands-guide.md
 
 **CRITICAL**: You MUST pass actual file content to the reviewer, NOT just a path.
 
-Invoke **command-quality-reviewer** with the Task tool:
+Invoke **command-reviewer** with the Task tool:
 - **MUST include**: Full file content in `~~~markdown` fences
 - **MUST include**: The Commands Guide from context above
 - Format the prompt as:
