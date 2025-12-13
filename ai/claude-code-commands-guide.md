@@ -419,7 +419,7 @@ $ARGUMENTS
    - `STATUS: READY_FOR_REVIEW` → Continue to step 3
 3. **If `STATUS: READY_FOR_REVIEW`**:
    - Parse: `agent_name`, `agent_location`, `slash_command`, `content`
-   - Invoke **subagent-quality-reviewer** with embedded content
+   - Invoke **subagent-reviewer** with embedded content
    - If grade < A: Resume subagent-manager with `REVIEW_FEEDBACK:` (max 3 attempts)
    - If grade A: Write agent to `{agent_location}/{agent_name}.md`
 4. **If `slash_command: yes: /command-name`**:

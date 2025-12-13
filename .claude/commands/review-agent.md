@@ -3,7 +3,7 @@ argument-hint: <agent-file-path|@file>
 description: Review subagent definitions for quality compliance against best practices
 ---
 
-Use the subagent-quality-reviewer agent to audit agent files for quality issues.
+Use the subagent-reviewer agent to audit agent files for quality issues.
 
 $ARGUMENTS
 
@@ -16,7 +16,7 @@ $ARGUMENTS
 
 ## Workflow
 
-1. **Invoke subagent-quality-reviewer** with the Task tool
+1. **Invoke subagent-reviewer** with the Task tool
    - Include agent file path(s): `$ARGUMENTS`
    - If no path provided, ask user which agent to review
 2. **Parse status block** from output:

@@ -51,7 +51,7 @@ Parse the status block from subagent output:
 
 **If `STATUS: READY_FOR_REVIEW`**:
 1. Parse: `agent_name`, `agent_location`, `slash_command`, and `content` (in `~~~markdown` fences)
-2. Invoke **subagent-quality-reviewer**:
+2. Invoke **subagent-reviewer**:
    ```
    Review this agent definition:
 

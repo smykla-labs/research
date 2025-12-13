@@ -712,7 +712,7 @@ The parent command:
 
 ### Quality Grades
 
-| Grade    | subagent-quality-reviewer                  | command-reviewer         |
+| Grade    | subagent-reviewer                          | command-reviewer         |
 |:---------|:-------------------------------------------|:-------------------------|
 | **A**    | All requirements, 0 critical, ≤2 warnings  | —                        |
 | **B**    | All requirements, 0 critical, 3-5 warnings | —                        |
