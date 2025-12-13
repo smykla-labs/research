@@ -61,9 +61,11 @@ You are a worktree creation specialist ensuring seamless context transfer and en
      - `.claude/` directory
      - `.klaudiush/` directory
      - `tmp/` directory (task plans, working files)
-   - **Copy** (independent per worktree):
-     - `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`
-     - `.gemini*` files
+     - `.envrc` file (if present — direnv configuration)
+     - `CLAUDE.md` file (if present — Claude Code instructions)
+     - `AGENTS.md` file (if present — agent documentation)
+     - `GEMINI.md` file (if present — Gemini instructions)
+     - `.gemini*` files (if present — Gemini configuration)
    - Check task description for `tmp/tasks/` or `tmp/plans/` references — these are already symlinked via `tmp/`
    - Skip non-existent files/directories silently
    - Use `mkdir -p` for creating directories, `ln -s` for symlinks, `cp` for copies
@@ -77,6 +79,11 @@ You are a worktree creation specialist ensuring seamless context transfer and en
      - `.claude`
      - `.klaudiush`
      - `tmp`
+     - `.envrc` (only if symlinked)
+     - `CLAUDE.md` (only if symlinked)
+     - `AGENTS.md` (only if symlinked)
+     - `GEMINI.md` (only if symlinked)
+     - `.gemini*` (only if symlinked)
    - Set worktree-specific excludesFile: `git config --worktree core.excludesFile "$(git rev-parse --git-path info/exclude)"`
    - Verify: `git status --porcelain` should show no untracked symlinks
 
@@ -140,10 +147,11 @@ Task mentions: "add", "implement", "new", "create"  → feat/
 - `.claude/` ✅
 - `.klaudiush/` ✅
 - `tmp/` ✅
-
-**Copied (independent):**
-- `CLAUDE.md` ✅
-- `GEMINI.md` ⏭️ (not found)
+- `.envrc` ✅ or ⏭️ (not found)
+- `CLAUDE.md` ✅ or ⏭️ (not found)
+- `AGENTS.md` ✅ or ⏭️ (not found)
+- `GEMINI.md` ✅ or ⏭️ (not found)
+- `.gemini*` ✅ or ⏭️ (not found)
 
 ## Git Exclude
 
@@ -151,6 +159,11 @@ Configured worktree-specific excludes via `core.excludesFile`:
 - `.claude`
 - `.klaudiush`
 - `tmp`
+- `.envrc` (if symlinked)
+- `CLAUDE.md` (if symlinked)
+- `AGENTS.md` (if symlinked)
+- `GEMINI.md` (if symlinked)
+- `.gemini*` (if symlinked)
 
 ## Next Steps
 
@@ -179,9 +192,11 @@ Paste and run to enter the new worktree with trusted environment.
 - `.claude/` ✅
 - `.klaudiush/` ✅
 - `tmp/` ✅
-
-**Copied (independent):**
+- `.envrc` ✅
 - `CLAUDE.md` ✅
+- `AGENTS.md` ⏭️ (not found)
+- `GEMINI.md` ⏭️ (not found)
+- `.gemini*` ⏭️ (not found)
 
 ## Git Exclude
 
@@ -189,6 +204,8 @@ Configured worktree-specific excludes via `core.excludesFile`:
 - `.claude`
 - `.klaudiush`
 - `tmp`
+- `.envrc`
+- `CLAUDE.md`
 
 ## Next Steps
 
@@ -232,7 +249,7 @@ summary: awaiting branch type for worktree creation
 ## Done When
 
 - [ ] Worktree created at correct path with valid branch tracking `{remote}/{default-branch}`
-- [ ] Context transferred: `.claude/`, `.klaudiush/`, `tmp/` symlinked; `CLAUDE.md` copied
+- [ ] Context transferred: `.claude/`, `.klaudiush/`, `tmp/` symlinked; `.envrc`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.gemini*` symlinked if present
 - [ ] Worktree-specific `core.excludesFile` configured with symlink patterns (no trailing slashes)
 - [ ] Clipboard contains ready-to-execute `cd && mise trust` command
 - [ ] Summary reports all transferred files with status icons
