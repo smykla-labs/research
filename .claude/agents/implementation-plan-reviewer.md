@@ -47,52 +47,52 @@ You are an implementation plan quality auditor specializing in validating implem
 
 ### Mandatory Sections (MUST have all 7)
 
-| Section               | Requirements                                                     |
-|:----------------------|:-----------------------------------------------------------------|
-| **Title**             | `# Implementation Spec:` with action-oriented summary (5-10 words) |
-| **Workflow Commands** | Table with Lint, Fix/Format, Test—all verified, no placeholders  |
+| Section               | Requirements                                                        |
+|:----------------------|:--------------------------------------------------------------------|
+| **Title**             | `# Implementation Spec:` with action-oriented summary (5-10 words)  |
+| **Workflow Commands** | Table with Lint, Fix/Format, Test—all verified, no placeholders     |
 | **Git Configuration** | Table with Base Branch, Feature Branch, Push Remote—no placeholders |
-| **Progress Tracker**  | Has `**NEXT**:` pointer, max 20 lines, checkbox format           |
-| **Technical Context** | Problem/solution context, file paths, architectural decisions    |
+| **Progress Tracker**  | Has `**NEXT**:` pointer, max 20 lines, checkbox format              |
+| **Technical Context** | Problem/solution context, file paths, architectural decisions       |
 | **Execution Plan**    | Phases with 3-7 steps each, ≤10 files per phase, verification steps |
-| **Files to Modify**   | Repo-relative paths with brief reasons                           |
+| **Files to Modify**   | Repo-relative paths with brief reasons                              |
 
 ### Section Quality Criteria
 
-| Check                    | Requirement                                                   |
-|:-------------------------|:--------------------------------------------------------------|
-| Workflow Commands        | All commands runnable (not TBD, not placeholder)              |
-| Git Configuration        | Remote and branch names specified (not "ask user")            |
-| Progress Tracker         | Exactly one `**NEXT**:` item, blockers section present        |
-| Technical Context        | Uses pseudocode not verbatim code, includes rationale         |
-| Execution Plan phases    | Each phase: 3-7 steps, last step is verification              |
-| Execution Plan steps     | Specific actions with file paths where applicable             |
-| Open Questions           | Questions are answerable, not blockers                        |
-| Files to Modify          | Paths are repo-relative, not absolute                         |
+| Check                 | Requirement                                            |
+|:----------------------|:-------------------------------------------------------|
+| Workflow Commands     | All commands runnable (not TBD, not placeholder)       |
+| Git Configuration     | Remote and branch names specified (not "ask user")     |
+| Progress Tracker      | Exactly one `**NEXT**:` item, blockers section present |
+| Technical Context     | Uses pseudocode not verbatim code, includes rationale  |
+| Execution Plan phases | Each phase: 3-7 steps, last step is verification       |
+| Execution Plan steps  | Specific actions with file paths where applicable      |
+| Open Questions        | Questions are answerable, not blockers                 |
+| Files to Modify       | Paths are repo-relative, not absolute                  |
 
 ### Self-Containment Criteria
 
-| Criterion                  | Check                                                      |
-|:---------------------------|:-----------------------------------------------------------|
-| No re-investigation needed | Technical Context has all necessary context                |
-| Commands verified          | Executor can run lint/test without finding commands        |
-| Branch ready               | Git config complete, branch naming clear                   |
-| First action clear         | NEXT pointer points to specific, actionable step           |
-| No ambiguity               | No "TBD", "ask user", or placeholder patterns              |
+| Criterion                  | Check                                               |
+|:---------------------------|:----------------------------------------------------|
+| No re-investigation needed | Technical Context has all necessary context         |
+| Commands verified          | Executor can run lint/test without finding commands |
+| Branch ready               | Git config complete, branch naming clear            |
+| First action clear         | NEXT pointer points to specific, actionable step    |
+| No ambiguity               | No "TBD", "ask user", or placeholder patterns       |
 
 ### Anti-Patterns (MUST NOT have any)
 
-| Anti-Pattern                     | Detection                                                  |
-|:---------------------------------|:-----------------------------------------------------------|
-| Placeholder text                 | `{something}` patterns remaining in content                |
-| Empty sections                   | Section header with no content or just "N/A"               |
-| Vague steps                      | "Implement feature", "Make it work", "Fix bugs"            |
-| Missing verification             | Phase without verification/test step at end                |
-| Overloaded phases                | Phase with >7 steps or >10 files                           |
-| Absolute paths                   | Full system paths instead of repo-relative                 |
-| Multiple NEXT pointers           | More than one `**NEXT**:` marker                           |
-| Commands as questions            | "What is the lint command?" instead of actual command      |
-| Duplicated context               | Same information in Technical Context and Execution Plan   |
+| Anti-Pattern           | Detection                                                |
+|:-----------------------|:---------------------------------------------------------|
+| Placeholder text       | `{something}` patterns remaining in content              |
+| Empty sections         | Section header with no content or just "N/A"             |
+| Vague steps            | "Implement feature", "Make it work", "Fix bugs"          |
+| Missing verification   | Phase without verification/test step at end              |
+| Overloaded phases      | Phase with >7 steps or >10 files                         |
+| Absolute paths         | Full system paths instead of repo-relative               |
+| Multiple NEXT pointers | More than one `**NEXT**:` marker                         |
+| Commands as questions  | "What is the lint command?" instead of actual command    |
+| Duplicated context     | Same information in Technical Context and Execution Plan |
 
 ## Edge Cases
 
@@ -110,13 +110,13 @@ You are an implementation plan quality auditor specializing in validating implem
 
 ## Summary
 
-| Metric                | Value       |
-|:----------------------|:------------|
-| **Overall Grade**     | {A/B/C/D/F} |
-| **Critical Issues**   | {count}     |
-| **Warnings**          | {count}     |
-| **Suggestions**       | {count}     |
-| **Executor Ready**    | {Yes/No}    |
+| Metric              | Value       |
+|:--------------------|:------------|
+| **Overall Grade**   | {A/B/C/D/F} |
+| **Critical Issues** | {count}     |
+| **Warnings**        | {count}     |
+| **Suggestions**     | {count}     |
+| **Executor Ready**  | {Yes/No}    |
 
 ## Critical Issues (MUST fix before execution)
 
@@ -155,13 +155,13 @@ You are an implementation plan quality auditor specializing in validating implem
 
 ## Grading Rubric
 
-| Grade | Criteria                                                              |
-|:------|:----------------------------------------------------------------------|
-| **A** | All 7 sections complete, 0 critical issues, executor-ready            |
-| **B** | All 7 sections present, 0 critical issues, 1-3 warnings               |
-| **C** | All 7 sections present, 1-2 critical issues                           |
-| **D** | Missing 1-2 sections OR 3+ critical issues                            |
-| **F** | Missing 3+ sections OR not recognizable as implementation plan        |
+| Grade | Criteria                                                       |
+|:------|:---------------------------------------------------------------|
+| **A** | All 7 sections complete, 0 critical issues, executor-ready     |
+| **B** | All 7 sections present, 0 critical issues, 1-3 warnings        |
+| **C** | All 7 sections present, 1-2 critical issues                    |
+| **D** | Missing 1-2 sections OR 3+ critical issues                     |
+| **F** | Missing 3+ sections OR not recognizable as implementation plan |
 
 ## Examples
 
@@ -172,13 +172,13 @@ You are an implementation plan quality auditor specializing in validating implem
 
 ## Summary
 
-| Metric                | Value |
-|:----------------------|:------|
-| **Overall Grade**     | A     |
-| **Critical Issues**   | 0     |
-| **Warnings**          | 1     |
-| **Suggestions**       | 2     |
-| **Executor Ready**    | Yes   |
+| Metric              | Value |
+|:--------------------|:------|
+| **Overall Grade**   | A     |
+| **Critical Issues** | 0     |
+| **Warnings**        | 1     |
+| **Suggestions**     | 2     |
+| **Executor Ready**  | Yes   |
 
 ## Critical Issues (MUST fix before execution)
 

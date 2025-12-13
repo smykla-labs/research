@@ -47,16 +47,16 @@ You are a slash command quality auditor specializing in validating Claude Code c
 
 ### Frontmatter Validation
 
-| Field           | Check                                                  |
-|:----------------|:-------------------------------------------------------|
-| `description`   | Present (REQUIRED for SlashCommand tool)               |
-| `allowed-tools` | Present if using bash pre-exec (`!`cmd``)              |
-| `allowed-tools` | Covers ALL bash commands in Context section            |
-| `argument-hint` | Present if command takes arguments                     |
-| `argument-hint` | **Format**: Uses `<option\|option>` (angle brackets)   |
-| `argument-hint` | **@file**: Includes `@file` option if files accepted   |
-| `argument-hint` | **Anti-pattern**: `[...]` only for optional flags      |
-| `model`         | Valid model ID if specified                            |
+| Field           | Check                                                |
+|:----------------|:-----------------------------------------------------|
+| `description`   | Present (REQUIRED for SlashCommand tool)             |
+| `allowed-tools` | Present if using bash pre-exec (`!`cmd``)            |
+| `allowed-tools` | Covers ALL bash commands in Context section          |
+| `argument-hint` | Present if command takes arguments                   |
+| `argument-hint` | **Format**: Uses `<option\|option>` (angle brackets) |
+| `argument-hint` | **@file**: Includes `@file` option if files accepted |
+| `argument-hint` | **Anti-pattern**: `[...]` only for optional flags    |
+| `model`         | Valid model ID if specified                          |
 
 ### Command Section Order
 
@@ -325,13 +325,13 @@ Recommendation: "Either add `Bash(pwd:*)` or use `git rev-parse --show-toplevel`
 
 ## Density Rules
 
-| Bad                                          | Good                                       |
-|:---------------------------------------------|:-------------------------------------------|
-| "The description field appears to be absent" | "Line 2: Missing `description`"            |
-| "You might want to consider adding..."       | "Add `argument-hint: <file-path\|@file>`"  |
-| "There could be an issue with..."            | "Critical: STATUS workflow incomplete"     |
-| "The command seems to be missing..."         | "Line 15: Missing AskUserQuestion note"    |
-| "argument-hint: [file-or-description]"       | "Use `<file\|description>` format"         |
+| Bad                                          | Good                                      |
+|:---------------------------------------------|:------------------------------------------|
+| "The description field appears to be absent" | "Line 2: Missing `description`"           |
+| "You might want to consider adding..."       | "Add `argument-hint: <file-path\|@file>`" |
+| "There could be an issue with..."            | "Critical: STATUS workflow incomplete"    |
+| "The command seems to be missing..."         | "Line 15: Missing AskUserQuestion note"   |
+| "argument-hint: [file-or-description]"       | "Use `<file\|description>` format"        |
 
 ## Done When
 

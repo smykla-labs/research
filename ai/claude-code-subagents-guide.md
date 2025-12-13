@@ -70,13 +70,13 @@ Plus any MCP tools registered in settings. ([Subagents Docs][docs])
 
 ## 3. Tool Selection by Agent Type
 
-| Agent Role        | Recommended Tools                       | Rationale            |
-|-------------------|-----------------------------------------|----------------------|
-| **Reviewer**      | `Read, Grep, Glob`                      | Read-only analysis   |
-| **Researcher**    | `Read, Grep, Glob, WebFetch, WebSearch` | Gather information   |
-| **Planner**       | `Read, Grep, Glob, Bash, Write`         | Investigate and doc  |
-| **Implementer**   | `Read, Edit, Write, Bash, Grep, Glob`   | Create and execute   |
-| **Documentation** | `Read, Write, Edit, Glob, WebFetch`     | Research and write   |
+| Agent Role        | Recommended Tools                       | Rationale           |
+|-------------------|-----------------------------------------|---------------------|
+| **Reviewer**      | `Read, Grep, Glob`                      | Read-only analysis  |
+| **Researcher**    | `Read, Grep, Glob, WebFetch, WebSearch` | Gather information  |
+| **Planner**       | `Read, Grep, Glob, Bash, Write`         | Investigate and doc |
+| **Implementer**   | `Read, Edit, Write, Bash, Grep, Glob`   | Create and execute  |
+| **Documentation** | `Read, Write, Edit, Glob, WebFetch`     | Research and write  |
 
 Source: [awesome-claude-code-subagents][awesome]
 
@@ -125,11 +125,11 @@ Source: [Subagents Docs][docs]
 
 Claude Code uses **prompt-driven triggers** rather than configuration:
 
-| Keyword                        | Approx. Budget   |
-|--------------------------------|------------------|
-| `think`                        | ~4,000 tokens    |
-| `think hard` / `megathink`     | ~10,000 tokens   |
-| `think harder` / `ultrathink`  | ~31,999 tokens   |
+| Keyword                       | Approx. Budget |
+|-------------------------------|----------------|
+| `think`                       | ~4,000 tokens  |
+| `think hard` / `megathink`    | ~10,000 tokens |
+| `think harder` / `ultrathink` | ~31,999 tokens |
 
 Source: [Claude Code Thinking Guide][cc-thinking]
 
@@ -712,16 +712,16 @@ The parent command:
 
 ### Quality Grades
 
-| Grade    | subagent-reviewer                          | command-reviewer         |
-|:---------|:-------------------------------------------|:-------------------------|
-| **A**    | All requirements, 0 critical, ≤2 warnings  | —                        |
-| **B**    | All requirements, 0 critical, 3-5 warnings | —                        |
-| **C**    | All requirements, 1-2 critical             | —                        |
-| **D**    | Missing requirements OR 3+ critical        | —                        |
-| **F**    | Missing 3+ requirements OR invalid         | —                        |
-| **PASS** | —                                          | All checks pass          |
-| **WARN** | —                                          | Passes with warnings     |
-| **FAIL** | —                                          | Critical issues present  |
+| Grade    | subagent-reviewer                          | command-reviewer        |
+|:---------|:-------------------------------------------|:------------------------|
+| **A**    | All requirements, 0 critical, ≤2 warnings  | —                       |
+| **B**    | All requirements, 0 critical, 3-5 warnings | —                       |
+| **C**    | All requirements, 1-2 critical             | —                       |
+| **D**    | Missing requirements OR 3+ critical        | —                       |
+| **F**    | Missing 3+ requirements OR invalid         | —                       |
+| **PASS** | —                                          | All checks pass         |
+| **WARN** | —                                          | Passes with warnings    |
+| **FAIL** | —                                          | Critical issues present |
 
 **Acceptance criteria:**
 - `subagent-manager`: Only grade **A** is acceptable
@@ -771,12 +771,12 @@ summary: one-line description
 
 #### Status Values
 
-| Status             | Meaning                         | Parent Action                               |
-|:-------------------|:--------------------------------|:--------------------------------------------|
-| `COMPLETED`        | Task finished successfully      | Report to user, done                        |
-| `READY_FOR_NEXT`   | Chain to another agent          | Invoke specified `next_agent`               |
-| `NEEDS_INPUT`      | Requires user clarification     | Use `AskUserQuestion`, then resume          |
-| `READY_FOR_REVIEW` | Content ready for quality check | Invoke quality reviewer, write if passed    |
+| Status             | Meaning                         | Parent Action                            |
+|:-------------------|:--------------------------------|:-----------------------------------------|
+| `COMPLETED`        | Task finished successfully      | Report to user, done                     |
+| `READY_FOR_NEXT`   | Chain to another agent          | Invoke specified `next_agent`            |
+| `NEEDS_INPUT`      | Requires user clarification     | Use `AskUserQuestion`, then resume       |
+| `READY_FOR_REVIEW` | Content ready for quality check | Invoke quality reviewer, write if passed |
 
 **Note**: `STATUS: READY_FOR_REVIEW` is used when subagents need quality review but cannot spawn reviewers themselves (Task tool not available to subagents). See §10 for details.
 
@@ -1034,11 +1034,11 @@ This approach aligns with PubNub's HITL (Human-in-the-Loop) pattern: "If accepta
 
 This limitation affects workflows that require subagents to chain other subagents:
 
-| Workflow                    | Blocked Approach                     | Working Approach                        |
-|:----------------------------|:-------------------------------------|:----------------------------------------|
-| Quality review integration  | Subagent invokes quality reviewer    | Parent command orchestrates review      |
-| Multi-agent pipelines       | Subagent chains to next subagent     | Parent command chains agents            |
-| Delegation within subagents | Subagent delegates to specialist     | Parent handles all delegation           |
+| Workflow                    | Blocked Approach                  | Working Approach                   |
+|:----------------------------|:----------------------------------|:-----------------------------------|
+| Quality review integration  | Subagent invokes quality reviewer | Parent command orchestrates review |
+| Multi-agent pipelines       | Subagent chains to next subagent  | Parent command chains agents       |
+| Delegation within subagents | Subagent delegates to specialist  | Parent handles all delegation      |
 
 #### Workaround: Parent-Orchestrated Pattern
 

@@ -249,11 +249,11 @@ Task mentions:
 
 ## Git Configuration
 
-| Setting        | Value                      |
-|:---------------|:---------------------------|
-| Base Branch    | `{main or master}`         |
-| Feature Branch | `{type/slug}`              |
-| Push Remote    | `{origin or upstream}`     |
+| Setting        | Value                          |
+|:---------------|:-------------------------------|
+| Base Branch    | `{main or master}`             |
+| Feature Branch | `{type/slug}`                  |
+| Push Remote    | `{origin or upstream}`         |
 | Worktree Path  | `{path or N/A if no worktree}` |
 
 ## Progress Tracker
@@ -331,16 +331,16 @@ task_slug: 251212-add-retry-logic
 plan_location: tmp/tasks/251212-add-retry-logic/implementation_plan.md
 content:
 
-~~~markdown
+```markdown
 # Implementation Spec: Add Retry Logic to API Client
 
 ## Workflow Commands
 
-| Action     | Command        |
-|:-----------|:---------------|
-| Lint       | `make lint`    |
-| Fix/Format | `make fmt`     |
-| Test       | `make test`    |
+| Action     | Command     |
+|:-----------|:------------|
+| Lint       | `make lint` |
+| Fix/Format | `make fmt`  |
+| Test       | `make test` |
 
 ## Git Configuration
 
@@ -408,7 +408,7 @@ content:
 - `pkg/client/retry.go` — New file for retry logic
 - `pkg/client/retry_test.go` — New file for retry tests
 - `pkg/client/client.go` — Add retry wrapper to HTTP client
-~~~
+```
 summary: Implementation plan for adding retry logic to API client
 </output>
 </example>
@@ -477,11 +477,11 @@ content:
 
 ## Workflow Commands
 
-| Action     | Command        |
-|:-----------|:---------------|
-| Lint       | `make lint`    |
-| Fix/Format | `make fmt`     |
-| Test       | `make test`    |
+| Action     | Command     |
+|:-----------|:------------|
+| Lint       | `make lint` |
+| Fix/Format | `make fmt`  |
+| Test       | `make test` |
 
 ## Git Configuration
 
@@ -572,13 +572,13 @@ summary: Improved implementation plan with detailed pseudocode and split phases
 
 ## Density Rules
 
-| Bad                                                    | Good                                         |
-|:-------------------------------------------------------|:---------------------------------------------|
-| "We need to investigate the codebase to understand..." | "Investigation: found X in `path/`"          |
-| "The function takes several parameters and..."         | "`func(a, b) -> C`: validates, transforms"   |
-| "Consider using retry logic because..."                | "Chose retry: transient failures common"     |
-| "There might be some issues with..."                   | "**Blocker:** X requires Y resolution"       |
-| "Make the tests pass"                                  | "Verify: `make test` exits 0, covers retry"  |
+| Bad                                                    | Good                                        |
+|:-------------------------------------------------------|:--------------------------------------------|
+| "We need to investigate the codebase to understand..." | "Investigation: found X in `path/`"         |
+| "The function takes several parameters and..."         | "`func(a, b) -> C`: validates, transforms"  |
+| "Consider using retry logic because..."                | "Chose retry: transient failures common"    |
+| "There might be some issues with..."                   | "**Blocker:** X requires Y resolution"      |
+| "Make the tests pass"                                  | "Verify: `make test` exits 0, covers retry" |
 
 ## Done When
 

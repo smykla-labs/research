@@ -18,7 +18,7 @@ Comprehensive template for creating production-quality Claude Code subagent defi
 | Edge Cases             | ✅        | Always (MUST include uncertainty handling)   |
 | Output Format          | ✅        | Always (concrete structure, not description) |
 | Examples               | ✅        | Always (good + bad with tags)                |
-| Density Rules          | 📋        | Recommended for agents producing text output |
+| Density Rules          | 📋       | Recommended for agents producing text output |
 | Done When              | ✅        | Always (4-6 measurable criteria)             |
 | Known Issues           | ❌        | Reviewer/validator agents with runtime traps |
 | Output (Status Blocks) | ❌        | Agent needs parent orchestration             |
@@ -47,10 +47,10 @@ You are a {specific role} specializing in {domain/capability in 5-10 words}.
 
 {INCLUDE ONLY IF: Agent has 2+ distinct operational modes}
 
-| Mode          | Trigger                    | Action                        |
-|:--------------|:---------------------------|:------------------------------|
-| **{Mode 1}**  | {Input pattern or keyword} | {What agent does in this mode}|
-| **{Mode 2}**  | {Input pattern or keyword} | {What agent does in this mode}|
+| Mode         | Trigger                    | Action                         |
+|:-------------|:---------------------------|:-------------------------------|
+| **{Mode 1}** | {Input pattern or keyword} | {What agent does in this mode} |
+| **{Mode 2}** | {Input pattern or keyword} | {What agent does in this mode} |
 
 ## Constraints
 
@@ -128,11 +128,11 @@ You are a {specific role} specializing in {domain/capability in 5-10 words}.
 
 {RECOMMENDED: Include for agents that produce text output}
 
-| Bad                            | Good                              |
-|:-------------------------------|:----------------------------------|
-| {Verbose pattern with prose}   | {Dense pattern with key info}     |
-| {Another wordy example}        | {Concise equivalent}              |
-| {Explanation instead of data}  | {Data in structured format}       |
+| Bad                           | Good                          |
+|:------------------------------|:------------------------------|
+| {Verbose pattern with prose}  | {Dense pattern with key info} |
+| {Another wordy example}       | {Concise equivalent}          |
+| {Explanation instead of data} | {Data in structured format}   |
 
 ## Done When
 
@@ -182,10 +182,10 @@ summary: {ready for what}
 
 ### Required Fields
 
-| Field         | Format                   | Purpose                                        |
-|:--------------|:-------------------------|:-----------------------------------------------|
-| `name`        | `kebab-case`             | Unique identifier for the agent                |
-| `description` | Natural language         | Determines when Claude invokes automatically   |
+| Field         | Format           | Purpose                                      |
+|:--------------|:-----------------|:---------------------------------------------|
+| `name`        | `kebab-case`     | Unique identifier for the agent              |
+| `description` | Natural language | Determines when Claude invokes automatically |
 
 ### Optional Fields
 
@@ -308,13 +308,13 @@ Problems: Vague, non-specific, doesn't establish domain expertise.
 
 **Keywords and Their Use:**
 
-| Keyword   | Use For                      | Example                                           |
-|:----------|:-----------------------------|:--------------------------------------------------|
-| `NEVER`   | Absolute prohibitions        | **NEVER** assume — output STATUS: NEEDS_INPUT     |
-| `ALWAYS`  | Mandatory actions            | **ALWAYS** verify — run lint before commit        |
-| `ZERO`    | No exceptions allowed        | **ZERO** tolerance for secrets in code            |
-| `MAXIMUM` | Upper limits                 | **MAXIMUM** 60 lines — cut ruthlessly             |
-| `ONLY`    | Scope restrictions           | **ONLY** modify plan file — no other files        |
+| Keyword   | Use For               | Example                                       |
+|:----------|:----------------------|:----------------------------------------------|
+| `NEVER`   | Absolute prohibitions | **NEVER** assume — output STATUS: NEEDS_INPUT |
+| `ALWAYS`  | Mandatory actions     | **ALWAYS** verify — run lint before commit    |
+| `ZERO`    | No exceptions allowed | **ZERO** tolerance for secrets in code        |
+| `MAXIMUM` | Upper limits          | **MAXIMUM** 60 lines — cut ruthlessly         |
+| `ONLY`    | Scope restrictions    | **ONLY** modify plan file — no other files    |
 
 **Mandatory Constraint** (every agent MUST include):
 
@@ -471,11 +471,11 @@ Problems: No structure, "appropriate sections" is vague, no format specification
 ```markdown
 ## Density Rules
 
-| Bad                                   | Good                               |
-|:--------------------------------------|:-----------------------------------|
-| "We attempted X but unfortunately..." | "Tried X: failed due to Y"         |
-| 20-line code block                    | `func(a,b) → filtered result`      |
-| "/Users/dev/Projects/.../file.md"     | `.claude/agents/file.md`           |
+| Bad                                   | Good                          |
+|:--------------------------------------|:------------------------------|
+| "We attempted X but unfortunately..." | "Tried X: failed due to Y"    |
+| 20-line code block                    | `func(a,b) → filtered result` |
+| "/Users/dev/Projects/.../file.md"     | `.claude/agents/file.md`      |
 ```
 
 ### Done When Section
@@ -516,19 +516,19 @@ Problems: Not measurable, "looks good" is subjective.
 
 **Required fields:**
 
-| Field | Purpose |
-|:------|:--------|
-| **Detect** | Pattern to look for (what triggers detection) |
-| **Problem** | Why this fails (detailed explanation) |
-| **Fix** | The correct approach (solution) |
+| Field       | Purpose                                       |
+|:------------|:----------------------------------------------|
+| **Detect**  | Pattern to look for (what triggers detection) |
+| **Problem** | Why this fails (detailed explanation)         |
+| **Fix**     | The correct approach (solution)               |
 
 **Optional fields:**
 
-| Field | Purpose |
-|:------|:--------|
+| Field        | Purpose                               |
+|:-------------|:--------------------------------------|
 | **Severity** | Critical/Warning/Info (for reviewers) |
-| **Example** | Concrete code showing the issue |
-| **Verify** | Command to test the fix works |
+| **Example**  | Concrete code showing the issue       |
+| **Verify**   | Command to test the fix works         |
 
 **Structure:**
 
@@ -584,10 +584,10 @@ Problems: Mixes XML with Markdown, inconsistent field names ("Pattern" vs "Detec
 
 **Relationship with Anti-Pattern Detection:**
 
-| Section | Purpose | Format |
-|:--------|:--------|:-------|
-| Anti-Pattern Detection | Quick reference checklist | Table: Pattern, Detection, Severity |
-| Known Issues | Detailed explanations | H3 headers with Detect, Problem, Fix |
+| Section                | Purpose                   | Format                               |
+|:-----------------------|:--------------------------|:-------------------------------------|
+| Anti-Pattern Detection | Quick reference checklist | Table: Pattern, Detection, Severity  |
+| Known Issues           | Detailed explanations     | H3 headers with Detect, Problem, Fix |
 
 Known Issues provides **depth** for complex issues that need explanation. Anti-Pattern Detection provides **breadth** for quick scanning. They can reference each other by ID.
 
@@ -862,8 +862,8 @@ Use this checklist before finalizing any agent definition.
 
 ## Version History
 
-| Date       | Version | Changes                                              |
-|:-----------|:--------|:-----------------------------------------------------|
-| 2025-12-12 | 1.2     | Added KEY naming guidance for command extraction     |
-| 2025-12-12 | 1.1     | Added Known Issues section for runtime traps         |
-| 2025-12-12 | 1.0     | Initial template                                     |
+| Date       | Version | Changes                                          |
+|:-----------|:--------|:-------------------------------------------------|
+| 2025-12-12 | 1.2     | Added KEY naming guidance for command extraction |
+| 2025-12-12 | 1.1     | Added Known Issues section for runtime traps     |
+| 2025-12-12 | 1.0     | Initial template                                 |

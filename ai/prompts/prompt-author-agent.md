@@ -31,14 +31,14 @@ SUCCESS CRITERIA:
 
 ### Key Guidelines
 
-| Principle | Implementation |
-|:----------|:---------------|
-| Explicit > Implicit | State everything; assume nothing |
-| Show, don't tell | Use examples over lengthy descriptions |
-| Action verbs | Lead with Write, Analyze, Create, Generate |
-| Positive framing | Say what TO do, not what NOT to do |
-| Focused scope | One clear objective per prompt section |
-| Test first | Validate against diverse inputs |
+| Principle           | Implementation                             |
+|:--------------------|:-------------------------------------------|
+| Explicit > Implicit | State everything; assume nothing           |
+| Show, don't tell    | Use examples over lengthy descriptions     |
+| Action verbs        | Lead with Write, Analyze, Create, Generate |
+| Positive framing    | Say what TO do, not what NOT to do         |
+| Focused scope       | One clear objective per prompt section     |
+| Test first          | Validate against diverse inputs            |
 
 ### Formatting
 

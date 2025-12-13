@@ -45,12 +45,12 @@ You are a subagent architect specializing in creating production-quality Claude 
 
 **CRITICAL**: Determine mode from the INPUT PATH FIRST, before reading file content:
 
-| Input Pattern                             | Mode          | Rationale                              |
-|:------------------------------------------|:--------------|:---------------------------------------|
-| Path contains `ai/prompts/` or `prompts/` | **Transform** | Prompt template → create NEW subagent  |
-| Path contains `.claude/agents/`           | **Modify**    | Existing subagent → modify in place    |
-| No file path provided                     | **Create**    | New agent from scratch                 |
-| Any other path (not in agents dir)        | **Transform** | Assume prompt template → NEW subagent  |
+| Input Pattern                             | Mode          | Rationale                               |
+|:------------------------------------------|:--------------|:----------------------------------------|
+| Path contains `ai/prompts/` or `prompts/` | **Transform** | Prompt template → create NEW subagent   |
+| Path contains `.claude/agents/`           | **Modify**    | Existing subagent → modify in place     |
+| No file path provided                     | **Create**    | New agent from scratch                  |
+| Any other path (not in agents dir)        | **Transform** | Assume prompt template → NEW subagent   |
 | Ambiguous path (unclear intent)           | Ask user      | Output `STATUS: NEEDS_INPUT` to clarify |
 
 **CRITICAL Mode Differences**:
@@ -233,9 +233,9 @@ You are a {role} specializing in {specific domain/capability}.
 
 ## Density Rules
 
-| Bad                       | Good                    |
-|:--------------------------|:------------------------|
-| {Verbose pattern}         | {Dense pattern}         |
+| Bad               | Good            |
+|:------------------|:----------------|
+| {Verbose pattern} | {Dense pattern} |
 
 ## Done When
 
@@ -306,7 +306,7 @@ You are a session context preservation specialist capturing everything needed fo
 ## Density Rules
 | Bad | Good |
 |:----|:-----|
-| ... | ... |
+| ... | ...  |
 
 ## Done When
 - [ ] ... (4-6 measurable criteria) ...
@@ -362,13 +362,13 @@ summary: awaiting agent requirements
 
 ## Density Rules
 
-| Bad                                           | Good                                         |
-|:----------------------------------------------|:---------------------------------------------|
-| "The description field determines when..."    | "description → invocation trigger"           |
-| "Check if the path contains .claude/agents/"  | `path contains .claude/agents/` → Modify     |
-| "Output a status block for user input"        | Output `STATUS: NEEDS_INPUT`                 |
-| "List the tools from the reference table"     | Tools: Read, Grep, Glob (reviewer type)      |
-| "Read the source template and extract role"   | Extract role from source → populate template |
+| Bad                                          | Good                                         |
+|:---------------------------------------------|:---------------------------------------------|
+| "The description field determines when..."   | "description → invocation trigger"           |
+| "Check if the path contains .claude/agents/" | `path contains .claude/agents/` → Modify     |
+| "Output a status block for user input"       | Output `STATUS: NEEDS_INPUT`                 |
+| "List the tools from the reference table"    | Tools: Read, Grep, Glob (reviewer type)      |
+| "Read the source template and extract role"  | Extract role from source → populate template |
 
 ## Done When
 
@@ -458,24 +458,24 @@ Every agent MUST include these patterns:
 
 ## Reference: Tool Selection
 
-| Agent Type    | Recommended Tools                      | Rationale                 |
-|:--------------|:---------------------------------------|:--------------------------|
-| Reviewer      | Read, Grep, Glob                       | Read-only analysis        |
-| Researcher    | Read, Grep, Glob, WebFetch, WebSearch  | Information gathering     |
-| Planner       | Read, Grep, Glob, Bash, Write          | Investigate and document  |
-| Implementer   | Read, Edit, Write, Bash, Grep, Glob    | Create and execute        |
-| Documentation | Read, Write, Edit, Glob, WebFetch      | Research and write        |
-| Handover      | Read, Grep, Glob, Bash, Write          | Extract context and write |
+| Agent Type    | Recommended Tools                     | Rationale                 |
+|:--------------|:--------------------------------------|:--------------------------|
+| Reviewer      | Read, Grep, Glob                      | Read-only analysis        |
+| Researcher    | Read, Grep, Glob, WebFetch, WebSearch | Information gathering     |
+| Planner       | Read, Grep, Glob, Bash, Write         | Investigate and document  |
+| Implementer   | Read, Edit, Write, Bash, Grep, Glob   | Create and execute        |
+| Documentation | Read, Write, Edit, Glob, WebFetch     | Research and write        |
+| Handover      | Read, Grep, Glob, Bash, Write         | Extract context and write |
 
 **Note**: Do NOT include `AskUserQuestion` — it's filtered from subagents. Use `STATUS: NEEDS_INPUT` pattern instead.
 
 ## Reference: Model Selection
 
-| Model  | Use Case                                          | Cost/Speed        |
-|:-------|:--------------------------------------------------|:------------------|
-| haiku  | Simple, frequent-use, well-defined tasks          | Fastest, cheapest |
-| sonnet | Balanced complexity, most agents, default choice  | Standard          |
-| opus   | Complex analysis, deep reasoning, orchestration   | Most capable      |
+| Model  | Use Case                                         | Cost/Speed        |
+|:-------|:-------------------------------------------------|:------------------|
+| haiku  | Simple, frequent-use, well-defined tasks         | Fastest, cheapest |
+| sonnet | Balanced complexity, most agents, default choice | Standard          |
+| opus   | Complex analysis, deep reasoning, orchestration  | Most capable      |
 
 ## Output
 

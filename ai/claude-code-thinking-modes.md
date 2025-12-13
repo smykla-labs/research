@@ -335,14 +335,14 @@ Extended thinking is supported in:
 
 ## Troubleshooting
 
-| Problem                              | Likely Cause                             | Solution                                          |
-|:-------------------------------------|:-----------------------------------------|:--------------------------------------------------|
-| Keyword not working                  | Not using Claude Code CLI                | Use API configuration or switch to Claude Code    |
-| Unexpectedly high token costs        | `ultrathink` when simpler level suffices | Start with `think`, escalate only if needed       |
-| Response timeout                     | Budget too high (32k+) for streaming     | Use batch processing API or reduce budget         |
-| Cache invalidation                   | Changed thinking parameters              | Keep thinking settings consistent within session  |
-| Non-English keyword doesn't work     | Keywords must be English                 | Use English keywords or API configuration         |
-| `budget_tokens` > `max_tokens` error | Budget exceeds max                       | Set `budget_tokens` to 40%-60% of `max_tokens`    |
+| Problem                              | Likely Cause                             | Solution                                         |
+|:-------------------------------------|:-----------------------------------------|:-------------------------------------------------|
+| Keyword not working                  | Not using Claude Code CLI                | Use API configuration or switch to Claude Code   |
+| Unexpectedly high token costs        | `ultrathink` when simpler level suffices | Start with `think`, escalate only if needed      |
+| Response timeout                     | Budget too high (32k+) for streaming     | Use batch processing API or reduce budget        |
+| Cache invalidation                   | Changed thinking parameters              | Keep thinking settings consistent within session |
+| Non-English keyword doesn't work     | Keywords must be English                 | Use English keywords or API configuration        |
+| `budget_tokens` > `max_tokens` error | Budget exceeds max                       | Set `budget_tokens` to 40%-60% of `max_tokens`   |
 
 ---
 

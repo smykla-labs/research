@@ -389,12 +389,12 @@ Check your shell variable (run the appropriate command for your system)
 
 ### Tables vs. Lists vs. Prose
 
-| Content Type                     | Format           | Example                               |
-|:---------------------------------|:-----------------|:--------------------------------------|
-| Comparisons, status, key-values  | Tables           | Diagnostic interpretation             |
-| Sequential steps                 | Numbered lists   | Installation instructions             |
-| Non-sequential items             | Bullet lists     | Symptoms list                         |
-| Complex explanations             | Short paragraphs | Root cause explanation                |
+| Content Type                    | Format           | Example                   |
+|:--------------------------------|:-----------------|:--------------------------|
+| Comparisons, status, key-values | Tables           | Diagnostic interpretation |
+| Sequential steps                | Numbered lists   | Installation instructions |
+| Non-sequential items            | Bullet lists     | Symptoms list             |
+| Complex explanations            | Short paragraphs | Root cause explanation    |
 
 ### Emphasis and Visual Cues
 

@@ -239,11 +239,11 @@ $ARGUMENTS
 
 Determine mode from input path BEFORE invoking subagent:
 
-| Input Pattern                    | Mode          | Tell Subagent                             |
-|:---------------------------------|:--------------|:------------------------------------------|
-| Path contains `{pattern1}`       | **{Mode1}**   | "{MODE1}: {instruction}"                  |
-| Path contains `{pattern2}`       | **{Mode2}**   | "{MODE2}: {instruction}"                  |
-| No file path provided            | **{Mode3}**   | "{MODE3}: {instruction}"                  |
+| Input Pattern              | Mode        | Tell Subagent            |
+|:---------------------------|:------------|:-------------------------|
+| Path contains `{pattern1}` | **{Mode1}** | "{MODE1}: {instruction}" |
+| Path contains `{pattern2}` | **{Mode2}** | "{MODE2}: {instruction}" |
+| No file path provided      | **{Mode3}** | "{MODE3}: {instruction}" |
 
 **CRITICAL**: State the mode explicitly in your Task tool prompt.
 
@@ -378,14 +378,14 @@ allowed-tools: Bash(pwd:*), Bash(git:*)
 
 **CRITICAL**: This format is REQUIRED for all commands that accept arguments. Square brackets `[...]` are ONLY for optional flags.
 
-| Pattern                           | Use Case                               | Example Command    |
-|:----------------------------------|:---------------------------------------|:-------------------|
-| `<file-path\|@file>`              | File path or inline content            | `review-command`   |
-| `<path\|description>`             | Path or free-form description          | `command`          |
-| `<file-path>`                     | Single file path (one option)          | `review-agent`     |
-| `<task-description>`              | Free-form text input                   | `wt`               |
-| `[--flag]`                        | Optional flag (square brackets OK)     | `clean-gone`       |
-| `<type> <scope> [message]`        | Multiple required + optional           | `commit`           |
+| Pattern                    | Use Case                           | Example Command  |
+|:---------------------------|:-----------------------------------|:-----------------|
+| `<file-path\|@file>`       | File path or inline content        | `review-command` |
+| `<path\|description>`      | Path or free-form description      | `command`        |
+| `<file-path>`              | Single file path (one option)      | `review-agent`   |
+| `<task-description>`       | Free-form text input               | `wt`             |
+| `[--flag]`                 | Optional flag (square brackets OK) | `clean-gone`     |
+| `<type> <scope> [message]` | Multiple required + optional       | `commit`         |
 
 **Rules**:
 - Use `<...>` for required/expected arguments
@@ -401,11 +401,11 @@ allowed-tools: Bash(pwd:*), Bash(git:*)
 
 ### Model Selection
 
-| Model    | Use Case                                          |
-|:---------|:--------------------------------------------------|
-| `haiku`  | Simple reviews, lightweight tasks                 |
-| `sonnet` | Default, balanced complexity (omit field)         |
-| `opus`   | Complex orchestration, deep analysis              |
+| Model    | Use Case                                  |
+|:---------|:------------------------------------------|
+| `haiku`  | Simple reviews, lightweight tasks         |
+| `sonnet` | Default, balanced complexity (omit field) |
+| `opus`   | Complex orchestration, deep analysis      |
 
 ---
 
@@ -482,11 +482,11 @@ Problems: Too vague, no strong keywords, no specific actions.
 
 Determine mode from input path BEFORE invoking subagent:
 
-| Input Pattern                    | Mode          | Tell Subagent                 |
-|:---------------------------------|:--------------|:------------------------------|
-| Path contains `.claude/agents/`  | **Modify**    | "MODIFY: {path}"              |
-| Path contains `prompts/`         | **Transform** | "TRANSFORM: {path}"           |
-| No file path provided            | **Create**    | "CREATE: {description}"       |
+| Input Pattern                   | Mode          | Tell Subagent           |
+|:--------------------------------|:--------------|:------------------------|
+| Path contains `.claude/agents/` | **Modify**    | "MODIFY: {path}"        |
+| Path contains `prompts/`        | **Transform** | "TRANSFORM: {path}"     |
+| No file path provided           | **Create**    | "CREATE: {description}" |
 
 **CRITICAL**: State the mode explicitly in your Task tool prompt.
 ```
@@ -671,20 +671,20 @@ Problems: No specific keys, no options listed.
 
 ### Avoid These in Commands
 
-| Anti-Pattern                         | Problem                            | Fix                                        |
-|:-------------------------------------|:-----------------------------------|:-------------------------------------------|
-| `[file-or-description]` hint format  | Square brackets imply optional     | Use `<file\|description>` format           |
-| Missing `@file` in hint              | Users don't know inline works      | Add `@file` option if files accepted       |
-| Missing `description`                | Breaks `SlashCommand` tool         | Add description to frontmatter             |
-| Missing STATUS workflow              | Subagent gets stuck waiting        | Add full STATUS handling                   |
-| Printing questions as text           | User misses interactive UI         | Use `AskUserQuestion` tool                 |
-| Hardcoded paths                      | Not portable                       | Use `$ARGUMENTS` or `@path`                |
-| Assuming subagent mode               | Wrong mode selected                | Detect from input, state explicitly        |
-| Missing `allowed-tools`              | Bash pre-exec fails                | Add required `Bash(...)` permissions       |
-| Passing path instead of content      | Reviewer hallucinates              | Read file, pass actual content             |
-| Missing CRITICAL warning             | Executor forgets tool requirement  | Always include for `NEEDS_INPUT`           |
-| No mode detection table              | Ambiguous mode selection           | Add decision table with patterns           |
-| Showing intermediate STATUS          | User sees internal details         | Filter output, show only final result      |
+| Anti-Pattern                        | Problem                           | Fix                                   |
+|:------------------------------------|:----------------------------------|:--------------------------------------|
+| `[file-or-description]` hint format | Square brackets imply optional    | Use `<file\|description>` format      |
+| Missing `@file` in hint             | Users don't know inline works     | Add `@file` option if files accepted  |
+| Missing `description`               | Breaks `SlashCommand` tool        | Add description to frontmatter        |
+| Missing STATUS workflow             | Subagent gets stuck waiting       | Add full STATUS handling              |
+| Printing questions as text          | User misses interactive UI        | Use `AskUserQuestion` tool            |
+| Hardcoded paths                     | Not portable                      | Use `$ARGUMENTS` or `@path`           |
+| Assuming subagent mode              | Wrong mode selected               | Detect from input, state explicitly   |
+| Missing `allowed-tools`             | Bash pre-exec fails               | Add required `Bash(...)` permissions  |
+| Passing path instead of content     | Reviewer hallucinates             | Read file, pass actual content        |
+| Missing CRITICAL warning            | Executor forgets tool requirement | Always include for `NEEDS_INPUT`      |
+| No mode detection table             | Ambiguous mode selection          | Add decision table with patterns      |
+| Showing intermediate STATUS         | User sees internal details        | Filter output, show only final result |
 
 ### Common Mistakes by Command Type
 
@@ -758,8 +758,8 @@ Use this checklist before finalizing any command.
 
 ## Version History
 
-| Date       | Version | Changes                                              |
-|:-----------|:--------|:-----------------------------------------------------|
-| 2025-12-12 | 1.2     | Make Constraints section required (not optional)     |
-| 2025-12-12 | 1.1     | Replace "When to Use" with "Constraints" section     |
-| 2025-12-12 | 1.0     | Initial template                                     |
+| Date       | Version | Changes                                          |
+|:-----------|:--------|:-------------------------------------------------|
+| 2025-12-12 | 1.2     | Make Constraints section required (not optional) |
+| 2025-12-12 | 1.1     | Replace "When to Use" with "Constraints" section |
+| 2025-12-12 | 1.0     | Initial template                                 |
