@@ -394,7 +394,7 @@ subagent-manager
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
 └── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
     ├── Grade A → write file → check slash_command
-    │   ├── yes → invoke commander → quality review → write → done
+    │   ├── yes → invoke command-manager → quality review → write → done
     │   └── no → done
     └── Grade < A → resume with REVIEW_FEEDBACK (max 3x)
 ```
@@ -423,8 +423,8 @@ $ARGUMENTS
    - If grade < A: Resume subagent-manager with `REVIEW_FEEDBACK:` (max 3 attempts)
    - If grade A: Write agent to `{agent_location}/{agent_name}.md`
 4. **If `slash_command: yes: /command-name`**:
-   - Invoke **commander** for the agent
-   - Handle `STATUS: READY_FOR_REVIEW` from commander (same quality review flow)
+   - Invoke **command-manager** for the agent
+   - Handle `STATUS: READY_FOR_REVIEW` from command-manager (same quality review flow)
    - Report both agent and command to user
 5. **If `slash_command: no`**:
    - Report success with agent path
@@ -559,7 +559,7 @@ $ARGUMENTS
    - `STATUS: READY_FOR_COMMAND` → Continue to step 3
 3. **If `STATUS: READY_FOR_COMMAND`**:
    - Parse: `agent_path`, `command_name`, `location`
-   - Invoke **commander** with context
+   - Invoke **command-manager** with context
    - Handle any `STATUS: NEEDS_INPUT`
 4. **Report success** when final `STATUS: COMPLETED`
 ```
@@ -568,7 +568,7 @@ $ARGUMENTS
 
 ## 11. Quality Review Integration
 
-The `commander` agent includes automatic quality review before saving commands:
+The `command-manager` agent includes automatic quality review before saving commands:
 
 ### Quality Workflow
 

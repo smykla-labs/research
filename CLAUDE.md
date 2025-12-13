@@ -34,9 +34,9 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 ### Claude Code Configuration
 
 - `.claude/agents/subagent-manager.md` - Meta-agent for creating/modifying/transforming subagents
-- `.claude/agents/commander.md` - Creates slash commands for subagents and workflows
+- `.claude/agents/command-manager.md` - Creates slash commands for subagents and workflows
 - `.claude/commands/subagent.md` - Slash command to invoke subagent-manager (`/subagent`)
-- `.claude/commands/command.md` - Slash command to invoke commander (`/command`)
+- `.claude/commands/command.md` - Slash command to invoke command-manager (`/command`)
 
 ### Working Directories
 

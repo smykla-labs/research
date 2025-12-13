@@ -3,7 +3,7 @@ description: Create, modify, or improve slash commands
 argument-hint: <path|description>
 ---
 
-Use the commander agent to create or improve a slash command.
+Use the command-manager agent to create or improve a slash command.
 
 $ARGUMENTS
 
@@ -38,7 +38,7 @@ Determine mode from input path BEFORE invoking subagent:
 
 Due to Claude Code limitations (AskUserQuestion filtered from subagents, Task tool not available to subagents), follow this status-based flow:
 
-### Step 1: Invoke commander
+### Step 1: Invoke command-manager
 
 Use the Task tool with the detected mode stated explicitly in the prompt.
 
@@ -92,7 +92,7 @@ If quality review returns WARN or FAIL:
 ## Status Flow
 
 ```
-commander
+command-manager
 ├── (no STATUS block) → resume asking for STATUS block
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
 └── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
@@ -130,7 +130,7 @@ The user should see a clean flow: questions (if any) → success/failure result.
 ## Done When
 
 - [ ] Mode detected from input (or user selected via question)
-- [ ] commander invoked with explicit mode in prompt
+- [ ] command-manager invoked with explicit mode in prompt
 - [ ] STATUS block parsed correctly
 - [ ] If NEEDS_INPUT: Questions asked, answers collected via AskUserQuestion
 - [ ] Quality review passed (or retried max 3 times)
