@@ -48,12 +48,13 @@ Pre-execution state (establishes baseline for validation):
    Removes worktrees for branches that are fully merged but NOT marked as [gone] (still have remote tracking).
 
    ```bash
-   bash -c 'main=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s@^refs/remotes/origin/@@" || echo "main"); tl=$(git rev-parse --show-toplevel); for wt in $(git worktree list --porcelain | grep "^worktree " | sed "s/^worktree //" | tail -n +2); do branch=$(git worktree list --porcelain | grep -A2 "^worktree $wt$" | grep "^branch " | sed "s@^branch refs/heads/@@"); [ -z "$branch" ] && continue; current=$(git branch --show-current); [ "$branch" = "$current" ] && continue; git merge-base --is-ancestor "$branch" "origin/$main" 2>/dev/null && echo "🗂️ Removing merged worktree: $(basename "$wt") (project: $(basename "$tl"), branch: $branch)" && git worktree remove --force "$wt" && git branch -d "$branch" && echo "🗑️ Deleted merged branch: $branch"; done'
+   bash -c 'main=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s@^refs/remotes/origin/@@"); [ -z "$main" ] && main="main"; tl=$(git rev-parse --show-toplevel); worktrees=$(git worktree list --porcelain | grep "^worktree " | sed "s/^worktree //" | tail -n +2); [ -z "$worktrees" ] && exit 0; echo "$worktrees" | while read -r wt; do [ -z "$wt" ] && continue; branch=$(git worktree list --porcelain | grep -A2 "^worktree $wt$" | grep "^branch " | sed "s@^branch refs/heads/@@"); [ -z "$branch" ] && continue; current=$(git branch --show-current); [ "$branch" = "$current" ] && echo "ℹ️ Keeping worktree: $(basename "$wt") (current branch)" && continue; if git merge-base --is-ancestor "$branch" "origin/$main" 2>/dev/null; then echo "🗂️ Removing merged worktree: $(basename "$wt") (project: $(basename "$tl"), branch: $branch)" && git worktree remove --force "$wt" && git branch -d "$branch" && echo "🗑️ Deleted merged branch: $branch"; else echo "ℹ️ Keeping worktree: $(basename "$wt") (branch $branch not yet merged to $main)"; fi; done; exit 0'
    ```
 
    - Only removes worktrees for branches fully merged into main/master
    - Uses safe delete (`-d`) since branch is verified merged
-   - Skips current branch
+   - Skips current branch with info message
+   - Reports kept worktrees with reason (not merged)
 
 4. **Report results**:
    - Count removed worktrees
