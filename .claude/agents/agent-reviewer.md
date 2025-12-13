@@ -1,5 +1,5 @@
 ---
-name: subagent-reviewer
+name: agent-reviewer
 description: Reviews subagent definitions for quality compliance against established best practices. Use PROACTIVELY after creating or modifying agents, before committing agent files, or when auditing existing agents. Prevents low-quality agents from entering the codebase.
 tools: Read, Grep, Glob
 model: haiku

@@ -3,7 +3,7 @@ argument-hint: <file|description|@file>
 description: Create, modify, or transform subagent definitions
 ---
 
-Use the subagent-manager agent to create, modify, or transform a subagent definition.
+Use the agent-manager agent to create, modify, or transform a subagent definition.
 
 $ARGUMENTS
 
@@ -35,7 +35,7 @@ Determine mode from input path BEFORE invoking subagent:
 
 Due to Claude Code limitations (AskUserQuestion filtered from subagents, Task tool not available to subagents), follow this status-based flow:
 
-### Step 1: Invoke subagent-manager
+### Step 1: Invoke agent-manager
 
 Use the Task tool with the detected mode stated explicitly.
 
@@ -51,7 +51,7 @@ Parse the status block from subagent output:
 
 **If `STATUS: READY_FOR_REVIEW`**:
 1. Parse: `agent_name`, `agent_location`, `slash_command`, and `content` (in `~~~markdown` fences)
-2. Invoke **subagent-reviewer**:
+2. Invoke **agent-reviewer**:
    ```
    Review this agent definition:
 
@@ -103,7 +103,7 @@ After writing the agent (quality review passed):
 ## Status Chaining Summary
 
 ```
-subagent-manager
+agent-manager
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
 └── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
     ├── Grade A → write file → check slash_command

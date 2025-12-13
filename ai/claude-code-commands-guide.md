@@ -295,7 +295,7 @@ description: Create, modify, or transform subagents
 argument-hint: [file-or-description]
 ---
 
-Use the subagent-manager agent.
+Use the agent-manager agent.
 
 $ARGUMENTS
 
@@ -390,7 +390,7 @@ summary: Ready for quality review
 #### Example: Agent Chain with Quality Review
 
 ```
-subagent-manager
+agent-manager
 ├── STATUS: NEEDS_INPUT → AskUserQuestion → resume
 └── STATUS: READY_FOR_REVIEW → invoke quality-reviewer
     ├── Grade A → write file → check slash_command
@@ -407,20 +407,20 @@ argument-hint: [file-or-description]
 description: Create subagent with optional slash command
 ---
 
-Use subagent-manager.
+Use agent-manager.
 
 $ARGUMENTS
 
 ## Workflow
 
-1. **Invoke subagent-manager** with Task tool, stating mode explicitly
+1. **Invoke agent-manager** with Task tool, stating mode explicitly
 2. **Parse status block** from output:
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion`, resume with `ANSWERS:`
    - `STATUS: READY_FOR_REVIEW` → Continue to step 3
 3. **If `STATUS: READY_FOR_REVIEW`**:
    - Parse: `agent_name`, `agent_location`, `slash_command`, `content`
-   - Invoke **subagent-reviewer** with embedded content
-   - If grade < A: Resume subagent-manager with `REVIEW_FEEDBACK:` (max 3 attempts)
+   - Invoke **agent-reviewer** with embedded content
+   - If grade < A: Resume agent-manager with `REVIEW_FEEDBACK:` (max 3 attempts)
    - If grade A: Write agent to `{agent_location}/{agent_name}.md`
 4. **If `slash_command: yes: /command-name`**:
    - Invoke **command-manager** for the agent
@@ -538,7 +538,7 @@ argument-hint: [file-or-description]
 description: Create, modify, or transform subagent definitions
 ---
 
-Use the subagent-manager agent.
+Use the agent-manager agent.
 
 $ARGUMENTS
 
@@ -552,7 +552,7 @@ $ARGUMENTS
 
 ## Workflow
 
-1. **Invoke subagent-manager** with Task tool, stating mode
+1. **Invoke agent-manager** with Task tool, stating mode
 2. **Parse status block** from output:
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion`, resume with `ANSWERS:`
    - `STATUS: COMPLETED` → Report success, done
