@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash(bash:*)
-argument-hint: [--no-worktrees]
+argument-hint: [--dry-run] [--no-worktrees]
 description: Clean up local branches with deleted remote tracking and their worktrees
 ---
 
@@ -13,6 +13,7 @@ $ARGUMENTS
 - **NEVER delete** the current branch — always skip and report in summary
 - **NEVER remove** the main worktree — only remove feature/task worktrees
 - **ALWAYS use** `bash -c '...'` format for atomic execution
+- **ALWAYS render** the summary output EXACTLY as specified in Summary Output section — no prose, no custom formatting
 - **ZERO tolerance** for accidental data loss — validate before destructive operations
 
 ## Context
@@ -27,46 +28,90 @@ Pre-execution state (establishes baseline for validation):
 
 ## Workflow
 
-1. **Validate arguments** — Valid flag: `--no-worktrees`. Report invalid flags and stop.
+1. **Validate arguments** — Valid flags: `--dry-run`, `--no-worktrees`. Report invalid flags and stop.
 
-2. **Phase 1: Clean gone branches** (always runs):
+2. **Clean branches and worktrees**:
 
-   - **Default (with worktree cleanup)**:
+   - **Default (full cleanup)**:
 
-     ```bash
-     bash -c 'git fetch --prune --all && git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | awk "/\[gone\]/ {print \$1}" | while read -r branch; do current=$(git branch --show-current); [ "$branch" = "$current" ] && echo "⚠️ Skipping current branch: $branch" && continue; wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); tl=$(git rev-parse --show-toplevel); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "🗂️ Removing worktree: $(basename "$wt") (project: $(basename "$tl"))" && git worktree remove --force "$wt"; echo "🗑️ Deleting branch: $branch" && git branch -D "$branch"; done'
-     ```
-
-   - **With `--no-worktrees` flag** (skip worktree removal):
+     Deletes branches that are gone OR merged (via squash/rebase), removes associated worktrees.
 
      ```bash
-     bash -c 'git fetch --prune --all && git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | awk "/\[gone\]/ {print \$1}" | while read -r branch; do current=$(git branch --show-current); [ "$branch" = "$current" ] && echo "⚠️ Skipping current branch: $branch" && continue; echo "🗑️ Deleting branch: $branch" && git branch -D "$branch"; done'
+     bash -c 'git fetch --prune --all 2>&1 | grep -v "^From\|^   \|^ \*\|^ +\|^ -" || :; remote=$(git for-each-ref --format="%(upstream:remotename)" refs/heads/main 2>/dev/null); [ -z "$remote" ] && remote=$(git remote | head -1); main=$(git symbolic-ref "refs/remotes/$remote/HEAD" 2>/dev/null | sed "s@^refs/remotes/$remote/@@"); [ -z "$main" ] && main="main"; tl=$(git rev-parse --show-toplevel); current=$(git branch --show-current); del_branches=0; del_worktrees=0; kept_branches=""; skipped=""; git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | while read -r branch track; do [ "$branch" = "$main" ] && continue; [ "$branch" = "$current" ] && echo "SKIPPED:$branch:current branch" && continue; delete=false; reason=""; case "$track" in *"[gone]"*) delete=true; reason="gone";; esac; if [ "$delete" = "false" ]; then unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ "$unmerged" -eq 0 ] 2>/dev/null && delete=true && reason="merged"; fi; if [ "$delete" = "true" ]; then wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); [ -n "$wt" ] && [ "$wt" != "$tl" ] && git worktree remove --force "$wt" 2>/dev/null && echo "REMOVED_WT:$(basename "$wt"):$branch"; git branch -D "$branch" >/dev/null 2>&1 && echo "DELETED:$branch:$reason"; else wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "KEPT_WT:$(basename "$wt"):$branch:$unmerged unmerged" || echo "KEPT:$branch:$unmerged unmerged"; fi; done'
      ```
 
-3. **Phase 2: Clean merged worktrees** (default, skipped with `--no-worktrees`):
+   - **With `--dry-run` flag** (preview only, no changes):
 
-   Removes worktrees for branches that are fully merged but NOT marked as [gone] (still have remote tracking).
+     ```bash
+     bash -c 'git fetch --prune --all 2>&1 | grep -v "^From\|^   \|^ \*\|^ +\|^ -" || :; remote=$(git for-each-ref --format="%(upstream:remotename)" refs/heads/main 2>/dev/null); [ -z "$remote" ] && remote=$(git remote | head -1); main=$(git symbolic-ref "refs/remotes/$remote/HEAD" 2>/dev/null | sed "s@^refs/remotes/$remote/@@"); [ -z "$main" ] && main="main"; tl=$(git rev-parse --show-toplevel); current=$(git branch --show-current); git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | while read -r branch track; do [ "$branch" = "$main" ] && continue; [ "$branch" = "$current" ] && echo "WOULD_SKIP:$branch:current branch" && continue; delete=false; reason=""; case "$track" in *"[gone]"*) delete=true; reason="gone";; esac; if [ "$delete" = "false" ]; then unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ "$unmerged" -eq 0 ] 2>/dev/null && delete=true && reason="merged"; fi; if [ "$delete" = "true" ]; then wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "WOULD_REMOVE_WT:$(basename "$wt"):$branch"; echo "WOULD_DELETE:$branch:$reason"; else wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "WOULD_KEEP_WT:$(basename "$wt"):$branch:$unmerged unmerged" || echo "WOULD_KEEP:$branch:$unmerged unmerged"; fi; done'
+     ```
 
-   ```bash
-   bash -c 'main=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s@^refs/remotes/origin/@@"); [ -z "$main" ] && main="main"; tl=$(git rev-parse --show-toplevel); worktrees=$(git worktree list --porcelain | grep "^worktree " | sed "s/^worktree //" | tail -n +2); [ -z "$worktrees" ] && exit 0; echo "$worktrees" | while read -r wt; do [ -z "$wt" ] && continue; branch=$(git worktree list --porcelain | grep -A2 "^worktree $wt$" | grep "^branch " | sed "s@^branch refs/heads/@@"); [ -z "$branch" ] && continue; current=$(git branch --show-current); [ "$branch" = "$current" ] && echo "ℹ️ Keeping worktree: $(basename "$wt") (current branch)" && continue; if git merge-base --is-ancestor "$branch" "origin/$main" 2>/dev/null; then echo "🗂️ Removing merged worktree: $(basename "$wt") (project: $(basename "$tl"), branch: $branch)" && git worktree remove --force "$wt" && git branch -d "$branch" && echo "🗑️ Deleted merged branch: $branch"; else echo "ℹ️ Keeping worktree: $(basename "$wt") (branch $branch not yet merged to $main)"; fi; done; exit 0'
-   ```
+   - **With `--no-worktrees` flag** (gone branches only, no worktree removal):
 
-   - Only removes worktrees for branches fully merged into main/master
-   - Uses safe delete (`-d`) since branch is verified merged
-   - Skips current branch with info message
-   - Reports kept worktrees with reason (not merged)
+     ```bash
+     bash -c 'git fetch --prune --all 2>&1 | grep -v "^From\|^   \|^ \*\|^ +\|^ -" || :; git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | awk "/\[gone\]/ {print \$1}" | while read -r branch; do current=$(git branch --show-current); [ "$branch" = "$current" ] && echo "SKIPPED:$branch:current branch" && continue; git branch -D "$branch" >/dev/null 2>&1 && echo "DELETED:$branch:gone"; done'
+     ```
 
-4. **Report results**:
-   - Count removed worktrees
-   - Count deleted branches
-   - List any skipped items (current branch)
-   - Report summary to user
+   **Cleanup logic**:
+   - Detects remote from main branch's upstream (works with origin, upstream, etc.)
+   - Deletes branches marked as `[gone]` (remote tracking deleted)
+   - Deletes branches fully merged via squash/rebase (detected via `git cherry`)
+   - Removes associated worktrees before branch deletion
+   - Skips main and current branch
+
+3. **Render summary** from script output
+
+## Summary Output
+
+**CRITICAL**: After running the cleanup script, render the summary using a SINGLE `printf` command. Do NOT write prose or use multiple echo commands.
+
+**Line prefixes** (from script output):
+
+- `DELETED:branch:reason` → deleted branch
+- `REMOVED_WT:worktree:branch` → removed worktree
+- `SKIPPED:branch:reason` → skipped branch
+- `KEPT:branch:reason` → kept branch
+- `KEPT_WT:worktree:branch:reason` → kept worktree
+
+**Dry-run prefixes** (same format, different header):
+
+- `WOULD_DELETE:branch:reason` → would delete branch
+- `WOULD_REMOVE_WT:worktree:branch` → would remove worktree
+- `WOULD_SKIP:branch:reason` → would skip branch
+- `WOULD_KEEP:branch:reason` → would keep branch
+- `WOULD_KEEP_WT:worktree:branch:reason` → would keep worktree
+
+**Colors**: bold=`\033[1m`, green=`\033[32m`, yellow=`\033[33m`, cyan=`\033[36m`, dim=`\033[90m`, reset=`\033[0m`
+
+**Required format** — single `printf` command:
+
+```bash
+printf '\033[1m🧹 Cleanup Summary\033[0m\n\n\033[1mDeleted:\033[0m\n  \033[32m🗑️ fix/old-feature (merged)\033[0m\n  \033[32m🗂️ fix-old-feature-wt (worktree)\033[0m\n\n\033[1mSkipped:\033[0m\n  \033[33m⚠️ feat/current-work (current branch)\033[0m\n\n\033[1mKept:\033[0m\n  \033[36mℹ️ feat/in-progress (14 unmerged)\033[0m\n\n\033[90m───────────────────────────────\nDeleted: 2 branches, 1 worktree\nKept: 1 branch\033[0m\n'
+```
+
+**Dry-run format** — use "Would delete/remove" and different header:
+
+```bash
+printf '\033[1m🔍 Dry Run Preview\033[0m\n\n\033[1mWould delete:\033[0m\n  \033[32m🗑️ fix/old-feature (merged)\033[0m\n  \033[32m🗂️ fix-old-feature-wt (worktree)\033[0m\n\n\033[1mWould skip:\033[0m\n  \033[33m⚠️ feat/current-work (current branch)\033[0m\n\n\033[1mWould keep:\033[0m\n  \033[36mℹ️ feat/in-progress (14 unmerged)\033[0m\n\n\033[90m───────────────────────────────\nWould delete: 2 branches, 1 worktree\nWould keep: 1 branch\033[0m\n'
+```
+
+**Empty state**:
+
+```bash
+printf '\033[32m✅ Repository already clean — no branches to process\033[0m\n'
+```
+
+**Rules**:
+- Use ONE `printf` command only — no multiple commands
+- Only include sections with items (omit empty Deleted/Skipped/Kept)
+- Build the entire output string dynamically based on parsed script output
 
 ## Flags
 
 | Flag             | Effect                                                                   |
 |:-----------------|:-------------------------------------------------------------------------|
 | (none)           | Full cleanup: gone branches + worktrees + merged worktrees **(default)** |
+| `--dry-run`      | Preview only: show what would be deleted without making changes          |
 | `--no-worktrees` | Branches only: clean gone branches, skip all worktree removal            |
 
 ## Notes
@@ -76,24 +121,27 @@ Pre-execution state (establishes baseline for validation):
 - Main worktree is never removed
 - Uses `git worktree remove --force` to handle uncommitted changes in worktrees
 - Uses `git branch -D` for gone branches (force, since remote is gone)
-- Uses `git branch -d` for merged worktrees (safe, verified merged)
+- Uses `git cherry` to detect squash/rebase merges (not just `--is-ancestor`)
+- Detects remote dynamically from main branch's upstream (works with origin, upstream, etc.)
 
 **CRITICAL**: All scripts use `bash -c '...'` format for reliable atomic execution.
 
 ## Edge Cases
 
-- **Invalid flags**: Report unknown flag, show valid options (`--no-worktrees`), stop execution
-- **No [gone] branches**: Report "No branches marked as [gone]" and exit (no cleanup needed)
-- **Current branch is [gone]**: Skip deletion, warn user, report in summary (user must switch first)
+- **Invalid flags**: Report unknown flag, show valid options (`--dry-run`, `--no-worktrees`), stop execution
+- **No cleanable branches**: Report "No branches to clean" and exit
+- **Current branch is [gone] or merged**: Skip deletion, warn user, report in summary
 - **Uncommitted changes in worktree**: Force remove with `--force` flag (preserves branch safety)
-- **No worktrees exist**: Skip Phase 2, complete Phase 1 normally
+- **No worktrees exist**: Still checks and deletes merged branches without worktrees
 - **Multiple worktrees, mixed states**: Process each independently, report counts
-- **Uncertainty about merge status**: Use `git merge-base --is-ancestor` for safe detection
+- **Squash/rebase merged branches**: Detected via `git cherry`, deleted with all commits merged
+- **No remote configured**: Falls back to first available remote
+- **Non-origin remote (upstream, etc.)**: Detected from main branch's upstream tracking
 
 ## Done When
 
 - [ ] Arguments validated — invalid flags rejected, stop if present
-- [ ] Phase 1: Gone branches deleted + worktrees cleaned (skipped with `--no-worktrees` flag)
-- [ ] Phase 2: Merged worktrees removed (only runs by default, skipped with `--no-worktrees`)
-- [ ] Results reported with counts: worktrees removed, branches deleted, items skipped
-- [ ] Summary shows what was cleaned and what was skipped (current branch, main worktree)
+- [ ] Gone and merged branches deleted, associated worktrees removed
+- [ ] With `--dry-run`: preview only, no actual changes made
+- [ ] With `--no-worktrees`: only gone branches deleted, no worktree removal, no merged detection
+- [ ] Summary rendered via single `printf` with ANSI colors — EXACTLY as specified in Summary Output section

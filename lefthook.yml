@@ -1,0 +1,71 @@
+# Lefthook configuration for .claude/ script testing
+# https://github.com/evilmartians/lefthook
+
+pre-push:
+  parallel: false
+  commands:
+    test-claude-scripts:
+      glob: ".claude/{commands,agents}/**/*.md"
+      run: |
+        # Source the coverage helper
+        source spec/support/script_coverage.sh
+
+        # Check each staged file for bash scripts
+        SCRIPTS_WITH_TESTS=()
+        SCRIPTS_WITHOUT_TESTS=()
+
+        for file in {staged_files}; do
+          # Skip if file doesn't exist (deleted)
+          [ -f "$file" ] || continue
+
+          # Skip if no bash scripts in file
+          grep -q $'```bash' "$file" 2>/dev/null || continue
+
+          if has_tests "$file"; then
+            SCRIPTS_WITH_TESTS+=("$file")
+          else
+            SCRIPTS_WITHOUT_TESTS+=("$file")
+          fi
+        done
+
+        # Run tests for scripts that have them
+        if [ ${#SCRIPTS_WITH_TESTS[@]} -gt 0 ]; then
+          echo "📋 Running tests for staged .claude/ scripts:"
+          SPECS=()
+          for script in "${SCRIPTS_WITH_TESTS[@]}"; do
+            spec=$(get_spec_path "$script")
+            echo "   $script -> $spec"
+            SPECS+=("$spec")
+          done
+          echo ""
+
+          shellspec "${SPECS[@]}" || exit 1
+          echo ""
+          echo "✅ All tests passed!"
+        fi
+
+        # Warn about untested scripts (but don't block)
+        if [ ${#SCRIPTS_WITHOUT_TESTS[@]} -gt 0 ]; then
+          echo ""
+          echo "⚠️  Warning: Scripts without tests:"
+          for script in "${SCRIPTS_WITHOUT_TESTS[@]}"; do
+            expected=$(get_spec_path "$script")
+            echo "   $script"
+            echo "      Create: $expected"
+          done
+        fi
+
+    check-test-coverage:
+      glob: ".claude/{commands,agents}/**/*.md"
+      run: |
+        source spec/support/script_coverage.sh
+
+        echo "📊 Checking script test coverage..."
+        echo ""
+
+        # Run coverage check - blocks commit if scripts lack tests
+        if ! check_coverage; then
+          echo ""
+          echo "❌ Commit blocked: All .claude/ scripts with bash must have tests"
+          exit 1
+        fi
