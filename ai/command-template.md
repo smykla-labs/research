@@ -420,7 +420,7 @@ allowed-tools: Bash(pwd:*), Bash(git:*)
 **Good:**
 
 ```markdown
-Use the session-handover agent to capture critical session context for continuity.
+Use the session-manager agent to capture critical session context for continuity.
 ```
 
 ```markdown

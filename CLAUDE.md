@@ -28,7 +28,7 @@ Knowledge base and research artifacts for investigations, experiments, and learn
   - `prompt-author-agent.md` - Agent for creating/refining prompts (follows spec)
   - `planning-agent.md` - Planning agent for creating implementation specs
   - `executor-agent.md` - Executor agent for single-task implementation
-  - `session-handover.md` - Agent for capturing session context for handover
+  - `session-manager.md` - Agent for capturing session context for handover
   - `worktree-manager.md` - Agent for creating git worktrees with context transfer
 
 ### Claude Code Configuration

@@ -4,7 +4,7 @@ argument-hint: [session-focus]
 description: Capture session context for continuity between Claude Code sessions
 ---
 
-Invoke session-handover agent to capture critical context for session continuity.
+Invoke session-manager agent to capture critical context for session continuity.
 
 $ARGUMENTS
 
@@ -22,7 +22,7 @@ $ARGUMENTS
 
 ## Workflow
 
-1. **Invoke session-handover** via Task tool
+1. **Invoke session-manager** via Task tool
    - Include user's focus if provided: `$ARGUMENTS`
    - Include current directory and git status from context above
 2. **Parse status block**:

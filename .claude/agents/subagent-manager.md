@@ -257,20 +257,20 @@ questions:
   3. PERMISSION: Permission mode? [default (recommended)|acceptEdits|bypassPermissions]
   4. LOCATION: Save location? [.claude/agents/ (recommended)|~/.claude/agents/]
   5. SLASH_COMMAND: Create slash command? Suggestions: /handover, /session [yes: handover|no]
-summary: awaiting configuration choices for session-handover
+summary: awaiting configuration choices for session-manager
 ```
 
 After receiving `ANSWERS: MODEL=sonnet, TOOLS=accept, PERMISSION=default, LOCATION=.claude/agents/, SLASH_COMMAND=yes: handover`:
 
 ```text
 STATUS: READY_FOR_REVIEW
-agent_name: session-handover
+agent_name: session-manager
 agent_location: .claude/agents/
 slash_command: yes: /handover
 content:
 ~~~markdown
 ---
-name: session-handover
+name: session-manager
 description: Captures critical session context for continuity between Claude Code sessions. Use PROACTIVELY at end of session, before context limit, or when switching tasks. Prevents re-investigation and failed approach retries.
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet

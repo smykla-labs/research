@@ -184,9 +184,9 @@ Sections MUST appear in this order (omit sections that don't apply):
 ## Examples
 
 <example type="good">
-<input>Review .claude/agents/session-handover.md</input>
+<input>Review .claude/agents/session-manager.md</input>
 <output>
-# Agent Quality Review: session-handover
+# Agent Quality Review: session-manager
 
 ## Summary
 

@@ -1,5 +1,5 @@
 ---
-name: session-handover
+name: session-manager
 description: Captures critical session context for continuity between Claude Code sessions. Use PROACTIVELY at end of session, when context limit approaches, or when transitioning between distinct tasks. Prevents re-investigation and failed approach retries.
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet

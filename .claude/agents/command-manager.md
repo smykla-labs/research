@@ -653,7 +653,7 @@ Run `git commit -m "..."` with the formatted message.
 </example>
 
 <example type="full-featured-command">
-<input>Create command for session-handover agent</input>
+<input>Create command for session-manager agent</input>
 <output>
 
 ````markdown
@@ -662,7 +662,7 @@ allowed-tools: Bash(pwd:*), Bash(git:*)
 description: Capture session context for continuity between Claude Code sessions
 ---
 
-Use the session-handover agent to capture critical session context for continuity.
+Use the session-manager agent to capture critical session context for continuity.
 
 $ARGUMENTS
 
@@ -673,7 +673,7 @@ $ARGUMENTS
 
 ## Workflow
 
-1. **Invoke session-handover** with the Task tool
+1. **Invoke session-manager** with the Task tool
    - Include user's focus/summary if provided: `$ARGUMENTS`
    - Include current directory and git status from context above
    - If no arguments provided, ask agent to analyze current session

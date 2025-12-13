@@ -16,5 +16,5 @@ Use AskUserQuestion tool for these questions
 - **`planning-agent.md`** - Investigates codebase, produces implementation plan. Never implements. Output: `tmp/tasks/YYMMDD-{task-slug}/implementation_plan.md` with workflow commands, git config, technical context, and session-sized phases.
 - **`executor-agent.md`** - Implements ONE task from spec, updates progress before verification, commits implementation only. Single task per session.
 - **`prompt-author-agent.md`** - Creates/refines agent prompts following `ai/prompt-engineering-spec.md`. No placeholders in output.
-- **`session-handover.md`** - Captures session context: failed approaches with rationale, environment constraints, architectural decisions, next steps. Dense technical format, clipboard-ready.
+- **`session-manager.md`** - Captures session context: failed approaches with rationale, environment constraints, architectural decisions, next steps. Dense technical format, clipboard-ready.
 - **`worktree-manager.md`** - Creates git worktree at `../{project}-{branch}` with context transfer. Discovers remote/default-branch, symlinks relevant files, outputs `cd` command to clipboard.
