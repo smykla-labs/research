@@ -4,7 +4,7 @@ argument-hint: <task-description|@file>
 description: Create git worktree with context transfer for feature branches
 ---
 
-Create a git worktree with context transfer via the worktree-creator agent.
+Create a git worktree with context transfer via the worktree-manager agent.
 
 $ARGUMENTS
 
@@ -24,7 +24,7 @@ $ARGUMENTS
 
 ## Workflow
 
-1. **Invoke worktree-creator** with the Task tool
+1. **Invoke worktree-manager** with the Task tool
    - Include full task description: `$ARGUMENTS`
    - Include context from above (directory, git status, remotes, current branch)
    - If no task description provided, ask agent to prompt user for details

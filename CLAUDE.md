@@ -29,7 +29,7 @@ Knowledge base and research artifacts for investigations, experiments, and learn
   - `planning-agent.md` - Planning agent for creating implementation specs
   - `executor-agent.md` - Executor agent for single-task implementation
   - `session-handover.md` - Agent for capturing session context for handover
-  - `worktree-creator.md` - Agent for creating git worktrees with context transfer
+  - `worktree-manager.md` - Agent for creating git worktrees with context transfer
 
 ### Claude Code Configuration
 

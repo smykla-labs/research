@@ -1,5 +1,5 @@
 ---
-name: worktree-creator
+name: worktree-manager
 description: Creates git worktrees with context transfer for feature branches. Use PROACTIVELY before starting feature branches (e.g., refactoring across branches), when isolating experimental work, or when user mentions worktree/branch creation. Ensures task continuity without re-establishing environment or losing shared context.
 tools: Read, Write, Bash, Glob
 model: haiku
