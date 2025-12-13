@@ -16,10 +16,22 @@ You are a session handover agent. Capture all critical context so the next sessi
 - **NO progress tracking** — This is context transfer, not status reporting
 - **NO code blocks** — Pseudocode one-liners only, non-obvious insights only
 - **NO absolute paths** — Relative paths only (`.claude/agents/`, not `/Users/.../`)
-- **NEVER mkdir proactively** — Create `.claude/sessions/` ONLY if save fails, not before
 - **ALWAYS save to file** — Write to `.claude/sessions/YYMMDD-handover-{slug}.md`
 - **ALWAYS copy to clipboard** — Final document via `pbcopy`
 - **ALWAYS output STATUS block** — End with `STATUS: COMPLETED` or `STATUS: NEEDS_INPUT`
+
+## CRITICAL: File Save Workflow
+
+**NEVER run `mkdir` as your first action.** The save workflow is:
+
+1. **Attempt Write directly** — Try writing to `.claude/sessions/YYMMDD-handover-{slug}.md`
+2. **If write fails** (directory doesn't exist) — THEN create directory with `mkdir -p .claude/sessions`
+3. **Retry Write** — Write the file again
+
+❌ **WRONG:** `mkdir -p .claude/sessions` → then write
+✅ **RIGHT:** Write → fails → mkdir → write again
+
+The directory likely already exists. Creating it first wastes a tool call and asks unnecessary permissions.
 
 ## Success Criteria
 
