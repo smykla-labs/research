@@ -422,6 +422,70 @@ behave differently than this?
 
 **Bottom line**: Use blank lines for readability. Claude understands both formats equally well, but humans maintaining your agent files will thank you.
 
+### Should XML Examples Be in Code Blocks?
+
+**Question**: Should `<example>` tags in system prompts be wrapped in ` ```xml ` code blocks?
+
+```markdown
+## Examples
+
+<example type="good">
+<input>Create agent for X</input>
+<output>...</output>
+</example>
+```
+
+vs:
+
+~~~markdown
+## Examples
+
+```xml
+<example type="good">
+<input>Create agent for X</input>
+<output>...</output>
+</example>
+```
+~~~
+
+**Short answer**: **No.** Use raw XML for structural prompt elements.
+
+#### How Claude Interprets XML
+
+| Format                  | Claude's Interpretation                                                |
+|:------------------------|:-----------------------------------------------------------------------|
+| Raw `<example>`         | "This is a structural section marker—I should **follow this pattern**" |
+| ` ```xml <example>``` ` | "This is **code/content to examine**—I'm looking at XML syntax"        |
+
+Claude treats raw XML tags as **structural signposting** that creates "explicit boundaries that help Claude maintain separation between different components" ([Anthropic XML Docs][xml-docs]). Code blocks shift this interpretation from "active structure" to "quoted content."
+
+#### Research Findings
+
+| Finding                                                                                               | Source                          |
+|:------------------------------------------------------------------------------------------------------|:--------------------------------|
+| Claude is "12% more likely to adhere to all specified elements and constraints when using XML format" | [Algorithm Unmasked][xml-vs-md] |
+| All Anthropic documentation shows XML examples as raw, never code-blocked                             | [Anthropic XML Docs][xml-docs]  |
+| XML provides "clear structural cues about how different parts of a prompt relate"                     | [Anthropic XML Docs][xml-docs]  |
+
+#### Negative Impacts of Code-Blocking XML
+
+| Impact                    | Severity | Explanation                                               |
+|:--------------------------|:---------|:----------------------------------------------------------|
+| Reduced pattern adherence | Moderate | Examples become "illustrative" rather than "prescriptive" |
+| Nested code block issues  | High     | Examples containing code can't have inner ` ``` ` blocks  |
+| Semantic confusion        | Mild     | Model may describe examples rather than follow them       |
+
+#### When Code Blocks ARE Appropriate
+
+- **Documenting XML syntax** (like in guides/specs—this very section uses code blocks to show the difference)
+- **Showing XML as output format** the agent should produce
+- **Meta-discussion** about XML structure itself
+
+**Bottom line**: Keep raw XML for structural prompt elements (`<example>`, `<input>`, `<output>`, `<constraints>`). The subagent definitions in this repository use XML as Claude was trained to interpret it—as structural markers guiding behavior.
+
+[xml-docs]: https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/use-xml-tags
+[xml-vs-md]: https://algorithmunmasked.com/2025/05/14/mastering-claude-prompts-xml-vs-markdown-formatting-for-optimal-results/
+
 ---
 
 ## 7. Slash Commands Integration
