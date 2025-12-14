@@ -15,6 +15,13 @@ tmp/
 # Claude Code session handovers (personal context)
 .claude/sessions/
 .claude/settings.local.json
+.envrc
+.direnv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 
 # Sensitive data
 *.key
