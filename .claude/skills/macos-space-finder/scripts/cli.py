@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from .actions import go_to_space
 from .core import find_space_by_app, get_current_space, get_spaces_plist, parse_spaces
-from .models import AppActivationError, PlistReadError, SpaceInfo
+from .models import ActivationError, PlistReadError, SpaceInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -101,7 +101,7 @@ def _handle_go(spaces: Sequence[SpaceInfo], app_query: str) -> int:
     """Handle --go command."""
     try:
         target, original, success = go_to_space(spaces, app_query)
-    except (AppActivationError, ValueError) as e:
+    except (ActivationError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 

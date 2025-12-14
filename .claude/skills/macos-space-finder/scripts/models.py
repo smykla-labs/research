@@ -31,7 +31,7 @@ class PlistReadError(SpacesError):
     """Failed to read the spaces plist file."""
 
 
-class AppActivationError(SpacesError):
+class ActivationError(SpacesError):
     """Failed to activate an application."""
 
 

@@ -8,7 +8,7 @@ import time
 from typing import TYPE_CHECKING
 
 from .core import find_space_by_app, get_current_space
-from .models import DEFAULT_RETURN_DELAY, AppActivationError, SpaceInfo
+from .models import DEFAULT_RETURN_DELAY, ActivationError, SpaceInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -43,7 +43,7 @@ def activate_app(app_name: str) -> None:
         app_name: Name of the application to activate.
 
     Raises:
-        AppActivationError: If the application cannot be activated.
+        ActivationError: If the application cannot be activated.
         ValueError: If the app name contains invalid characters.
     """
     sanitized_name = sanitize_app_name(app_name)
@@ -57,7 +57,7 @@ def activate_app(app_name: str) -> None:
 
     if result.returncode != 0:
         stderr = result.stderr.decode("utf-8", errors="replace")
-        raise AppActivationError(f"Failed to activate {app_name}: {stderr}")
+        raise ActivationError(f"Failed to activate {app_name}: {stderr}")
 
 
 def go_to_space(

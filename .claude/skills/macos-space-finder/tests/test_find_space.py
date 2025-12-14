@@ -10,7 +10,7 @@ from scripts import (
     SPACE_TYPE_FULLSCREEN,
     SPACE_TYPE_NAMES,
     SPACE_TYPE_NORMAL,
-    AppActivationError,
+    ActivationError,
     PlistReadError,
     SpaceInfo,
     activate_app,
@@ -448,7 +448,7 @@ class TestActivateApp:
                 stderr=b"App not found",
             )
 
-            with pytest.raises(AppActivationError, match="Failed to activate"):
+            with pytest.raises(ActivationError, match="Failed to activate"):
                 activate_app("NonExistentApp")
 
 
