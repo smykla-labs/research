@@ -6,12 +6,8 @@ import functools
 import plistlib
 import re
 import subprocess
-from pathlib import Path
 
-from .models import PlistReadError, WindowFilter, WindowInfo
-
-# Spaces plist path
-SPACES_PLIST_PATH = Path.home() / "Library/Preferences/com.apple.spaces.plist"
+from .models import SPACES_PLIST_PATH, PlistReadError, WindowFilter, WindowInfo
 
 
 @functools.cache

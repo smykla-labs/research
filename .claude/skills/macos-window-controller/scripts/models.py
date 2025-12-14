@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
+
+# Spaces plist path
+SPACES_PLIST_PATH = Path.home() / "Library/Preferences/com.apple.spaces.plist"
 
 
 class WindowError(Exception):
