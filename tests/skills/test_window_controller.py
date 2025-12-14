@@ -45,7 +45,7 @@ def sample_window_goland() -> WindowInfo:
         bounds_height=1290.0,
         space_index=3,
         exe_path="/Users/dev/Applications/GoLand.app/Contents/MacOS/goland",
-        cmdline=["goland", "."],
+        cmdline=("goland", "."),
     )
 
 
@@ -66,7 +66,7 @@ def sample_window_sandbox() -> WindowInfo:
         bounds_height=1290.0,
         space_index=4,
         exe_path="/Users/dev/.gradle/caches/modules-2/files-2.1/goland-2025.3/jbr/java",
-        cmdline=["java", "-Didea.plugin.in.sandbox.mode=true", "com.intellij.idea.Main"],
+        cmdline=("java", "-Didea.plugin.in.sandbox.mode=true", "com.intellij.idea.Main"),
     )
 
 
@@ -87,7 +87,7 @@ def sample_window_chrome() -> WindowInfo:
         bounds_height=800.0,
         space_index=1,
         exe_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        cmdline=["Google Chrome"],
+        cmdline=("Google Chrome",),
     )
 
 
@@ -108,7 +108,7 @@ def sample_window_no_title() -> WindowInfo:
         bounds_height=0.0,
         space_index=None,
         exe_path="/System/Library/CoreServices/Finder.app/Contents/MacOS/Finder",
-        cmdline=["Finder"],
+        cmdline=("Finder",),
     )
 
 
