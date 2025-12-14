@@ -24,27 +24,43 @@ def _sanitize_app_name(app_name: str) -> str:
     return app_name.replace('"', '\\"')
 
 
+def _activate_by_app_name(app_name: str, wait_time: float = 0.5) -> None:
+    """Activate app by name (internal helper).
+
+    Args:
+        app_name: Application name to activate.
+        wait_time: Seconds to wait after activation.
+
+    Raises:
+        ActivationError: If activation fails.
+    """
+    try:
+        sanitized = _sanitize_app_name(app_name)
+    except ValueError as e:
+        raise ActivationError(str(e)) from e
+
+    result = subprocess.run(
+        ["osascript", "-e", f'tell application "{sanitized}" to activate'],
+        capture_output=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        stderr = result.stderr.decode("utf-8", errors="replace")
+        raise ActivationError(f"Failed to activate {app_name}: {stderr}")
+
+    if wait_time > 0:
+        time.sleep(wait_time)
+
+
 def activate_window(f: WindowFilter, wait_time: float = 0.5) -> WindowInfo:
     """Activate a window (switches to its Space)."""
     window = find_window(f)
     if not window:
         raise WindowNotFoundError("No window found matching filter")
 
-    try:
-        sanitized_name = _sanitize_app_name(window.app_name)
-        result = subprocess.run(
-            ["osascript", "-e", f'tell application "{sanitized_name}" to activate'],
-            capture_output=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            stderr = result.stderr.decode("utf-8", errors="replace")
-            raise ActivationError(f"Failed to activate {window.app_name}: {stderr}")
-        if wait_time > 0:
-            time.sleep(wait_time)
-        return window
-    except ValueError as e:
-        raise ActivationError(str(e)) from e
+    _activate_by_app_name(window.app_name, wait_time)
+    return window
 
 
 def take_screenshot(
@@ -61,7 +77,8 @@ def take_screenshot(
         raise WindowNotFoundError("No window found matching filter")
 
     if activate_first:
-        activate_window(f, wait_time=settle_ms / 1000.0)
+        # Use the found window's app name directly to avoid race condition
+        _activate_by_app_name(window.app_name, settle_ms / 1000.0)
 
     if output_path is None:
         screenshots_dir = Path("screenshots")
