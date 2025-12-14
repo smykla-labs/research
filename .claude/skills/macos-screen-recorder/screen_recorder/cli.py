@@ -24,6 +24,7 @@ from .models import (
     RecordingError,
     RetryStrategy,
     VerificationStrategy,
+    WindowBounds,
 )
 
 if TYPE_CHECKING:
@@ -44,6 +45,8 @@ Examples:
   %(prog)s --full-screen -d 3 -o screen.webp     Full screen for 3 seconds
   %(prog)s --find "GoLand" --json                Find window info only
   %(prog)s --check-deps                          Check ffmpeg availability
+  %(prog)s -R 100,200,800,600 -d 5               Record absolute screen region
+  %(prog)s --record "GoLand" --window-region 0,400,800,300  Record terminal area
 
 Platform presets:
   discord     WebP, 10MB max, 10fps, 720px max (no Nitro)
@@ -117,6 +120,14 @@ Verification strategies:
     rec_opts.add_argument(
         "--max-duration", type=float, default=DEFAULT_MAX_DURATION_SECONDS,
         metavar="SEC", help=f"Maximum allowed duration (default: {DEFAULT_MAX_DURATION_SECONDS})"
+    )
+    rec_opts.add_argument(
+        "--region", "-R", metavar="X,Y,W,H",
+        help="Absolute screen region: x,y,width,height"
+    )
+    rec_opts.add_argument(
+        "--window-region", metavar="X,Y,W,H",
+        help="Window-relative region (requires --record): x,y,w,h offset from window"
     )
     rec_opts.add_argument(
         "--no-clicks", action="store_true",
@@ -255,8 +266,57 @@ def parse_retry_strategy(strategy: str) -> RetryStrategy:
     return mapping.get(strategy, RetryStrategy.FIXED)
 
 
+REGION_PARTS_COUNT = 4  # x, y, width, height
+
+
+def parse_region(region_str: str | None) -> WindowBounds | None:
+    """Parse region string to WindowBounds.
+
+    Args:
+        region_str: Region in format "x,y,width,height".
+
+    Returns:
+        WindowBounds or None if not provided.
+
+    Raises:
+        argparse.ArgumentTypeError: If format is invalid.
+    """
+    if not region_str:
+        return None
+
+    parts = region_str.split(",")
+    if len(parts) != REGION_PARTS_COUNT:
+        raise argparse.ArgumentTypeError(
+            f"Region must be x,y,width,height: {region_str}"
+        )
+
+    try:
+        x, y, w, h = (float(p.strip()) for p in parts)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(
+            f"Invalid region values: {region_str}"
+        ) from e
+
+    if w <= 0 or h <= 0:
+        raise argparse.ArgumentTypeError(
+            f"Region width and height must be positive: {region_str}"
+        )
+
+    return WindowBounds(x=x, y=y, width=w, height=h)
+
+
 def build_config(args) -> RecordingConfig:
     """Build RecordingConfig from parsed arguments."""
+    # Parse region arguments
+    region = parse_region(args.region)
+    window_relative_region = parse_region(args.window_region)
+
+    # Validate: window-region requires a window target
+    if window_relative_region and not args.record:
+        raise argparse.ArgumentTypeError(
+            "--window-region requires --record to specify the target window"
+        )
+
     return RecordingConfig(
         app_name=args.record or args.find,
         title_pattern=args.title,
@@ -264,6 +324,8 @@ def build_config(args) -> RecordingConfig:
         path_contains=args.path_contains,
         path_excludes=args.path_excludes,
         args_contains=args.args,
+        region=region,
+        window_relative_region=window_relative_region,
         full_screen=args.full_screen,
         duration_seconds=args.duration,
         max_duration_seconds=args.max_duration,

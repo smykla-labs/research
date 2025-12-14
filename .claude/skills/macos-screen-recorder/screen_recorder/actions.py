@@ -755,7 +755,18 @@ def _find_target_if_needed(
 
     if has_window_filters:
         target = find_target_window(config)
-        region = target.bounds
+
+        # Handle window-relative region (offset from window origin)
+        if config.window_relative_region:
+            rel = config.window_relative_region
+            region = WindowBounds(
+                x=target.bounds.x + rel.x,
+                y=target.bounds.y + rel.y,
+                width=rel.width,
+                height=rel.height,
+            )
+        else:
+            region = target.bounds
 
     return target, region
 

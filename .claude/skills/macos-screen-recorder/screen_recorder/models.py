@@ -271,6 +271,7 @@ class RecordingConfig:
 
     # Or direct region specification
     region: WindowBounds | None = None
+    window_relative_region: WindowBounds | None = None  # Offset from window origin
     full_screen: bool = False
 
     # Recording settings
@@ -313,6 +314,10 @@ class RecordingConfig:
             "path_excludes": self.path_excludes,
             "args_contains": self.args_contains,
             "region": self.region.to_dict() if self.region else None,
+            "window_relative_region": (
+                self.window_relative_region.to_dict()
+                if self.window_relative_region else None
+            ),
             "full_screen": self.full_screen,
             "duration_seconds": self.duration_seconds,
             "max_duration_seconds": self.max_duration_seconds,

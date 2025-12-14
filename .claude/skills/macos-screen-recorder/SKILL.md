@@ -28,6 +28,12 @@ uv run screen-recorder --full-screen -d 3 -o demo.gif
 # Record sandbox IDE (JetBrains via Gradle runIde)
 uv run screen-recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 
+# Record absolute screen region (x=100, y=200, w=800, h=600)
+uv run screen-recorder -R 100,200,800,600 -d 5
+
+# Record window-relative region (terminal area at bottom of IDE)
+uv run screen-recorder --record "GoLand" --window-region 0,800,1600,400 -d 5
+
 # Check if ffmpeg is installed
 uv run screen-recorder --check-deps
 ```
@@ -64,6 +70,31 @@ uv run screen-recorder --check-deps
 | `jetbrains` | GIF    | 20 MB    | 15     | 1280×800  | Plugin marketplace |
 | `raw`       | MOV    | -        | native | -         | No conversion      |
 
+### Region Recording
+
+Two region modes for capturing specific screen areas:
+
+**Absolute Region** (`--region`, `-R`):
+- Captures a fixed screen area regardless of window position
+- Coordinates are absolute screen pixels: `x,y,width,height`
+- Example: `-R 100,200,800,600` captures 800×600 area at screen position (100,200)
+
+**Window-Relative Region** (`--window-region`):
+- Captures a region relative to a window's top-left corner
+- Requires `--record` to specify the target window
+- Coordinates are offsets from window origin: `x,y,width,height`
+- Example: `--record "GoLand" --window-region 0,800,1600,400`
+  - Finds GoLand window (e.g., at screen position 50,25)
+  - Adds offset: (50+0, 25+800) = captures at (50, 825)
+  - Records 1600×400 area (captures terminal panel at bottom)
+
+Use `--find` to discover window bounds before recording:
+
+```bash
+uv run screen-recorder --find "GoLand" --json | jq '.bounds'
+# {"x": 50, "y": 25, "width": 2056, "height": 1290}
+```
+
 ### Verification Strategies
 
 | Strategy   | Purpose           | Details                        |
@@ -98,13 +129,15 @@ uv run screen-recorder --check-deps
 
 ### Recording Options
 
-| Flag               | Description                                 |
-|--------------------|---------------------------------------------|
-| `--duration`, `-d` | Recording duration in seconds (default: 10) |
-| `--max-duration`   | Maximum allowed duration (default: 60)      |
-| `--no-clicks`      | Don't show mouse clicks                     |
-| `--no-activate`    | Don't activate window first                 |
-| `--settle-ms`      | Wait time after activation (default: 500)   |
+| Flag               | Short | Description                                          |
+|--------------------|-------|------------------------------------------------------|
+| `--duration`       | `-d`  | Recording duration in seconds (default: 10)          |
+| `--max-duration`   |       | Maximum allowed duration (default: 60)               |
+| `--region`         | `-R`  | Absolute screen region: x,y,width,height             |
+| `--window-region`  |       | Window-relative region (requires --record): x,y,w,h  |
+| `--no-clicks`      |       | Don't show mouse clicks                              |
+| `--no-activate`    |       | Don't activate window first                          |
+| `--settle-ms`      |       | Wait time after activation (default: 500)            |
 
 ### Output Options
 

@@ -30,6 +30,7 @@ from screen_recorder.cli import (
     main,
     parse_output_format,
     parse_preset,
+    parse_region,
     parse_retry_strategy,
     parse_verification_strategies,
 )
@@ -663,3 +664,179 @@ class TestDefaultValues:
     def test_default_quality(self) -> None:
         """Test default quality value."""
         assert DEFAULT_QUALITY == 75
+
+
+# =============================================================================
+# Region Parsing Tests
+# =============================================================================
+
+
+class TestParseRegion:
+    """Tests for parse_region function."""
+
+    def test_parse_region_valid(self) -> None:
+        """Test parsing valid region string."""
+        bounds = parse_region("100,200,800,600")
+        assert bounds is not None
+        assert bounds.x == 100.0
+        assert bounds.y == 200.0
+        assert bounds.width == 800.0
+        assert bounds.height == 600.0
+
+    def test_parse_region_with_spaces(self) -> None:
+        """Test parsing region with spaces around values."""
+        bounds = parse_region("100, 200, 800, 600")
+        assert bounds is not None
+        assert bounds.x == 100.0
+        assert bounds.y == 200.0
+
+    def test_parse_region_float_values(self) -> None:
+        """Test parsing region with float values."""
+        bounds = parse_region("100.5,200.5,800.5,600.5")
+        assert bounds is not None
+        assert bounds.x == 100.5
+        assert bounds.y == 200.5
+
+    def test_parse_region_none(self) -> None:
+        """Test parsing None returns None."""
+        assert parse_region(None) is None
+
+    def test_parse_region_empty_string(self) -> None:
+        """Test parsing empty string returns None."""
+        assert parse_region("") is None
+
+    def test_parse_region_invalid_format_too_few(self) -> None:
+        """Test parsing region with too few parts raises error."""
+        import argparse
+        with pytest.raises(argparse.ArgumentTypeError, match="x,y,width,height"):
+            parse_region("100,200,800")
+
+    def test_parse_region_invalid_format_too_many(self) -> None:
+        """Test parsing region with too many parts raises error."""
+        import argparse
+        with pytest.raises(argparse.ArgumentTypeError, match="x,y,width,height"):
+            parse_region("100,200,800,600,extra")
+
+    def test_parse_region_invalid_values(self) -> None:
+        """Test parsing region with non-numeric values raises error."""
+        import argparse
+        with pytest.raises(argparse.ArgumentTypeError, match="Invalid region"):
+            parse_region("abc,200,800,600")
+
+    def test_parse_region_zero_width(self) -> None:
+        """Test parsing region with zero width raises error."""
+        import argparse
+        with pytest.raises(argparse.ArgumentTypeError, match="must be positive"):
+            parse_region("100,200,0,600")
+
+    def test_parse_region_negative_height(self) -> None:
+        """Test parsing region with negative height raises error."""
+        import argparse
+        with pytest.raises(argparse.ArgumentTypeError, match="must be positive"):
+            parse_region("100,200,800,-100")
+
+    def test_parse_region_as_region_format(self) -> None:
+        """Test that parsed region can be used for screencapture."""
+        bounds = parse_region("100,200,800,600")
+        assert bounds is not None
+        assert bounds.as_region == "100,200,800,600"
+
+
+class TestCLIRegionFlags:
+    """Tests for CLI region flags."""
+
+    def test_region_flag_parsing(self) -> None:
+        """Test --region flag is parsed correctly."""
+        parser = create_parser()
+        args = parser.parse_args(["--full-screen", "--region", "100,200,800,600"])
+        assert args.region == "100,200,800,600"
+
+    def test_region_short_flag(self) -> None:
+        """Test -R short flag for region."""
+        parser = create_parser()
+        args = parser.parse_args(["--full-screen", "-R", "100,200,800,600"])
+        assert args.region == "100,200,800,600"
+
+    def test_window_region_flag_parsing(self) -> None:
+        """Test --window-region flag is parsed correctly."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "--record", "TestApp",
+            "--window-region", "0,400,800,300",
+        ])
+        assert args.window_region == "0,400,800,300"
+
+    def test_build_config_with_region(self) -> None:
+        """Test building config with --region."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "--full-screen",
+            "--region", "100,200,800,600",
+        ])
+        config = build_config(args)
+
+        assert config.region is not None
+        assert config.region.x == 100.0
+        assert config.region.y == 200.0
+        assert config.region.width == 800.0
+        assert config.region.height == 600.0
+
+    def test_build_config_with_window_region(self) -> None:
+        """Test building config with --window-region."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "--record", "TestApp",
+            "--window-region", "0,400,800,300",
+        ])
+        config = build_config(args)
+
+        assert config.window_relative_region is not None
+        assert config.window_relative_region.x == 0.0
+        assert config.window_relative_region.y == 400.0
+        assert config.window_relative_region.width == 800.0
+        assert config.window_relative_region.height == 300.0
+
+    def test_window_region_requires_record(self) -> None:
+        """Test --window-region requires --record flag."""
+        import argparse
+        parser = create_parser()
+        args = parser.parse_args([
+            "--full-screen",
+            "--window-region", "0,400,800,300",
+        ])
+
+        with pytest.raises(argparse.ArgumentTypeError, match="requires --record"):
+            build_config(args)
+
+
+class TestRecordingConfigWindowRelativeRegion:
+    """Tests for RecordingConfig with window_relative_region."""
+
+    def test_config_with_window_relative_region(self) -> None:
+        """Test RecordingConfig stores window_relative_region."""
+        region = WindowBounds(x=0, y=400, width=800, height=300)
+        config = RecordingConfig(
+            app_name="TestApp",
+            window_relative_region=region,
+        )
+        assert config.window_relative_region == region
+
+    def test_config_to_dict_includes_window_relative_region(self) -> None:
+        """Test to_dict includes window_relative_region."""
+        region = WindowBounds(x=0, y=400, width=800, height=300)
+        config = RecordingConfig(
+            app_name="TestApp",
+            window_relative_region=region,
+        )
+        data = config.to_dict()
+
+        assert "window_relative_region" in data
+        assert data["window_relative_region"]["x"] == 0
+        assert data["window_relative_region"]["y"] == 400
+
+    def test_config_to_dict_null_window_relative_region(self) -> None:
+        """Test to_dict with None window_relative_region."""
+        config = RecordingConfig(app_name="TestApp")
+        data = config.to_dict()
+
+        assert data["window_relative_region"] is None
