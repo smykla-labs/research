@@ -1,6 +1,6 @@
 # Claude Code Skills Development Specification
 
-Version 1.0.0 | Derived from: `macos-space-finder`, `macos-window-controller`
+Version 2.0.0 | Derived from: `macos-space-finder`, `macos-window-controller`, `macos-verified-screenshot`
 
 This document defines requirements, guidelines, and best practices for developing Claude Code skills. Use it to validate new skills for consistency, quality, security, and maintainability.
 
@@ -26,58 +26,95 @@ This document defines requirements, guidelines, and best practices for developin
 
 ## Directory Structure
 
-Skills MUST follow this directory structure:
+Skills are organized as a uv workspace with centralized tests:
 
 ```
+# Root workspace
+pyproject.toml                  # Workspace config, shared dependencies
+uv.lock                         # Single lockfile for all skills
+tests/
+└── skills/                     # Centralized test location
+    ├── test_space_finder.py
+    ├── test_verified_screenshot.py
+    └── test_window_controller.py
+
+# Skill directory structure
 .claude/skills/{skill-name}/
 ├── SKILL.md                    # Required: Skill documentation
-├── pyproject.toml              # Required: Project configuration
-├── uv.lock                     # Required: Dependency lockfile
-├── scripts/                    # Required: Python package
-│   ├── __init__.py             # Public API exports
-│   ├── __main__.py             # Entry point (python -m scripts)
-│   ├── models.py               # Data classes, exceptions, constants
-│   ├── core.py                 # Core functionality (pure logic)
-│   ├── actions.py              # Action functions (side effects)
-│   └── cli.py                  # CLI interface
-└── tests/                      # Required: Test suite
-    ├── __init__.py
-    └── test_{skill_name}.py    # Comprehensive tests
+├── pyproject.toml              # Required: Project configuration (workspace member)
+└── {package_name}/             # Required: Python package (unique name)
+    ├── __init__.py             # Public API exports
+    ├── __main__.py             # Entry point (python -m {package_name})
+    ├── models.py               # Data classes, exceptions, constants
+    ├── core.py                 # Core functionality (pure logic)
+    ├── actions.py              # Action functions (side effects)
+    └── cli.py                  # CLI interface
 ```
 
 ### Naming Rules
 
 - **Skill directory**: `kebab-case` (e.g., `macos-space-finder`)
-- **Python package**: Always `scripts/` (consistent across skills)
-- **Test file**: `test_{skill_name_underscored}.py`
+- **Python package**: Unique `snake_case` name (e.g., `space_finder`, `verified_screenshot`)
+- **Test file**: `test_{package_name}.py` in `tests/skills/`
+
+### Workspace Configuration
+
+Root `pyproject.toml` defines the workspace:
+
+```toml
+[tool.uv.workspace]
+members = [".claude/skills/*"]
+```
+
+Skills are installed as editable packages via `uv pip install -e .claude/skills/{skill-name}`.
 
 ---
 
 ## Required Files
 
-### `pyproject.toml`
+### `pyproject.toml` (Skill)
 
 ```toml
 [project]
-name = "skill-name"
+name = "macos-skill-name"
 version = "0.1.0"
 description = "Brief description of what the skill does"
 requires-python = ">=3.11"
-dependencies = [
-    # Pin major.minor versions, not patch
-    # "pyobjc-framework-Quartz>=10.0",
-]
+dependencies = []  # Managed by workspace root
+
+[project.scripts]
+skill-name = "package_name.cli:main"
 
 [tool.uv]
-# Script-only project, no package to build
-package = false
+package = true
 ```
 
 **Requirements:**
 
 - Python version: `>=3.11`
-- Dependencies: Pin to `>=major.minor`, not exact versions
-- Package flag: `package = false` (scripts-only)
+- Dependencies: Empty list (managed by workspace root `pyproject.toml`)
+- Package flag: `package = true` (installable package)
+- Entry point: Define in `[project.scripts]` for CLI access
+
+### `pyproject.toml` (Workspace Root)
+
+All shared dependencies are defined in the root:
+
+```toml
+[project]
+name = "workspace-name"
+dependencies = [
+    # Shared dependencies for all skills
+    "pyobjc-framework-Quartz>=10.0",
+    "psutil>=5.9",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [".claude/skills/*"]
+```
 
 ### `SKILL.md`
 
@@ -91,10 +128,6 @@ description: One-line description for Claude Code skill discovery
 ```
 
 See [Documentation](#documentation) section for full requirements.
-
-### `uv.lock`
-
-Generated lockfile. Run `uv lock` to create/update.
 
 ---
 
@@ -178,7 +211,7 @@ __all__ = [
 ### `__main__.py` Pattern
 
 ```python
-"""Package entry point for running as module: python -m scripts."""
+"""Package entry point for running as module: python -m {package_name}."""
 
 import sys
 
@@ -536,6 +569,10 @@ print(json.dumps({
 
 ## Testing Requirements
 
+### Test Location
+
+Tests are centralized in `tests/skills/` at the workspace root, not in per-skill directories.
+
 ### Test Structure
 
 ```python
@@ -547,13 +584,13 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from scripts import (
+from package_name import (
     DataClass,
     SpecificError,
     public_function,
     main,
 )
-from scripts.cli import _handle_action
+from package_name.cli import _handle_action
 
 # =============================================================================
 # Fixtures
@@ -625,14 +662,14 @@ class TestDataClass:
 ```python
 def test_external_call_success(self) -> None:
     """Test successful external call."""
-    with patch("scripts.core.subprocess.run") as mock_run:
+    with patch("package_name.core.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout=b"data")
         result = function_under_test()
     assert result == expected
 
 def test_external_call_failure(self) -> None:
     """Test external call failure handling."""
-    with patch("scripts.core.subprocess.run") as mock_run:
+    with patch("package_name.core.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=1, stderr=b"error")
         with pytest.raises(SpecificError, match="error"):
             function_under_test()
@@ -662,10 +699,13 @@ Brief description of what the skill does and when to use it.
 ## Quick Start
 
 \```bash
-# Most common use cases
-uv run python -m scripts --list
-uv run python -m scripts --find "query"
-uv run python -m scripts --json --list
+# Most common use cases (using CLI entry point)
+uv run skill-name --list
+uv run skill-name --find "query"
+uv run skill-name --json --list
+
+# Or using module syntax
+uv run python -m package_name --list
 \```
 
 ## How It Works
@@ -692,7 +732,7 @@ Document known limitations and workarounds.
 # Example code for programmatic use
 import subprocess
 result = subprocess.run(
-    ["uv", "run", "python", "-m", "scripts", "--list", "--json"],
+    ["uv", "run", "skill-name", "--list", "--json"],
     capture_output=True, text=True
 )
 data = json.loads(result.stdout)
@@ -702,7 +742,10 @@ data = json.loads(result.stdout)
 
 \```bash
 # Verify the skill works
-uv run python -m scripts --list
+uv run skill-name --list
+
+# Run tests
+uv run pytest tests/skills/test_package_name.py -v
 \```
 
 ## Troubleshooting
@@ -736,55 +779,57 @@ This section describes how to validate that a skill meets all requirements.
 
 ### Automated Validation Commands
 
-Run these commands from the skill directory (e.g., `.claude/skills/{skill-name}/`):
+Run these commands from the workspace root:
 
 #### 1. Structure Validation
 
 ```bash
-# Required files exist
-test -f SKILL.md && echo "✅ SKILL.md" || echo "❌ SKILL.md missing"
-test -f pyproject.toml && echo "✅ pyproject.toml" || echo "❌ pyproject.toml missing"
-test -f uv.lock && echo "✅ uv.lock" || echo "❌ uv.lock missing"
-test -d scripts && echo "✅ scripts/" || echo "❌ scripts/ missing"
-test -d tests && echo "✅ tests/" || echo "❌ tests/ missing"
+SKILL_DIR=".claude/skills/{skill-name}"
+PKG_NAME="{package_name}"
 
-# Required Python files
+# Required files exist
+test -f "$SKILL_DIR/SKILL.md" && echo "✅ SKILL.md" || echo "❌ SKILL.md missing"
+test -f "$SKILL_DIR/pyproject.toml" && echo "✅ pyproject.toml" || echo "❌ pyproject.toml missing"
+test -d "$SKILL_DIR/$PKG_NAME" && echo "✅ $PKG_NAME/" || echo "❌ $PKG_NAME/ missing"
+test -f "tests/skills/test_${PKG_NAME}.py" && echo "✅ tests/skills/test_${PKG_NAME}.py" || echo "❌ test file missing"
+
+# Required Python files in package
 for f in __init__.py __main__.py models.py core.py actions.py cli.py; do
-  test -f "scripts/$f" && echo "✅ scripts/$f" || echo "❌ scripts/$f missing"
+  test -f "$SKILL_DIR/$PKG_NAME/$f" && echo "✅ $PKG_NAME/$f" || echo "❌ $PKG_NAME/$f missing"
 done
 ```
 
 #### 2. Code Quality (Linting)
 
 ```bash
-# Run ruff linter with auto-fix
-uv run ruff check --fix scripts/ tests/
+# Run ruff linter with auto-fix (from workspace root)
+uv run ruff check --fix "$SKILL_DIR/$PKG_NAME/" "tests/skills/test_${PKG_NAME}.py"
 
 # Check for type errors (optional, requires mypy)
-uv run mypy scripts/ --ignore-missing-imports
+uv run mypy "$SKILL_DIR/$PKG_NAME/" --ignore-missing-imports
 ```
 
 #### 3. Test Coverage
 
 ```bash
-# Run tests with coverage
-uv run pytest tests/ -v --cov=scripts --cov-report=term-missing
+# Run tests with coverage (from workspace root)
+uv run pytest "tests/skills/test_${PKG_NAME}.py" -v --cov="$PKG_NAME" --cov-report=term-missing
 
 # Minimum coverage requirement: 80%
-uv run pytest tests/ --cov=scripts --cov-fail-under=80
+uv run pytest "tests/skills/test_${PKG_NAME}.py" --cov="$PKG_NAME" --cov-fail-under=80
 ```
 
 #### 4. Security Validation
 
 ```bash
 # Check for shell=True (should return no matches)
-grep -r "shell=True" scripts/ && echo "❌ shell=True found!" || echo "✅ No shell=True"
+grep -r "shell=True" "$SKILL_DIR/$PKG_NAME/" && echo "❌ shell=True found!" || echo "✅ No shell=True"
 
 # Check for eval/exec (should return no matches)
-grep -rE "\b(eval|exec)\s*\(" scripts/ && echo "❌ eval/exec found!" || echo "✅ No eval/exec"
+grep -rE "\b(eval|exec)\s*\(" "$SKILL_DIR/$PKG_NAME/" && echo "❌ eval/exec found!" || echo "✅ No eval/exec"
 
 # Verify sanitization functions exist
-grep -l "sanitize_" scripts/actions.py && echo "✅ Sanitization exists" || echo "⚠️ No sanitization"
+grep -l "sanitize_" "$SKILL_DIR/$PKG_NAME/actions.py" && echo "✅ Sanitization exists" || echo "⚠️ No sanitization"
 ```
 
 ### Manual Validation Checks
@@ -793,59 +838,59 @@ grep -l "sanitize_" scripts/actions.py && echo "✅ Sanitization exists" || echo
 
 | Check | How to Validate | Expected |
 |-------|-----------------|----------|
-| Directory naming | `basename $(pwd)` | `kebab-case` |
-| Package naming | `ls scripts/` | Always `scripts/` |
-| Test file naming | `ls tests/` | `test_*.py` |
+| Directory naming | `basename "$SKILL_DIR"` | `kebab-case` |
+| Package naming | `ls "$SKILL_DIR/"` | Unique `snake_case` package |
+| Test file naming | `ls tests/skills/` | `test_{package_name}.py` |
 
 #### Code Architecture Compliance
 
 ```bash
 # Verify __all__ is defined
-grep -q "__all__" scripts/__init__.py && echo "✅ __all__ defined" || echo "❌ __all__ missing"
+grep -q "__all__" "$SKILL_DIR/$PKG_NAME/__init__.py" && echo "✅ __all__ defined" || echo "❌ __all__ missing"
 
 # Verify future annotations
-for f in scripts/*.py; do
+for f in "$SKILL_DIR/$PKG_NAME"/*.py; do
   grep -q "from __future__ import annotations" "$f" && echo "✅ $f" || echo "❌ $f missing future annotations"
 done
 
 # Verify __main__.py pattern
-grep -q "sys.exit(main())" scripts/__main__.py && echo "✅ __main__.py correct" || echo "❌ __main__.py pattern wrong"
+grep -q "sys.exit(main())" "$SKILL_DIR/$PKG_NAME/__main__.py" && echo "✅ __main__.py correct" || echo "❌ __main__.py pattern wrong"
 ```
 
 #### Data Model Compliance
 
 ```bash
 # Check frozen dataclasses
-grep -E "@dataclass\(frozen=True\)" scripts/models.py && echo "✅ Frozen dataclasses" || echo "❌ Not frozen"
+grep -E "@dataclass\(frozen=True\)" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ Frozen dataclasses" || echo "❌ Not frozen"
 
 # Check for list fields (should use tuple)
-grep -E ":\s*list\[" scripts/models.py && echo "⚠️ Using list (should use tuple)" || echo "✅ No list fields"
+grep -E ":\s*list\[" "$SKILL_DIR/$PKG_NAME/models.py" && echo "⚠️ Using list (should use tuple)" || echo "✅ No list fields"
 
 # Check to_dict exists
-grep -q "def to_dict" scripts/models.py && echo "✅ to_dict exists" || echo "❌ to_dict missing"
+grep -q "def to_dict" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ to_dict exists" || echo "❌ to_dict missing"
 ```
 
 #### Exception Hierarchy Compliance
 
 ```bash
 # Check base exception exists
-grep -E "class \w+Error\(Exception\):" scripts/models.py && echo "✅ Base exception" || echo "❌ No base exception"
+grep -E "class \w+Error\(Exception\):" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ Base exception" || echo "❌ No base exception"
 
 # List all exceptions
-grep -E "class \w+Error\(" scripts/models.py
+grep -E "class \w+Error\(" "$SKILL_DIR/$PKG_NAME/models.py"
 ```
 
 #### CLI Compliance
 
 ```bash
 # Check short flags exist
-grep -E '"-[a-z]"' scripts/cli.py && echo "✅ Short flags exist" || echo "❌ No short flags"
+grep -E '"-[a-z]"' "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ Short flags exist" || echo "❌ No short flags"
 
 # Check JSON flag
-grep -q '"-j"' scripts/cli.py && echo "✅ -j flag" || echo "❌ -j flag missing"
+grep -q '"-j"' "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ -j flag" || echo "❌ -j flag missing"
 
 # Check help epilog with examples
-grep -q "Examples:" scripts/cli.py && echo "✅ Examples in help" || echo "❌ No examples"
+grep -q "Examples:" "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ Examples in help" || echo "❌ No examples"
 ```
 
 ### Test Coverage Requirements
@@ -865,13 +910,13 @@ grep -q "Examples:" scripts/cli.py && echo "✅ Examples in help" || echo "❌ N
 
 ```bash
 # Check fixture usage
-grep -c "@pytest.fixture" tests/test_*.py
+grep -c "@pytest.fixture" "tests/skills/test_${PKG_NAME}.py"
 
 # Check class-based tests
-grep -c "class Test" tests/test_*.py
+grep -c "class Test" "tests/skills/test_${PKG_NAME}.py"
 
 # Check error testing
-grep -c "pytest.raises" tests/test_*.py
+grep -c "pytest.raises" "tests/skills/test_${PKG_NAME}.py"
 ```
 
 ### Documentation Compliance
@@ -880,15 +925,15 @@ grep -c "pytest.raises" tests/test_*.py
 
 ```bash
 # Check frontmatter
-head -5 SKILL.md | grep -q "^---" && echo "✅ Frontmatter exists" || echo "❌ No frontmatter"
+head -5 "$SKILL_DIR/SKILL.md" | grep -q "^---" && echo "✅ Frontmatter exists" || echo "❌ No frontmatter"
 
 # Check required sections
 for section in "Quick Start" "How It Works" "Command Reference" "Troubleshooting"; do
-  grep -q "## $section" SKILL.md && echo "✅ $section" || echo "❌ $section missing"
+  grep -q "## $section" "$SKILL_DIR/SKILL.md" && echo "✅ $section" || echo "❌ $section missing"
 done
 
 # Check command table
-grep -q "| Flag" SKILL.md && echo "✅ Command table" || echo "❌ No command table"
+grep -q "| Flag" "$SKILL_DIR/SKILL.md" && echo "✅ Command table" || echo "❌ No command table"
 ```
 
 ### Full Validation Script
@@ -897,57 +942,60 @@ Create and run this script for comprehensive validation:
 
 ```bash
 #!/bin/bash
-# validate-skill.sh - Run from skill directory
+# validate-skill.sh - Run from workspace root
+# Usage: ./validate-skill.sh macos-space-finder space_finder
 
-echo "=== Skill Validation ==="
-SKILL_DIR=$(pwd)
-SKILL_NAME=$(basename "$SKILL_DIR")
+SKILL_NAME="${1:?Usage: $0 <skill-name> <package-name>}"
+PKG_NAME="${2:?Usage: $0 <skill-name> <package-name>}"
+SKILL_DIR=".claude/skills/$SKILL_NAME"
+
+echo "=== Skill Validation: $SKILL_NAME ($PKG_NAME) ==="
 
 # Structure
 echo -e "\n--- Structure ---"
-for f in SKILL.md pyproject.toml uv.lock; do
-  test -f "$f" && echo "✅ $f" || echo "❌ $f"
-done
+test -f "$SKILL_DIR/SKILL.md" && echo "✅ SKILL.md" || echo "❌ SKILL.md"
+test -f "$SKILL_DIR/pyproject.toml" && echo "✅ pyproject.toml" || echo "❌ pyproject.toml"
+test -d "$SKILL_DIR/$PKG_NAME" && echo "✅ $PKG_NAME/" || echo "❌ $PKG_NAME/"
 for f in __init__.py __main__.py models.py core.py actions.py cli.py; do
-  test -f "scripts/$f" && echo "✅ scripts/$f" || echo "❌ scripts/$f"
+  test -f "$SKILL_DIR/$PKG_NAME/$f" && echo "✅ $PKG_NAME/$f" || echo "❌ $PKG_NAME/$f"
 done
-test -d tests && echo "✅ tests/" || echo "❌ tests/"
+test -f "tests/skills/test_${PKG_NAME}.py" && echo "✅ tests/skills/test_${PKG_NAME}.py" || echo "❌ tests/skills/test_${PKG_NAME}.py"
 
 # Linting
 echo -e "\n--- Linting ---"
-uv run ruff check scripts/ tests/ --quiet && echo "✅ Lint passed" || echo "❌ Lint failed"
+uv run ruff check "$SKILL_DIR/$PKG_NAME/" "tests/skills/test_${PKG_NAME}.py" --quiet && echo "✅ Lint passed" || echo "❌ Lint failed"
 
 # Tests
 echo -e "\n--- Tests ---"
-uv run pytest tests/ -q && echo "✅ Tests passed" || echo "❌ Tests failed"
+uv run pytest "tests/skills/test_${PKG_NAME}.py" -q && echo "✅ Tests passed" || echo "❌ Tests failed"
 
 # Coverage
 echo -e "\n--- Coverage ---"
-uv run pytest tests/ --cov=scripts --cov-fail-under=80 -q 2>/dev/null && \
+uv run pytest "tests/skills/test_${PKG_NAME}.py" --cov="$PKG_NAME" --cov-fail-under=80 -q 2>/dev/null && \
   echo "✅ Coverage ≥80%" || echo "⚠️ Coverage <80%"
 
 # Security
 echo -e "\n--- Security ---"
-! grep -rq "shell=True" scripts/ && echo "✅ No shell=True" || echo "❌ shell=True found"
-! grep -rqE "\b(eval|exec)\s*\(" scripts/ && echo "✅ No eval/exec" || echo "❌ eval/exec found"
-grep -q "sanitize_" scripts/actions.py && echo "✅ Sanitization" || echo "⚠️ No sanitization"
+! grep -rq "shell=True" "$SKILL_DIR/$PKG_NAME/" && echo "✅ No shell=True" || echo "❌ shell=True found"
+! grep -rqE "\b(eval|exec)\s*\(" "$SKILL_DIR/$PKG_NAME/" && echo "✅ No eval/exec" || echo "❌ eval/exec found"
+grep -q "sanitize_" "$SKILL_DIR/$PKG_NAME/actions.py" && echo "✅ Sanitization" || echo "⚠️ No sanitization"
 
 # Code patterns
 echo -e "\n--- Code Patterns ---"
-grep -q "__all__" scripts/__init__.py && echo "✅ __all__" || echo "❌ __all__"
-grep -qE "@dataclass\(frozen=True\)" scripts/models.py && echo "✅ Frozen" || echo "❌ Not frozen"
-grep -q "def to_dict" scripts/models.py && echo "✅ to_dict" || echo "❌ to_dict"
+grep -q "__all__" "$SKILL_DIR/$PKG_NAME/__init__.py" && echo "✅ __all__" || echo "❌ __all__"
+grep -qE "@dataclass\(frozen=True\)" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ Frozen" || echo "❌ Not frozen"
+grep -q "def to_dict" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ to_dict" || echo "❌ to_dict"
 
 # CLI
 echo -e "\n--- CLI ---"
-grep -q '"-j"' scripts/cli.py && echo "✅ -j flag" || echo "❌ -j flag"
-grep -q "Examples:" scripts/cli.py && echo "✅ Examples" || echo "❌ Examples"
+grep -q '"-j"' "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ -j flag" || echo "❌ -j flag"
+grep -q "Examples:" "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ Examples" || echo "❌ Examples"
 
 # Documentation
 echo -e "\n--- Documentation ---"
-head -1 SKILL.md | grep -q "^---" && echo "✅ Frontmatter" || echo "❌ Frontmatter"
-grep -q "## Quick Start" SKILL.md && echo "✅ Quick Start" || echo "❌ Quick Start"
-grep -q "## Troubleshooting" SKILL.md && echo "✅ Troubleshooting" || echo "❌ Troubleshooting"
+head -1 "$SKILL_DIR/SKILL.md" | grep -q "^---" && echo "✅ Frontmatter" || echo "❌ Frontmatter"
+grep -q "## Quick Start" "$SKILL_DIR/SKILL.md" && echo "✅ Quick Start" || echo "❌ Quick Start"
+grep -q "## Troubleshooting" "$SKILL_DIR/SKILL.md" && echo "✅ Troubleshooting" || echo "❌ Troubleshooting"
 
 echo -e "\n=== Validation Complete ==="
 ```
@@ -957,13 +1005,14 @@ echo -e "\n=== Validation Complete ==="
 For automated validation in CI pipelines:
 
 ```yaml
-# .github/workflows/validate-skill.yml
-name: Validate Skill
+# .github/workflows/validate-skills.yml
+name: Validate Skills
 
 on:
   pull_request:
     paths:
       - '.claude/skills/**'
+      - 'tests/skills/**'
 
 jobs:
   validate:
@@ -972,38 +1021,39 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
+
+      - name: Install workspace
+        run: |
+          uv sync
+          uv pip install -e .claude/skills/macos-space-finder
+          uv pip install -e .claude/skills/macos-verified-screenshot
+          uv pip install -e .claude/skills/macos-window-controller
 
       - name: Validate Structure
         run: |
-          cd .claude/skills/${{ matrix.skill }}
-          test -f SKILL.md
-          test -f pyproject.toml
-          test -d scripts
-          test -d tests
+          for skill_pkg in "macos-space-finder:space_finder" "macos-verified-screenshot:verified_screenshot" "macos-window-controller:window_controller"; do
+            skill="${skill_pkg%%:*}"
+            pkg="${skill_pkg##*:}"
+            echo "Checking $skill ($pkg)"
+            test -f ".claude/skills/$skill/SKILL.md"
+            test -f ".claude/skills/$skill/pyproject.toml"
+            test -d ".claude/skills/$skill/$pkg"
+            test -f "tests/skills/test_${pkg}.py"
+          done
 
       - name: Lint
         run: |
-          cd .claude/skills/${{ matrix.skill }}
-          uv run ruff check scripts/ tests/
+          uv run ruff check .claude/skills/ tests/skills/
 
       - name: Test
         run: |
-          cd .claude/skills/${{ matrix.skill }}
-          uv run pytest tests/ -v --cov=scripts --cov-fail-under=80
+          uv run pytest tests/skills/ -v
 
       - name: Security Check
         run: |
-          cd .claude/skills/${{ matrix.skill }}
-          ! grep -r "shell=True" scripts/
-          ! grep -rE "\b(eval|exec)\s*\(" scripts/
-
-    strategy:
-      matrix:
-        skill:
-          - macos-space-finder
-          - macos-window-controller
-          # Add new skills here
+          ! grep -r "shell=True" .claude/skills/*/
+          ! grep -rE "\b(eval|exec)\s*\(" .claude/skills/*/
 ```
 
 ---
@@ -1014,10 +1064,10 @@ Use this checklist to validate new skills:
 
 ### Structure
 
-- [ ] Directory follows required structure
-- [ ] All required files present
-- [ ] `pyproject.toml` correctly configured
-- [ ] `uv.lock` generated
+- [ ] Skill directory in `.claude/skills/{skill-name}/`
+- [ ] Unique Python package name (e.g., `space_finder/`, not `scripts/`)
+- [ ] `pyproject.toml` with `package = true`
+- [ ] Test file in `tests/skills/test_{package_name}.py`
 
 ### Code Quality
 
@@ -1069,4 +1119,5 @@ Use this checklist to validate new skills:
 
 | Version | Date       | Changes                                                                               |
 |---------|------------|---------------------------------------------------------------------------------------|
+| 2.0.0   | 2024-12-14 | **Breaking**: Migrate from per-skill `scripts/` to unique package names; centralize tests in `tests/skills/`; use uv workspace with single lockfile; skills are now installable packages (`package = true`) |
 | 1.0.0   | 2024-12-14 | Initial specification derived from `macos-space-finder` and `macos-window-controller` |

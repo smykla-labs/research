@@ -2,8 +2,15 @@
 name = "smykla-labs-research"
 version = "0.1.0"
 description = "Knowledge base and research artifacts for investigations, experiments, and learnings"
-requires-python = ">=3.13"
-dependencies = []
+requires-python = ">=3.11"
+dependencies = [
+    # macOS window/screenshot skills
+    "pyobjc-framework-Quartz>=10.0",
+    "pyobjc-framework-Cocoa>=10.0",
+    "psutil>=5.9",
+    "pillow>=10.0",
+    "imagehash>=4.3",
+]
 
 [dependency-groups]
 dev = [
@@ -11,8 +18,15 @@ dev = [
     "pytest-cov>=7.0.0",
 ]
 
+[tool.uv]
+# Script-only workspace, no package to build
+package = false
+
+[tool.uv.workspace]
+members = [".claude/skills/*"]
+
 [tool.ruff]
-target-version = "py313"
+target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
@@ -40,14 +54,11 @@ ignore = [
 max-returns = 7  # CLI main functions with multiple subcommands need more returns
 
 [tool.ruff.lint.per-file-ignores]
-"**/scripts/*.py" = ["T201"]  # Allow print statements in CLI scripts
-"**/tests/*.py" = [
-    "S101",    # Allow assert in tests
-    "PLR2004", # Allow magic values in tests
-    "ARG002",  # Allow unused method arguments (fixtures)
-    "RUF001",  # Allow ambiguous characters in test strings
-]
-"tests/*.py" = [
+# Allow print statements in skill packages (CLI output)
+"**/space_finder/*.py" = ["T201"]
+"**/verified_screenshot/*.py" = ["T201"]
+"**/window_controller/*.py" = ["T201"]
+"tests/**/*.py" = [
     "S101",    # Allow assert in tests
     "PLR2004", # Allow magic values in tests
     "ARG002",  # Allow unused method arguments (fixtures)
@@ -65,7 +76,7 @@ addopts = [
 ]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -73,5 +84,5 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
-module = "plistlib"
+module = ["plistlib", "Quartz", "psutil", "PIL", "imagehash"]
 ignore_missing_imports = true

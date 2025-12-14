@@ -3,12 +3,10 @@ name = "macos-window-controller"
 version = "0.1.0"
 description = "macOS window detection, activation, and screenshot capture across Spaces"
 requires-python = ">=3.11"
-dependencies = [
-    "pyobjc-framework-Quartz>=10.0",
-    "pyobjc-framework-Cocoa>=10.0",
-    "psutil>=5.9",
-]
+dependencies = []  # Managed by workspace root
+
+[project.scripts]
+window-controller = "window_controller.cli:main"
 
 [tool.uv]
-# Script-only project, no package to build
-package = false
+package = true

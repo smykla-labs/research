@@ -3,8 +3,10 @@ name = "macos-space-finder"
 version = "0.1.0"
 description = "Find and navigate macOS Spaces by application name"
 requires-python = ">=3.11"
-dependencies = []  # stdlib only
+dependencies = []  # Managed by workspace root
+
+[project.scripts]
+space-finder = "space_finder.cli:main"
 
 [tool.uv]
-# Script-only project, no package to build
-package = false
+package = true

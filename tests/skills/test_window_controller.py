@@ -3,17 +3,9 @@
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Add the scripts directory to the path - must be before window_controller import
-SCRIPTS_DIR = Path(__file__).parent.parent / ".claude/skills/macos-window-controller/scripts"
-sys.path.insert(0, str(SCRIPTS_DIR))
-
-# ruff: noqa: E402
 from window_controller import (
     ActivationError,
     ScreenshotError,
@@ -21,7 +13,6 @@ from window_controller import (
     WindowFilter,
     WindowInfo,
     WindowNotFoundError,
-    _sanitize_app_name,
     build_filter,
     create_parser,
     filter_windows,
@@ -29,6 +20,7 @@ from window_controller import (
     get_spaces_plist,
     get_window_space_mapping,
     main,
+    sanitize_app_name,
 )
 
 # =============================================================================
@@ -329,33 +321,33 @@ class TestSanitizeAppName:
 
     def test_valid_app_name(self) -> None:
         """Test valid app names pass through."""
-        assert _sanitize_app_name("GoLand") == "GoLand"
-        assert _sanitize_app_name("Google Chrome") == "Google Chrome"
-        assert _sanitize_app_name("IntelliJ IDEA") == "IntelliJ IDEA"
+        assert sanitize_app_name("GoLand") == "GoLand"
+        assert sanitize_app_name("Google Chrome") == "Google Chrome"
+        assert sanitize_app_name("IntelliJ IDEA") == "IntelliJ IDEA"
 
     def test_app_name_with_parentheses(self) -> None:
         """Test app names with parentheses are valid."""
-        assert _sanitize_app_name("App (Beta)") == "App (Beta)"
+        assert sanitize_app_name("App (Beta)") == "App (Beta)"
 
     def test_app_name_with_dots(self) -> None:
         """Test app names with dots are valid."""
-        assert _sanitize_app_name("Visual Studio Code.app") == "Visual Studio Code.app"
+        assert sanitize_app_name("Visual Studio Code.app") == "Visual Studio Code.app"
 
     def test_app_name_with_quotes_rejected(self) -> None:
         """Test double quotes are rejected (security measure)."""
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name('App with "quotes"')
+            sanitize_app_name('App with "quotes"')
 
     def test_invalid_characters_rejected(self) -> None:
         """Test invalid characters raise ValueError."""
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name("App; rm -rf /")
+            sanitize_app_name("App; rm -rf /")
 
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name("App`whoami`")
+            sanitize_app_name("App`whoami`")
 
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name("App$PATH")
+            sanitize_app_name("App$PATH")
 
 
 # =============================================================================
@@ -378,7 +370,7 @@ class TestSpacesPlist:
         mapping = get_window_space_mapping({})
         assert mapping == {}
 
-    @patch("window_controller.subprocess.run")
+    @patch("window_controller.core.subprocess.run")
     def test_get_spaces_plist_success(self, mock_run: MagicMock) -> None:
         """Test successful plist reading."""
         import plistlib
@@ -389,13 +381,15 @@ class TestSpacesPlist:
         result = get_spaces_plist()
         assert result == {"test": "data"}
 
-    @patch("window_controller.subprocess.run")
+    @patch("window_controller.core.subprocess.run")
     def test_get_spaces_plist_failure(self, mock_run: MagicMock) -> None:
-        """Test plist reading failure returns empty dict."""
+        """Test plist reading failure raises PlistReadError."""
+        from window_controller.models import PlistReadError
+
         mock_run.return_value = MagicMock(returncode=1, stdout=b"", stderr=b"error")
 
-        result = get_spaces_plist()
-        assert result == {}
+        with pytest.raises(PlistReadError, match="Cannot read spaces plist"):
+            get_spaces_plist()
 
 
 # =============================================================================
@@ -406,7 +400,7 @@ class TestSpacesPlist:
 class TestProcessInfo:
     """Tests for process info retrieval."""
 
-    @patch("window_controller._get_psutil")
+    @patch("window_controller.core._get_psutil")
     def test_get_process_info_success(self, mock_get_psutil: MagicMock) -> None:
         """Test successful process info retrieval."""
         mock_psutil = MagicMock()
@@ -420,7 +414,7 @@ class TestProcessInfo:
         assert exe_path == "/usr/bin/app"
         assert cmdline == ["app", "--flag"]
 
-    @patch("window_controller._get_psutil")
+    @patch("window_controller.core._get_psutil")
     def test_get_process_info_no_such_process(self, mock_get_psutil: MagicMock) -> None:
         """Test process info when process doesn't exist."""
         mock_psutil = MagicMock()
@@ -549,7 +543,7 @@ class TestMain:
         result = main([])
         assert result == 1
 
-    @patch("window_controller.get_all_windows")
+    @patch("window_controller.cli.get_all_windows")
     def test_list_action(self, mock_get_windows: MagicMock) -> None:
         """Test --list action."""
         mock_get_windows.return_value = []
@@ -558,14 +552,14 @@ class TestMain:
         # get_all_windows may be called multiple times (once in main, once in list_all_windows)
         assert mock_get_windows.called
 
-    @patch("window_controller.find_windows")
+    @patch("window_controller.cli.find_windows")
     def test_find_no_results(self, mock_find: MagicMock) -> None:
         """Test --find with no results."""
         mock_find.return_value = []
         result = main(["--find", "NonExistent"])
         assert result == 1
 
-    @patch("window_controller.find_windows")
+    @patch("window_controller.cli.find_windows")
     def test_find_with_json(
         self,
         mock_find: MagicMock,

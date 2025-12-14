@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from scripts import (
+from verified_screenshot import (
     CaptureConfig,
     CaptureError,
     CaptureResult,
@@ -20,14 +20,14 @@ from scripts import (
     main,
     sanitize_app_name,
 )
-from scripts.actions import calculate_retry_delay, generate_output_path
-from scripts.cli import (
+from verified_screenshot.actions import calculate_retry_delay, generate_output_path
+from verified_screenshot.cli import (
     build_config,
     create_parser,
     parse_retry_strategy,
     parse_verification_strategies,
 )
-from scripts.core import (
+from verified_screenshot.core import (
     verify_basic,
     verify_content,
     verify_dimensions,
@@ -585,14 +585,14 @@ class TestMain:
 
     def test_find_window_not_found(self) -> None:
         """Test find with non-existent window."""
-        with patch("scripts.cli.find_target_window") as mock_find:
+        with patch("verified_screenshot.cli.find_target_window") as mock_find:
             mock_find.side_effect = WindowNotFoundError("Not found")
             result = main(["--find", "NonExistent"])
         assert result == 1
 
     def test_capture_with_mock(self, sample_capture_result: CaptureResult) -> None:
         """Test capture action with mocked capture_verified."""
-        with patch("scripts.cli.capture_verified") as mock_capture:
+        with patch("verified_screenshot.cli.capture_verified") as mock_capture:
             mock_capture.return_value = sample_capture_result
             result = main(["--capture", "TestApp"])
         assert result == 0

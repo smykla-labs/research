@@ -7,7 +7,7 @@ import plistlib
 from unittest.mock import MagicMock, patch
 
 import pytest
-from scripts import (
+from space_finder import (
     SPACE_TYPE_FULLSCREEN,
     SPACE_TYPE_NAMES,
     SPACE_TYPE_NORMAL,
@@ -24,9 +24,7 @@ from scripts import (
     parse_spaces,
     sanitize_app_name,
 )
-
-# Import private functions from cli module for testing
-from scripts.cli import (
+from space_finder.cli import (
     _handle_current,
     _handle_find,
     _handle_go,
@@ -233,7 +231,7 @@ class TestGetSpacesPlist:
         """Test successful plist read."""
         plist_bytes = plistlib.dumps(sample_plist_data)
 
-        with patch("scripts.core.subprocess.run") as mock_run:
+        with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
                 stdout=plist_bytes,
@@ -244,7 +242,7 @@ class TestGetSpacesPlist:
 
     def test_plutil_failure(self) -> None:
         """Test handling of plutil failure."""
-        with patch("scripts.core.subprocess.run") as mock_run:
+        with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=1,
                 stderr=b"Error reading plist",
@@ -255,7 +253,7 @@ class TestGetSpacesPlist:
 
     def test_invalid_plist_format(self) -> None:
         """Test handling of invalid plist format."""
-        with patch("scripts.core.subprocess.run") as mock_run:
+        with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
                 stdout=b"not valid plist data",
@@ -446,7 +444,7 @@ class TestActivateApp:
 
     def test_successful_activation(self) -> None:
         """Test successful app activation."""
-        with patch("scripts.actions.subprocess.run") as mock_run:
+        with patch("space_finder.actions.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
             activate_app("GoLand")
 
@@ -457,7 +455,7 @@ class TestActivateApp:
 
     def test_activation_failure(self) -> None:
         """Test handling of activation failure."""
-        with patch("scripts.actions.subprocess.run") as mock_run:
+        with patch("space_finder.actions.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=1,
                 stderr=b"App not found",
@@ -478,8 +476,8 @@ class TestGoToSpace:
     def test_go_to_different_space(self, sample_spaces: list[SpaceInfo]) -> None:
         """Test switching to a different space."""
         with (
-            patch("scripts.actions.activate_app") as mock_activate,
-            patch("scripts.actions.time.sleep"),
+            patch("space_finder.actions.activate_app") as mock_activate,
+            patch("space_finder.actions.time.sleep"),
         ):
             target, original, success = go_to_space(sample_spaces, "GoLand")
 
@@ -522,7 +520,7 @@ class TestGoToSpace:
             ),
         ]
 
-        with patch("scripts.actions.activate_app") as mock_activate:
+        with patch("space_finder.actions.activate_app") as mock_activate:
             target, original, success = go_to_space(spaces, "GoLand")
 
         assert success is True
@@ -616,7 +614,7 @@ class TestHandlers:
         self, sample_spaces: list[SpaceInfo], capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Test --go handler success."""
-        with patch("scripts.actions.activate_app"), patch("scripts.actions.time.sleep"):
+        with patch("space_finder.actions.activate_app"), patch("space_finder.actions.time.sleep"):
             result = _handle_go(sample_spaces, "GoLand")
 
         assert result == 0
@@ -764,7 +762,7 @@ class TestMain:
         """Test main with --list."""
         plist_bytes = plistlib.dumps(sample_plist_data)
 
-        with patch("scripts.core.subprocess.run") as mock_run:
+        with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
             result = main(["--list"])
 
@@ -774,7 +772,7 @@ class TestMain:
 
     def test_main_plist_error(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test main with plist read error."""
-        with patch("scripts.core.subprocess.run") as mock_run:
+        with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stderr=b"Error")
             result = main(["--list"])
 
@@ -788,7 +786,7 @@ class TestMain:
         """Test main with --list --json."""
         plist_bytes = plistlib.dumps(sample_plist_data)
 
-        with patch("scripts.core.subprocess.run") as mock_run:
+        with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
             result = main(["--list", "--json"])
 
