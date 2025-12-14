@@ -69,7 +69,7 @@ class WindowInfo:
         return data
 
 
-@dataclass
+@dataclass(frozen=True)
 class WindowFilter:
     """Filter criteria for window search."""
 
