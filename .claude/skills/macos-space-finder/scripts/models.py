@@ -65,3 +65,19 @@ class SpaceInfo:
         """Window title for display, truncated."""
         title = self.window_title or "-"
         return title[:38]
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "index": self.index,
+            "display": self.display,
+            "managed_space_id": self.managed_space_id,
+            "space_type": self.space_type,
+            "type_name": self.type_name,
+            "uuid": self.uuid,
+            "is_current": self.is_current,
+            "app_name": self.app_name,
+            "window_title": self.window_title,
+            "window_id": self.window_id,
+            "pid": self.pid,
+        }

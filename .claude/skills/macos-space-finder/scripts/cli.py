@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from typing import TYPE_CHECKING
 
@@ -54,21 +55,27 @@ Examples:
     )
 
     parser.add_argument(
-        "--list",
+        "--list", "-l",
         action="store_true",
         help="List all spaces with their details",
     )
 
     parser.add_argument(
-        "--current",
+        "--current", "-c",
         action="store_true",
         help="Print the current space's application name",
     )
 
     parser.add_argument(
-        "--go",
+        "--go", "-g",
         metavar="APP",
         help="Switch to the space containing APP, then return to original",
+    )
+
+    parser.add_argument(
+        "--json", "-j",
+        action="store_true",
+        help="Output as JSON",
     )
 
     parser.add_argument(
@@ -81,53 +88,88 @@ Examples:
     return parser
 
 
-def _handle_list(spaces: Sequence[SpaceInfo]) -> int:
+def _handle_list(spaces: Sequence[SpaceInfo], *, json_output: bool = False) -> int:
     """Handle --list command."""
-    list_spaces(spaces)
+    if json_output:
+        print(json.dumps([s.to_dict() for s in spaces], indent=2))
+    else:
+        list_spaces(spaces)
     return 0
 
 
-def _handle_current(spaces: Sequence[SpaceInfo]) -> int:
+def _handle_current(spaces: Sequence[SpaceInfo], *, json_output: bool = False) -> int:
     """Handle --current command."""
     current = get_current_space(spaces)
-    if current:
+    if json_output:
+        if current:
+            print(json.dumps(current.to_dict(), indent=2))
+        else:
+            print(json.dumps(None))
+    elif current:
         print(current.app_name or "Desktop")
     else:
         print("Unknown")
     return 0
 
 
-def _handle_go(spaces: Sequence[SpaceInfo], app_query: str) -> int:
+def _handle_go(
+    spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool = False
+) -> int:
     """Handle --go command."""
     try:
         target, original, success = go_to_space(spaces, app_query)
     except (ActivationError, ValueError) as e:
-        print(f"Error: {e}", file=sys.stderr)
+        if json_output:
+            print(json.dumps({"error": str(e)}))
+        else:
+            print(f"Error: {e}", file=sys.stderr)
         return 1
 
     if not success:
-        print(f"No space found for app: {app_query}")
+        if json_output:
+            print(json.dumps({"error": f"No space found for app: {app_query}"}))
+        else:
+            print(f"No space found for app: {app_query}")
         return 1
 
-    orig_name = original.app_name if original else "Desktop"
-    target_name = target.app_name if target else "Unknown"
-    print(f"Switched to: {target_name}")
-    print(f"Returned to: {orig_name}")
+    if json_output:
+        print(
+            json.dumps(
+                {
+                    "target": target.to_dict() if target else None,
+                    "original": original.to_dict() if original else None,
+                },
+                indent=2,
+            )
+        )
+    else:
+        orig_name = original.app_name if original else "Desktop"
+        target_name = target.app_name if target else "Unknown"
+        print(f"Switched to: {target_name}")
+        print(f"Returned to: {orig_name}")
     return 0
 
 
-def _handle_find(spaces: Sequence[SpaceInfo], app_query: str) -> int:
+def _handle_find(
+    spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool = False
+) -> int:
     """Handle find (positional argument) command."""
     matches = find_space_by_app(spaces, app_query)
 
     if not matches:
-        print(f"No space found for app: {app_query}")
-        print("\nAvailable spaces:")
-        list_spaces(spaces)
+        if json_output:
+            print(json.dumps({"error": f"No space found for app: {app_query}"}))
+        else:
+            print(f"No space found for app: {app_query}")
+            print("\nAvailable spaces:")
+            list_spaces(spaces)
         return 1
 
-    for match in matches:
-        print_space_details(match)
+    if json_output:
+        print(json.dumps([m.to_dict() for m in matches], indent=2))
+    else:
+        for match in matches:
+            print_space_details(match)
     return 0
 
 
@@ -158,16 +200,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     # Dispatch to handlers
+    json_output = args.json
+
     if args.list:
-        return _handle_list(spaces)
+        return _handle_list(spaces, json_output=json_output)
 
     if args.current:
-        return _handle_current(spaces)
+        return _handle_current(spaces, json_output=json_output)
 
     if args.go:
-        return _handle_go(spaces, args.go)
+        return _handle_go(spaces, args.go, json_output=json_output)
 
     if args.app_query:
-        return _handle_find(spaces, args.app_query)
+        return _handle_find(spaces, args.app_query, json_output=json_output)
 
     return 0

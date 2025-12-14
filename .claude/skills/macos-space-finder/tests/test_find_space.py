@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import plistlib
 from unittest.mock import MagicMock, patch
 
@@ -204,6 +205,20 @@ class TestSpaceInfo:
         """Test that SpaceInfo is immutable (frozen dataclass)."""
         with pytest.raises(AttributeError):
             sample_space_normal.index = 5  # type: ignore[misc]
+
+    def test_to_dict(self, sample_space_fullscreen: SpaceInfo) -> None:
+        """Test to_dict method returns correct structure."""
+        data = sample_space_fullscreen.to_dict()
+        assert data["index"] == 2
+        assert data["display"] == "Main"
+        assert data["managed_space_id"] == 3100
+        assert data["space_type"] == 4
+        assert data["type_name"] == "FullSc"
+        assert data["is_current"] is False
+        assert data["app_name"] == "GoLand"
+        assert data["window_title"] == "research – find_space.py"
+        assert data["window_id"] == 176051
+        assert data["pid"] == 9275
 
 
 # =============================================================================
@@ -618,6 +633,53 @@ class TestHandlers:
         captured = capsys.readouterr()
         assert "No space found" in captured.out
 
+    def test_handle_list_json(
+        self, sample_spaces: list[SpaceInfo], capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test --list --json handler output."""
+        result = _handle_list(sample_spaces, json_output=True)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert len(data) == 3
+        assert data[1]["app_name"] == "GoLand"
+
+    def test_handle_current_json(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test --current --json handler output."""
+        spaces = [
+            SpaceInfo(
+                index=1,
+                display="Main",
+                managed_space_id=1,
+                space_type=4,
+                uuid="",
+                is_current=True,
+                app_name="GoLand",
+                window_title="test",
+                window_id=123,
+                pid=456,
+            )
+        ]
+        result = _handle_current(spaces, json_output=True)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert data["app_name"] == "GoLand"
+
+    def test_handle_find_json(
+        self, sample_spaces: list[SpaceInfo], capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test find --json handler output."""
+        result = _handle_find(sample_spaces, "GoLand", json_output=True)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert len(data) == 1
+        assert data[0]["app_name"] == "GoLand"
+
 
 # =============================================================================
 # Argument Parser Tests
@@ -656,6 +718,29 @@ class TestCreateParser:
         parser = create_parser()
         args = parser.parse_args(["IntelliJ IDEA"])
         assert args.app_query == "IntelliJ IDEA"
+
+    def test_parser_json_flag(self) -> None:
+        """Test --json flag parsing."""
+        parser = create_parser()
+        args = parser.parse_args(["--list", "--json"])
+        assert args.json is True
+
+    def test_parser_short_flags(self) -> None:
+        """Test short flag variants (-l, -c, -g, -j)."""
+        parser = create_parser()
+
+        args = parser.parse_args(["-l"])
+        assert args.list is True
+
+        args = parser.parse_args(["-c"])
+        assert args.current is True
+
+        args = parser.parse_args(["-g", "GoLand"])
+        assert args.go == "GoLand"
+
+        args = parser.parse_args(["-l", "-j"])
+        assert args.list is True
+        assert args.json is True
 
 
 # =============================================================================
@@ -696,6 +781,22 @@ class TestMain:
         assert result == 1
         captured = capsys.readouterr()
         assert "Error" in captured.err
+
+    def test_main_list_json(
+        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test main with --list --json."""
+        plist_bytes = plistlib.dumps(sample_plist_data)
+
+        with patch("scripts.core.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
+            result = main(["--list", "--json"])
+
+        assert result == 0
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert isinstance(data, list)
+        assert data[1]["app_name"] == "GoLand"
 
 
 # =============================================================================
