@@ -9,23 +9,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Add the scripts directory to the path - must be before find_space import
-SCRIPTS_DIR = Path(__file__).parent.parent / ".claude/skills/macos-space-finder/scripts"
-sys.path.insert(0, str(SCRIPTS_DIR))
+# Add the skill directory to the path - must be before package import
+SKILL_DIR = Path(__file__).parent.parent / ".claude/skills/macos-space-finder"
+sys.path.insert(0, str(SKILL_DIR))
 
 # ruff: noqa: E402
-from find_space import (
+# Import from the package
+from scripts import (
     SPACE_TYPE_FULLSCREEN,
     SPACE_TYPE_NAMES,
     SPACE_TYPE_NORMAL,
     AppActivationError,
     PlistReadError,
     SpaceInfo,
-    _handle_current,
-    _handle_find,
-    _handle_go,
-    _handle_list,
-    _sanitize_app_name,
     activate_app,
     create_parser,
     find_space_by_app,
@@ -34,6 +30,15 @@ from find_space import (
     go_to_space,
     main,
     parse_spaces,
+    sanitize_app_name,
+)
+
+# Import private functions from cli module for testing
+from scripts.cli import (
+    _handle_current,
+    _handle_find,
+    _handle_go,
+    _handle_list,
 )
 
 # =============================================================================
@@ -222,7 +227,7 @@ class TestGetSpacesPlist:
         """Test successful plist read."""
         plist_bytes = plistlib.dumps(sample_plist_data)
 
-        with patch("find_space.subprocess.run") as mock_run:
+        with patch("scripts.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
                 stdout=plist_bytes,
@@ -233,7 +238,7 @@ class TestGetSpacesPlist:
 
     def test_plutil_failure(self) -> None:
         """Test handling of plutil failure."""
-        with patch("find_space.subprocess.run") as mock_run:
+        with patch("scripts.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=1,
                 stderr=b"Error reading plist",
@@ -244,7 +249,7 @@ class TestGetSpacesPlist:
 
     def test_invalid_plist_format(self) -> None:
         """Test handling of invalid plist format."""
-        with patch("find_space.subprocess.run") as mock_run:
+        with patch("scripts.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
                 stdout=b"not valid plist data",
@@ -396,38 +401,38 @@ class TestGetCurrentSpace:
 
 
 class TestSanitizeAppName:
-    """Tests for _sanitize_app_name function."""
+    """Tests for sanitize_app_name function."""
 
     def test_valid_simple_name(self) -> None:
         """Test valid simple app name."""
-        assert _sanitize_app_name("GoLand") == "GoLand"
+        assert sanitize_app_name("GoLand") == "GoLand"
 
     def test_valid_name_with_spaces(self) -> None:
         """Test valid name with spaces."""
-        assert _sanitize_app_name("IntelliJ IDEA") == "IntelliJ IDEA"
+        assert sanitize_app_name("IntelliJ IDEA") == "IntelliJ IDEA"
 
     def test_valid_name_with_hyphen(self) -> None:
         """Test valid name with hyphen."""
-        assert _sanitize_app_name("VS-Code") == "VS-Code"
+        assert sanitize_app_name("VS-Code") == "VS-Code"
 
     def test_valid_name_with_period(self) -> None:
         """Test valid name with period."""
-        assert _sanitize_app_name("App.Name") == "App.Name"
+        assert sanitize_app_name("App.Name") == "App.Name"
 
     def test_invalid_name_with_quotes(self) -> None:
         """Test rejection of name with quotes."""
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name('App"Name')
+            sanitize_app_name('App"Name')
 
     def test_invalid_name_with_semicolon(self) -> None:
         """Test rejection of name with semicolon."""
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name("App;Name")
+            sanitize_app_name("App;Name")
 
     def test_invalid_name_with_shell_chars(self) -> None:
         """Test rejection of shell special characters."""
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name("App$(whoami)")
+            sanitize_app_name("App$(whoami)")
 
 
 class TestActivateApp:
@@ -435,7 +440,7 @@ class TestActivateApp:
 
     def test_successful_activation(self) -> None:
         """Test successful app activation."""
-        with patch("find_space.subprocess.run") as mock_run:
+        with patch("scripts.actions.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
             activate_app("GoLand")
 
@@ -446,7 +451,7 @@ class TestActivateApp:
 
     def test_activation_failure(self) -> None:
         """Test handling of activation failure."""
-        with patch("find_space.subprocess.run") as mock_run:
+        with patch("scripts.actions.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=1,
                 stderr=b"App not found",
@@ -466,8 +471,8 @@ class TestGoToSpace:
 
     def test_go_to_different_space(self, sample_spaces: list[SpaceInfo]) -> None:
         """Test switching to a different space."""
-        with patch("find_space.activate_app") as mock_activate, patch(
-            "find_space.time.sleep"
+        with patch("scripts.actions.activate_app") as mock_activate, patch(
+            "scripts.actions.time.sleep"
         ):
             target, original, success = go_to_space(sample_spaces, "GoLand")
 
@@ -510,7 +515,7 @@ class TestGoToSpace:
             ),
         ]
 
-        with patch("find_space.activate_app") as mock_activate:
+        with patch("scripts.actions.activate_app") as mock_activate:
             target, original, success = go_to_space(spaces, "GoLand")
 
         assert success is True
@@ -604,7 +609,7 @@ class TestHandlers:
         self, sample_spaces: list[SpaceInfo], capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Test --go handler success."""
-        with patch("find_space.activate_app"), patch("find_space.time.sleep"):
+        with patch("scripts.actions.activate_app"), patch("scripts.actions.time.sleep"):
             result = _handle_go(sample_spaces, "GoLand")
 
         assert result == 0
@@ -682,7 +687,7 @@ class TestMain:
         """Test main with --list."""
         plist_bytes = plistlib.dumps(sample_plist_data)
 
-        with patch("find_space.subprocess.run") as mock_run:
+        with patch("scripts.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
             result = main(["--list"])
 
@@ -692,7 +697,7 @@ class TestMain:
 
     def test_main_plist_error(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test main with plist read error."""
-        with patch("find_space.subprocess.run") as mock_run:
+        with patch("scripts.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stderr=b"Error")
             result = main(["--list"])
 

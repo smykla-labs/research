@@ -11,16 +11,16 @@ Find which macOS Space/Desktop contains a specific application and navigate to i
 
 ```bash
 # List all spaces
-./scripts/find_space.py --list
+uv run python -m scripts --list
 
 # Find space containing an app
-./scripts/find_space.py "GoLand"
+uv run python -m scripts "GoLand"
 
 # Show current space
-./scripts/find_space.py --current
+uv run python -m scripts --current
 
 # Go to app's space and return to original
-./scripts/find_space.py --go "GoLand"
+uv run python -m scripts --go "GoLand"
 ```
 
 ## How It Works
@@ -61,9 +61,7 @@ Two methods work reliably:
 - **Plist caching**: The plist may not update immediately after Space changes
 - **Control+Number**: Direct Space switching (Ctrl+1, Ctrl+2) only works if enabled in System Settings > Keyboard > Keyboard Shortcuts > Mission Control
 
-## Script Reference
-
-### `scripts/find_space.py`
+## Command Reference
 
 | Flag | Description |
 |------|-------------|
@@ -87,7 +85,7 @@ When using `computer-control-mcp` to navigate Spaces:
 
 ```python
 # 1. Get current space before operations
-result = subprocess.run(["./scripts/find_space.py", "--current"], capture_output=True, text=True)
+result = subprocess.run(["uv", "run", "python", "-m", "scripts", "--current"], capture_output=True, text=True)
 original_space = result.stdout.strip()
 
 # 2. Activate target app (switches Space automatically)
@@ -106,13 +104,13 @@ Verify the skill works by running:
 
 ```bash
 # Should list all your Spaces
-./scripts/find_space.py --list
+uv run python -m scripts --list
 
 # Should show current app (e.g., "Ghostty" or "Desktop")
-./scripts/find_space.py --current
+uv run python -m scripts --current
 
 # If you have GoLand in full-screen, this should work:
-./scripts/find_space.py --go GoLand
+uv run python -m scripts --go GoLand
 ```
 
 Expected `--list` output:
