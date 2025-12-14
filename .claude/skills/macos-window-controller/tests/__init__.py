@@ -1,1 +1,1 @@
-# Tests for macos-window-controller
+"""Tests for macOS Window Controller skill."""

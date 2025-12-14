@@ -1,0 +1,298 @@
+---
+name: macos-verified-screenshot
+description: Capture macOS screenshots with verification and retry logic. Integrates with window-controller for window discovery.
+---
+
+# macOS Verified Screenshot
+
+Capture macOS window screenshots with automatic verification and retry logic. This skill ensures you actually captured what you intended by verifying the screenshot content, dimensions, and optionally text via OCR.
+
+## Quick Start
+
+```bash
+# Simple capture with default verification
+uv run python -m scripts --capture "GoLand"
+
+# Capture with full verification
+uv run python -m scripts --capture "GoLand" --verify all
+
+# Capture sandbox IDE (JetBrains via Gradle runIde)
+# Note: Sandbox IDEs appear as "Main", use --no-activate since AppleScript can't activate them
+uv run python -m scripts --capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+
+# Capture specific window by title
+uv run python -m scripts --capture "Chrome" --title "GitHub"
+
+# Custom output path with 3 retries
+uv run python -m scripts --capture "Code" -o ~/screenshots/vscode.png -r 3
+
+# Find window info without capturing
+uv run python -m scripts --find "GoLand" --json
+```
+
+## How It Works
+
+### Capture Pipeline
+
+1. **Window Discovery**: Uses `CGWindowListCopyWindowInfo` to enumerate all windows and filter by app name, title pattern, PID, executable path, or command-line arguments.
+
+2. **Activation** (optional): Activates the target app via AppleScript, which also switches to the window's Space. Configurable settle time allows the window to render.
+
+3. **Screenshot Capture**: Uses `CGWindowListCreateImage` to capture the specific window by ID. Optionally excludes window shadow.
+
+4. **Verification**: Runs configured verification strategies against the captured image:
+   - **basic**: File exists, size > 0, valid PNG format
+   - **dimensions**: Image dimensions match window bounds (within 10% tolerance)
+   - **content**: Image is not blank, differs from previous capture (perceptual hash)
+   - **text**: Expected text appears in image (OCR via pytesseract)
+
+5. **Retry Loop**: If verification fails, retries up to N times with configurable delay strategy:
+   - **fixed**: Constant delay between retries
+   - **exponential**: Doubling delay (500ms, 1s, 2s, ...)
+   - **reactivate**: Re-activate window before each retry
+
+### Verification Strategies
+
+| Strategy | Purpose | Details |
+|----------|---------|---------|
+| `basic` | Sanity check | File exists, >0 bytes, valid image |
+| `dimensions` | Correct window | Width/height match window bounds ±10% |
+| `content` | Not blank/stale | Perceptual hash differs from blank/previous |
+| `text` | Correct content | OCR finds expected text |
+| `all` | Full verification | All above strategies combined |
+| `none` | Skip verification | Capture only, no verification |
+
+### Perceptual Hashing
+
+Uses [imagehash](https://github.com/JohannesBuchner/imagehash) for content verification:
+
+- Computes `phash` (perceptual hash) of the image
+- Compares via Hamming distance (number of differing bits)
+- Default threshold: 5 (images with distance < 5 considered "same")
+- Detects blank images and unchanged screenshots
+
+## Command Reference
+
+### Actions
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--capture` | `-c` | Capture screenshot of window |
+| `--find` | `-f` | Find window without capturing |
+
+### Window Filters
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--title` | `-t` | Regex pattern for window title |
+| `--pid` | | Filter by process ID |
+| `--path-contains` | | Executable path must contain |
+| `--path-excludes` | | Executable path must NOT contain |
+| `--args` | | Command line must contain |
+
+### Output Options
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--output` | `-o` | Output path for screenshot |
+| `--json` | `-j` | Output as JSON |
+
+### Capture Options
+
+| Flag | Description |
+|------|-------------|
+| `--no-activate` | Don't activate window first |
+| `--settle-ms` | Wait time after activation (default: 1000) |
+| `--shadow` | Include window shadow |
+
+### Verification Options
+
+| Flag | Description |
+|------|-------------|
+| `--verify` | Verification strategies (basic, dimensions, content, text, all, none) |
+| `--expected-text` | Text to verify via OCR |
+| `--hash-threshold` | Hamming distance threshold (default: 5) |
+
+### Retry Options
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--retries` | `-r` | Maximum retry attempts (default: 5) |
+| `--retry-delay` | | Delay between retries in ms (default: 500) |
+| `--retry-strategy` | | fixed, exponential, or reactivate |
+
+## Integration Examples
+
+### Programmatic Use
+
+```python
+from scripts import capture_verified, capture_simple, CaptureConfig, VerificationStrategy
+
+# Simple capture
+result = capture_simple(app_name="GoLand", max_retries=3)
+print(f"Saved: {result.path}")
+
+# Full configuration
+config = CaptureConfig(
+    app_name="Main",
+    args_contains="idea.plugin.in.sandbox.mode",
+    output_path="sandbox_ide.png",
+    verification_strategies=(
+        VerificationStrategy.BASIC,
+        VerificationStrategy.CONTENT,
+        VerificationStrategy.DIMENSIONS,
+    ),
+    max_retries=5,
+    retry_strategy=RetryStrategy.REACTIVATE,
+)
+result = capture_verified(config)
+
+if result.verified:
+    print(f"Successfully captured: {result.path}")
+    print(f"Dimensions: {result.actual_width}x{result.actual_height}")
+else:
+    print("Capture failed verification")
+    for v in result.verifications:
+        print(f"  {v.strategy.value}: {v.message}")
+```
+
+### JSON Output
+
+```bash
+uv run python -m scripts --capture "GoLand" --verify all --json
+```
+
+```json
+{
+  "path": "screenshots/goland_20241214_153045.png",
+  "attempt": 1,
+  "window_id": 190027,
+  "app_name": "GoLand",
+  "window_title": "research – models.py",
+  "expected_dimensions": {"width": 2056.0, "height": 1290.0},
+  "actual_dimensions": {"width": 2056, "height": 1290},
+  "verified": true,
+  "image_hash": "a1b2c3d4e5f6",
+  "verifications": [
+    {"strategy": "basic", "passed": true, "message": "Valid image file", "details": {}},
+    {"strategy": "dimensions", "passed": true, "message": "Dimensions match", "details": {}},
+    {"strategy": "content", "passed": true, "message": "Image has meaningful content", "details": {}}
+  ]
+}
+```
+
+### Claude Code Integration
+
+Use this skill to capture screenshots for verification:
+
+```bash
+# Load the skill context
+Skill tool: macos-verified-screenshot
+
+# Capture with verification
+cd ~/.claude/skills/macos-verified-screenshot
+uv run python -m scripts --capture "GoLand" --verify all -o ~/screenshot.png
+
+# If capture fails, it will retry up to 5 times
+# Final result indicates whether verification passed
+```
+
+## Testing
+
+```bash
+cd ~/.claude/skills/macos-verified-screenshot
+
+# Install dependencies
+uv sync --all-extras
+
+# Run tests
+uv run pytest tests/ -v
+
+# Run with coverage
+uv run pytest tests/ -v --cov=scripts --cov-report=term-missing
+```
+
+## Troubleshooting
+
+### "No window found matching filter"
+
+1. Check if the app is running: `ps aux | grep -i appname`
+2. Use `--find` to see what windows are available
+3. For sandbox IDEs, use `--capture "Main" --args "sandbox"`
+4. Try without filters first to verify connectivity
+
+### "Verification failed after N attempts"
+
+1. Increase `--retries` and/or `--settle-ms`
+2. Use `--retry-strategy reactivate` to re-focus window
+3. Check verification details in JSON output
+4. Try `--verify basic` to isolate the failing check
+
+### Screenshot is blank or wrong window
+
+1. Grant Screen Recording permission: System Settings > Privacy & Security > Screen Recording
+2. The window might be minimized or on another Space
+3. Use `--verify dimensions` to detect wrong-sized captures
+4. Increase `--settle-ms` if app is slow to render
+
+### Avoiding Space switching
+
+By default, activation switches to the target window's Space. To stay on current Space:
+
+```bash
+uv run python -m scripts --capture "App" --no-activate
+```
+
+**Tradeoff**: Windows on other Spaces may not be fully rendered (could be stale/blank). The verification strategies will detect this and retry.
+
+### Sandbox IDEs (JetBrains runIde)
+
+JetBrains sandbox IDEs appear as "Main" (Java process name), and AppleScript cannot activate them:
+
+```bash
+# Must use --no-activate for sandbox IDEs
+uv run python -m scripts --capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+```
+
+If the sandbox window needs to be active, manually switch to its Space before capturing.
+
+### OCR text verification fails
+
+1. Install Tesseract: `brew install tesseract`
+2. Install pytesseract: `uv add pytesseract`
+3. Ensure expected text is actually visible (not scrolled off)
+4. Text must be readable (not too small, good contrast)
+
+### Permission errors
+
+Grant these permissions in System Settings > Privacy & Security:
+
+- **Screen Recording**: Required for window names and screenshots
+- **Accessibility**: Required for AppleScript window activation
+
+## Dependencies
+
+Required:
+- `pyobjc-framework-Quartz>=10.0` - macOS Quartz framework bindings
+- `psutil>=5.9` - Process information
+- `pillow>=10.0` - Image processing
+- `imagehash>=4.3` - Perceptual hashing
+
+Optional:
+- `pytesseract>=0.3` - OCR text verification (requires Tesseract)
+
+## Technical References
+
+- [CGWindowListCreateImage](https://developer.apple.com/documentation/coregraphics/1454852-cgwindowlistcreateimage) - Apple CoreGraphics API
+- [imagehash](https://github.com/JohannesBuchner/imagehash) - Perceptual hashing library
+- [pytesseract](https://github.com/madmaze/pytesseract) - Python Tesseract wrapper
+- [PyObjC](https://pyobjc.readthedocs.io/) - Python Objective-C bridge
+
+## Sources (Research)
+
+- [SS64 screencapture Manual](https://ss64.com/mac/screencapture.html)
+- [GitHub: GetWindowID](https://github.com/smokris/GetWindowID)
+- [Fast Screenshot Gist](https://gist.github.com/mr-linch/d31024f931441a39c6a830328f8b5030)
+- [Window Screenshot Gist](https://gist.github.com/dougbacelar/2116a834f5e4e1cd069659463a07dde5)
+- [ImageHash PyPI](https://pypi.org/project/ImageHash/)
+- [pytesseract PyPI](https://pypi.org/project/pytesseract/)
