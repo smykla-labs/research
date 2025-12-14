@@ -7,20 +7,22 @@ description: Find and switch to macOS Spaces/Desktops by application name. Use w
 
 Find which macOS Space/Desktop contains a specific application and navigate to it.
 
+**No external dependencies** - uses only Python standard library and macOS native tools.
+
 ## Quick Start
 
 ```bash
 # List all spaces
-uv run python -m scripts --list
+uv run space-finder --list
 
 # Find space containing an app
-uv run python -m scripts "GoLand"
+uv run space-finder "GoLand"
 
 # Show current space
-uv run python -m scripts --current
+uv run space-finder --current
 
 # Go to app's space and return to original
-uv run python -m scripts --go "GoLand"
+uv run space-finder --go "GoLand"
 ```
 
 ## How It Works
@@ -36,24 +38,15 @@ macOS stores Space configuration in `~/Library/Preferences/com.apple.spaces.plis
 
 ### Switching Spaces
 
-Two methods work reliably:
+**AppleScript app activation** (recommended):
 
-1. **AppleScript app activation** (recommended):
-   ```bash
-   osascript -e 'tell application "GoLand" to activate'
-   ```
-   - macOS automatically switches to the Space containing the app
-   - Works for full-screen apps and windowed apps
+```bash
+osascript -e 'tell application "GoLand" to activate'
+```
 
-2. **Keyboard shortcuts** via computer-control MCP:
-   ```python
-   # Control+Right Arrow to move one space right
-   press_keys([["ctrl", "right"]])
-
-   # Control+Left Arrow to move one space left
-   press_keys([["ctrl", "left"]])
-   ```
-   - Requires knowing relative position of target Space
+- macOS automatically switches to the Space containing the app
+- Works for full-screen apps and windowed apps
+- No external dependencies required
 
 ### Limitations
 
@@ -80,20 +73,23 @@ Two methods work reliably:
 | Tile (5) | Tile within full-screen Space |
 | Wall (6) | Wallpaper layer |
 
-## Integration with MCP
-
-When using `computer-control-mcp` to navigate Spaces:
+## Programmatic Usage
 
 ```python
+import subprocess
+
 # 1. Get current space before operations
-result = subprocess.run(["uv", "run", "python", "-m", "scripts", "--current"], capture_output=True, text=True)
+result = subprocess.run(
+    ["uv", "run", "space-finder", "--current"],
+    capture_output=True, text=True
+)
 original_space = result.stdout.strip()
 
 # 2. Activate target app (switches Space automatically)
 subprocess.run(["osascript", "-e", f'tell application "{target_app}" to activate'])
 
-# 3. Perform MCP operations (screenshots, clicks, etc.)
-# ... mcp operations ...
+# 3. Perform your operations here
+# ...
 
 # 4. Return to original Space
 if original_space and original_space != "Desktop":
@@ -109,13 +105,13 @@ Verify the skill works by running:
 
 ```bash
 # Should list all your Spaces
-uv run python -m scripts --list
+uv run space-finder --list
 
 # Should show current app (e.g., "Ghostty" or "Desktop")
-uv run python -m scripts --current
+uv run space-finder --current
 
 # If you have GoLand in full-screen, this should work:
-uv run python -m scripts --go GoLand
+uv run space-finder --go GoLand
 ```
 
 Expected `--list` output:
