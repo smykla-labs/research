@@ -144,7 +144,7 @@ Output:
 ```json
 {
   "app_name": "GoLand",
-  "window_title": "research – find_space.py",
+  "window_title": "research – models.py",
   "window_id": 190027,
   "pid": 57878,
   "exe_path": "/Users/.../Applications/GoLand.app/Contents/MacOS/goland",

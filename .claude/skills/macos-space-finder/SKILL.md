@@ -63,12 +63,13 @@ Two methods work reliably:
 
 ## Command Reference
 
-| Flag | Description |
-|------|-------------|
-| `--list` | Show all Spaces with index, type, app name, window title |
-| `--current` | Print current Space's app name (or "Desktop") |
-| `--go <app>` | Switch to app's Space, wait 1s, return to original |
-| `<app>` | Find Space containing app (case-insensitive partial match) |
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--list` | `-l` | Show all Spaces with index, type, app name, window title |
+| `--current` | `-c` | Print current Space's app name (or "Desktop") |
+| `--go <app>` | `-g` | Switch to app's Space, wait 1s, return to original |
+| `--json` | `-j` | Output as JSON (for automation) |
+| `<app>` | | Find Space containing app (case-insensitive partial match) |
 
 ### Space Types
 
@@ -95,7 +96,11 @@ subprocess.run(["osascript", "-e", f'tell application "{target_app}" to activate
 # ... mcp operations ...
 
 # 4. Return to original Space
-subprocess.run(["osascript", "-e", f'tell application "{original_space}" to activate'])
+if original_space and original_space != "Desktop":
+    subprocess.run(["osascript", "-e", f'tell application "{original_space}" to activate'])
+else:
+    # For normal desktop, activate Finder as fallback
+    subprocess.run(["osascript", "-e", 'tell application "Finder" to activate'])
 ```
 
 ## Testing
