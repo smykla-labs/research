@@ -56,13 +56,17 @@ max-returns = 7  # CLI main functions with multiple subcommands need more return
 [tool.ruff.lint.per-file-ignores]
 # Allow print statements in skill packages (CLI output)
 "**/space_finder/*.py" = ["T201"]
+"**/screen_recorder/*.py" = ["T201"]
 "**/verified_screenshot/*.py" = ["T201"]
 "**/window_controller/*.py" = ["T201"]
 "tests/**/*.py" = [
     "S101",    # Allow assert in tests
     "PLR2004", # Allow magic values in tests
+    "ARG001",  # Allow unused function arguments (mock side effects)
     "ARG002",  # Allow unused method arguments (fixtures)
     "RUF001",  # Allow ambiguous characters in test strings
+    "SIM117",  # Allow nested with statements (pytest.raises with context managers)
+    "S108",    # Allow hardcoded /tmp paths in tests
 ]
 
 [tool.pytest.ini_options]
