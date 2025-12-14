@@ -3,18 +3,9 @@
 from __future__ import annotations
 
 import plistlib
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Add the skill directory to the path - must be before package import
-SKILL_DIR = Path(__file__).parent.parent / ".claude/skills/macos-space-finder"
-sys.path.insert(0, str(SKILL_DIR))
-
-# ruff: noqa: E402
-# Import from the package
 from scripts import (
     SPACE_TYPE_FULLSCREEN,
     SPACE_TYPE_NAMES,
@@ -471,8 +462,9 @@ class TestGoToSpace:
 
     def test_go_to_different_space(self, sample_spaces: list[SpaceInfo]) -> None:
         """Test switching to a different space."""
-        with patch("scripts.actions.activate_app") as mock_activate, patch(
-            "scripts.actions.time.sleep"
+        with (
+            patch("scripts.actions.activate_app") as mock_activate,
+            patch("scripts.actions.time.sleep"),
         ):
             target, original, success = go_to_space(sample_spaces, "GoLand")
 
