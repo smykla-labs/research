@@ -29,7 +29,7 @@ class PlistReadError(WindowError):
     """Failed to read plist file."""
 
 
-@dataclass
+@dataclass(frozen=True)
 class WindowInfo:
     """Information about a macOS window."""
 
@@ -46,7 +46,7 @@ class WindowInfo:
     bounds_height: float
     space_index: int | None = None
     exe_path: str | None = None
-    cmdline: list[str] = field(default_factory=list)
+    cmdline: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def bounds(self) -> dict:

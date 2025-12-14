@@ -44,7 +44,7 @@ def sample_window() -> WindowInfo:
         bounds_height=800.0,
         space_index=2,
         exe_path="/Applications/GoLand.app/Contents/MacOS/goland",
-        cmdline=["/Applications/GoLand.app/Contents/MacOS/goland", "-project", "/path/to/research"],
+        cmdline=("/Applications/GoLand.app/Contents/MacOS/goland", "-project", "/path/to/research"),
     )
 
 
@@ -67,7 +67,7 @@ def sample_windows(sample_window: WindowInfo) -> list[WindowInfo]:
             bounds_height=600.0,
             space_index=1,
             exe_path="/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
-            cmdline=["/bin/bash"],
+            cmdline=("/bin/bash",),
         ),
         WindowInfo(
             app_name="Safari",
@@ -83,7 +83,7 @@ def sample_windows(sample_window: WindowInfo) -> list[WindowInfo]:
             bounds_height=0.0,
             space_index=None,
             exe_path="/Applications/Safari.app/Contents/MacOS/Safari",
-            cmdline=["/Applications/Safari.app/Contents/MacOS/Safari"],
+            cmdline=("/Applications/Safari.app/Contents/MacOS/Safari",),
         ),
         WindowInfo(
             app_name="Dock",
@@ -99,7 +99,7 @@ def sample_windows(sample_window: WindowInfo) -> list[WindowInfo]:
             bounds_height=50.0,
             space_index=None,
             exe_path="/System/Library/CoreServices/Dock.app/Contents/MacOS/Dock",
-            cmdline=[],
+            cmdline=(),
         ),
     ]
 
@@ -197,7 +197,7 @@ class TestWindowInfo:
         )
         assert window.space_index is None
         assert window.exe_path is None
-        assert window.cmdline == []
+        assert window.cmdline == ()
 
 
 # -- TestWindowFilter --

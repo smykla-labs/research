@@ -121,7 +121,7 @@ def get_all_windows() -> list[WindowInfo]:
                 bounds_height=bounds.get("Height", 0.0),
                 space_index=window_space_map.get(window.get("kCGWindowNumber", 0)),
                 exe_path=exe_path,
-                cmdline=cmdline,
+                cmdline=tuple(cmdline),
             )
         )
 
