@@ -13,6 +13,7 @@ from .core import (
 )
 from .models import (
     ActivationError,
+    PlistReadError,
     ScreenshotError,
     WindowError,
     WindowFilter,
@@ -22,6 +23,7 @@ from .models import (
 
 __all__ = [
     "ActivationError",
+    "PlistReadError",
     "ScreenshotError",
     "WindowError",
     "WindowFilter",

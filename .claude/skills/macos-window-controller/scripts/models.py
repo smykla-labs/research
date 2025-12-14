@@ -21,6 +21,10 @@ class ScreenshotError(WindowError):
     """Failed to take screenshot."""
 
 
+class PlistReadError(WindowError):
+    """Failed to read plist file."""
+
+
 @dataclass
 class WindowInfo:
     """Information about a macOS window."""

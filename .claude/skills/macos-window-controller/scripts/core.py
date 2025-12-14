@@ -8,7 +8,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from .models import WindowFilter, WindowInfo
+from .models import PlistReadError, WindowFilter, WindowInfo
 
 # Spaces plist path
 SPACES_PLIST_PATH = Path.home() / "Library/Preferences/com.apple.spaces.plist"
@@ -31,7 +31,14 @@ def _get_psutil():
 
 
 def get_spaces_plist() -> dict:
-    """Read the spaces plist file."""
+    """Read the spaces plist file.
+
+    Returns:
+        Parsed plist data as a dictionary.
+
+    Raises:
+        PlistReadError: If the plist cannot be read or parsed.
+    """
     result = subprocess.run(
         ["plutil", "-convert", "xml1", "-o", "-", str(SPACES_PLIST_PATH)],
         capture_output=True,
@@ -39,12 +46,13 @@ def get_spaces_plist() -> dict:
     )
 
     if result.returncode != 0:
-        return {}
+        stderr = result.stderr.decode("utf-8", errors="replace")
+        raise PlistReadError(f"Cannot read spaces plist: {stderr}")
 
     try:
         return plistlib.loads(result.stdout)
-    except plistlib.InvalidFileException:
-        return {}
+    except plistlib.InvalidFileException as e:
+        raise PlistReadError(f"Invalid plist format: {e}") from e
 
 
 def get_window_space_mapping(plist_data: dict) -> dict[int, int]:
@@ -86,8 +94,12 @@ def get_all_windows() -> list[WindowInfo]:
     if not all_windows:
         return []
 
-    plist_data = get_spaces_plist()
-    window_space_map = get_window_space_mapping(plist_data)
+    # Try to get space mapping, gracefully degrade if plist unavailable
+    try:
+        plist_data = get_spaces_plist()
+        window_space_map = get_window_space_mapping(plist_data)
+    except PlistReadError:
+        window_space_map = {}
     process_cache: dict[int, tuple[str | None, list[str]]] = {}
     windows: list[WindowInfo] = []
 
