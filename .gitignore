@@ -34,3 +34,5 @@ secrets/
 
 # Klaudiush project level configuration
 .klaudiush/
+.coverage
+.hypothesis/
