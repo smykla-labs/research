@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from scripts.actions import _sanitize_app_name, activate_window, take_screenshot
+from scripts.actions import activate_window, sanitize_app_name, take_screenshot
 from scripts.cli import build_filter, create_parser, main
 from scripts.core import (
     filter_windows,
@@ -502,21 +502,21 @@ class TestFindWindow:
 
 
 class TestActivateWindow:
-    """Tests for activate_window and _sanitize_app_name functions."""
+    """Tests for activate_window and sanitize_app_name functions."""
 
     def test_sanitize_valid_names(self) -> None:
         """Test sanitize_app_name allows valid characters."""
-        assert _sanitize_app_name("GoLand") == "GoLand"
-        assert _sanitize_app_name("Visual Studio Code") == "Visual Studio Code"
-        assert _sanitize_app_name("Safari (Beta)") == "Safari (Beta)"
-        assert _sanitize_app_name("app-name.test") == "app-name.test"
+        assert sanitize_app_name("GoLand") == "GoLand"
+        assert sanitize_app_name("Visual Studio Code") == "Visual Studio Code"
+        assert sanitize_app_name("Safari (Beta)") == "Safari (Beta)"
+        assert sanitize_app_name("app-name.test") == "app-name.test"
 
     def test_sanitize_invalid_name(self) -> None:
         """Test sanitize_app_name rejects invalid characters."""
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name("App; rm -rf /")
+            sanitize_app_name("App; rm -rf /")
         with pytest.raises(ValueError, match="Invalid characters"):
-            _sanitize_app_name('App"; echo pwned')
+            sanitize_app_name('App"; echo pwned')
 
     def test_activate_success(self, sample_window: WindowInfo) -> None:
         """Test successful window activation."""

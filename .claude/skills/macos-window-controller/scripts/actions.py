@@ -17,7 +17,7 @@ from .models import (
 )
 
 
-def _sanitize_app_name(app_name: str) -> str:
+def sanitize_app_name(app_name: str) -> str:
     """Sanitize application name for AppleScript."""
     if not re.match(r"^[\w\s.\-()]+$", app_name):
         raise ValueError(f"Invalid characters in app name: {app_name}")
@@ -35,7 +35,7 @@ def _activate_by_app_name(app_name: str, wait_time: float = 0.5) -> None:
         ActivationError: If activation fails.
     """
     try:
-        sanitized = _sanitize_app_name(app_name)
+        sanitized = sanitize_app_name(app_name)
     except ValueError as e:
         raise ActivationError(str(e)) from e
 

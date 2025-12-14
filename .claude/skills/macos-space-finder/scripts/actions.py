@@ -27,8 +27,8 @@ def sanitize_app_name(app_name: str) -> str:
     Raises:
         ValueError: If the app name contains invalid characters.
     """
-    # Allow only alphanumeric, spaces, hyphens, underscores, and periods
-    if not re.match(r"^[\w\s.\-]+$", app_name):
+    # Allow only alphanumeric, spaces, hyphens, underscores, periods, and parentheses
+    if not re.match(r"^[\w\s.\-()]+$", app_name):
         raise ValueError(f"Invalid characters in app name: {app_name}")
 
     # Escape any remaining quotes (shouldn't exist after regex, but defense in depth)
