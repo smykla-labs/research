@@ -168,6 +168,7 @@ class TestWindowTarget:
     def test_frozen_immutable(self, sample_target: WindowTarget) -> None:
         """Test that dataclass is immutable."""
         with pytest.raises(AttributeError):
+            # noinspection PyDataclass
             sample_target.app_name = "NewApp"  # type: ignore[misc]
 
 
@@ -197,6 +198,7 @@ class TestCaptureConfig:
     def test_frozen_immutable(self, sample_config: CaptureConfig) -> None:
         """Test that dataclass is immutable."""
         with pytest.raises(AttributeError):
+            # noinspection PyDataclass
             sample_config.app_name = "NewApp"  # type: ignore[misc]
 
 

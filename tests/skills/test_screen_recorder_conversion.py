@@ -35,7 +35,7 @@ class TestConvertToGif:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake gif")
             return mock_result
 
@@ -81,7 +81,7 @@ class TestConvertToGif:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake gif")
             return mock_result
 
@@ -109,7 +109,7 @@ class TestConvertToGif:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake gif")
             return mock_result
 
@@ -142,7 +142,7 @@ class TestConvertToWebp:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake webp")
             return mock_result
 
@@ -164,7 +164,7 @@ class TestConvertToWebp:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake webp")
             return mock_result
 
@@ -190,7 +190,7 @@ class TestConvertToWebp:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake webp")
             return mock_result
 
@@ -244,7 +244,7 @@ class TestConvertToMp4:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake mp4")
             return mock_result
 
@@ -265,7 +265,7 @@ class TestConvertToMp4:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake mp4")
             return mock_result
 
@@ -291,7 +291,7 @@ class TestConvertToMp4:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake mp4")
             return mock_result
 
@@ -366,7 +366,7 @@ class TestConvertVideo:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake gif")
             return mock_result
 
@@ -387,7 +387,7 @@ class TestConvertVideo:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake webp")
             return mock_result
 
@@ -408,7 +408,7 @@ class TestConvertVideo:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake mp4")
             return mock_result
 
@@ -428,7 +428,7 @@ class TestConvertVideo:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             # Create the expected output
             (tmp_path / "input.gif").write_bytes(b"fake gif")
             return mock_result
@@ -451,7 +451,7 @@ class TestConvertVideo:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake gif")
             return mock_result
 

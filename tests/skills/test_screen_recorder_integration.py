@@ -64,11 +64,11 @@ class TestRecordVerifiedSuccess:
     ) -> None:
         """Test successful recording on first attempt with basic verification."""
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
-            result = Mock()
-            result.returncode = 0
-            result.stderr = b""
+            proc_result = Mock()
+            proc_result.returncode = 0
+            proc_result.stderr = b""
 
             if "screencapture" in cmd[0]:
                 # Create recording file
@@ -77,13 +77,13 @@ class TestRecordVerifiedSuccess:
                         Path(arg).write_bytes(b"fake video")
                         break
             elif "ffprobe" in cmd[0]:
-                result.stdout = mock_ffprobe_success
+                proc_result.stdout = mock_ffprobe_success
             elif "ffmpeg" in cmd[0]:
                 # Create converted file
                 output = cmd[-1]
                 Path(output).write_bytes(b"fake gif")
 
-            return result
+            return proc_result
 
         config = RecordingConfig(
             app_name="TestApp",
@@ -112,11 +112,11 @@ class TestRecordVerifiedSuccess:
     ) -> None:
         """Test successful full screen recording (no window target)."""
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
-            result = Mock()
-            result.returncode = 0
-            result.stderr = b""
+            proc_result = Mock()
+            proc_result.returncode = 0
+            proc_result.stderr = b""
 
             if "screencapture" in cmd[0]:
                 for arg in cmd:
@@ -124,12 +124,12 @@ class TestRecordVerifiedSuccess:
                         Path(arg).write_bytes(b"fake video")
                         break
             elif "ffprobe" in cmd[0]:
-                result.stdout = mock_ffprobe_success
+                proc_result.stdout = mock_ffprobe_success
             elif "ffmpeg" in cmd[0]:
                 output = cmd[-1]
                 Path(output).write_bytes(b"fake gif")
 
-            return result
+            return proc_result
 
         config = RecordingConfig(
             full_screen=True,
@@ -165,11 +165,11 @@ class TestRecordVerifiedRetry:
         """Test retry when verification fails."""
         attempt_count = [0]
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
-            result = Mock()
-            result.returncode = 0
-            result.stderr = b""
+            proc_result = Mock()
+            proc_result.returncode = 0
+            proc_result.stderr = b""
 
             if "screencapture" in cmd[0]:
                 attempt_count[0] += 1
@@ -180,7 +180,7 @@ class TestRecordVerifiedRetry:
             elif "ffprobe" in cmd[0]:
                 # First attempt: short duration (fails), second: correct duration
                 duration = "2.0" if attempt_count[0] == 1 else "5.0"
-                result.stdout = json.dumps({
+                proc_result.stdout = json.dumps({
                     "streams": [{"width": 800, "height": 600, "avg_frame_rate": "30/1"}],
                     "format": {"duration": duration, "size": "1000000", "format_name": "mov"}
                 }).encode()
@@ -188,7 +188,7 @@ class TestRecordVerifiedRetry:
                 output = cmd[-1]
                 Path(output).write_bytes(b"fake gif")
 
-            return result
+            return proc_result
 
         config = RecordingConfig(
             app_name="TestApp",
@@ -225,11 +225,11 @@ class TestRecordVerifiedErrors:
     ) -> None:
         """Test MaxRetriesError after all retries exhausted."""
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
-            result = Mock()
-            result.returncode = 0
-            result.stderr = b""
+            proc_result = Mock()
+            proc_result.returncode = 0
+            proc_result.stderr = b""
 
             if "screencapture" in cmd[0]:
                 for arg in cmd:
@@ -238,12 +238,12 @@ class TestRecordVerifiedErrors:
                         break
             elif "ffprobe" in cmd[0]:
                 # Always return short duration (fails verification)
-                result.stdout = json.dumps({
+                proc_result.stdout = json.dumps({
                     "streams": [{"width": 800, "height": 600, "avg_frame_rate": "30/1"}],
                     "format": {"duration": "1.0", "size": "1000", "format_name": "mov"}
                 }).encode()
 
-            return result
+            return proc_result
 
         config = RecordingConfig(
             app_name="TestApp",
@@ -308,11 +308,11 @@ class TestRecordVerifiedOptions:
         """Test keep_raw=True preserves raw MOV file."""
         raw_files_created = []
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
-            result = Mock()
-            result.returncode = 0
-            result.stderr = b""
+            proc_result = Mock()
+            proc_result.returncode = 0
+            proc_result.stderr = b""
 
             if "screencapture" in cmd[0]:
                 for arg in cmd:
@@ -321,12 +321,12 @@ class TestRecordVerifiedOptions:
                         raw_files_created.append(Path(arg))
                         break
             elif "ffprobe" in cmd[0]:
-                result.stdout = mock_ffprobe_success
+                proc_result.stdout = mock_ffprobe_success
             elif "ffmpeg" in cmd[0]:
                 output = cmd[-1]
                 Path(output).write_bytes(b"fake gif")
 
-            return result
+            return proc_result
 
         config = RecordingConfig(
             app_name="TestApp",
@@ -353,11 +353,11 @@ class TestRecordVerifiedOptions:
     ) -> None:
         """Test keep_raw=False removes raw MOV file."""
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
-            result = Mock()
-            result.returncode = 0
-            result.stderr = b""
+            proc_result = Mock()
+            proc_result.returncode = 0
+            proc_result.stderr = b""
 
             if "screencapture" in cmd[0]:
                 for arg in cmd:
@@ -365,12 +365,12 @@ class TestRecordVerifiedOptions:
                         Path(arg).write_bytes(b"fake video")
                         break
             elif "ffprobe" in cmd[0]:
-                result.stdout = mock_ffprobe_success
+                proc_result.stdout = mock_ffprobe_success
             elif "ffmpeg" in cmd[0]:
                 output = cmd[-1]
                 Path(output).write_bytes(b"fake gif")
 
-            return result
+            return proc_result
 
         config = RecordingConfig(
             app_name="TestApp",
@@ -414,11 +414,11 @@ class TestRecordSimple:
             "format": {"duration": "3.0", "size": "600000", "format_name": "mov"}
         }).encode()
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
-            result = Mock()
-            result.returncode = 0
-            result.stderr = b""
+            proc_result = Mock()
+            proc_result.returncode = 0
+            proc_result.stderr = b""
 
             if "screencapture" in cmd[0]:
                 for arg in cmd:
@@ -426,12 +426,12 @@ class TestRecordSimple:
                         Path(arg).write_bytes(b"fake video")
                         break
             elif "ffprobe" in cmd[0]:
-                result.stdout = ffprobe_3s
+                proc_result.stdout = ffprobe_3s
             elif "ffmpeg" in cmd[0]:
                 output = cmd[-1]
                 Path(output).write_bytes(b"fake gif")
 
-            return result
+            return proc_result
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),
@@ -454,11 +454,11 @@ class TestRecordSimple:
     ) -> None:
         """Test record_simple with default parameters."""
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
-            result = Mock()
-            result.returncode = 0
-            result.stderr = b""
+            proc_result = Mock()
+            proc_result.returncode = 0
+            proc_result.stderr = b""
 
             if "screencapture" in cmd[0]:
                 for arg in cmd:
@@ -466,12 +466,12 @@ class TestRecordSimple:
                         Path(arg).write_bytes(b"fake video")
                         break
             elif "ffprobe" in cmd[0]:
-                result.stdout = mock_ffprobe_success
+                proc_result.stdout = mock_ffprobe_success
             elif "ffmpeg" in cmd[0]:
                 output = cmd[-1]
                 Path(output).write_bytes(b"fake gif")
 
-            return result
+            return proc_result
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),

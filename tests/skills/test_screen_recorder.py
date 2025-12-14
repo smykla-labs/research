@@ -163,6 +163,7 @@ class TestWindowBounds:
     def test_frozen_immutable(self, sample_bounds: WindowBounds) -> None:
         """Test that dataclass is immutable."""
         with pytest.raises(AttributeError):
+            # noinspection PyDataclass
             sample_bounds.x = 200.0  # type: ignore[misc]
 
 
@@ -191,6 +192,7 @@ class TestWindowTarget:
     def test_frozen_immutable(self, sample_target: WindowTarget) -> None:
         """Test that dataclass is immutable."""
         with pytest.raises(AttributeError):
+            # noinspection PyDataclass
             sample_target.window_id = 99999  # type: ignore[misc]
 
 
@@ -222,6 +224,7 @@ class TestVideoInfo:
     def test_frozen_immutable(self, sample_video_info: VideoInfo) -> None:
         """Test that dataclass is immutable."""
         with pytest.raises(AttributeError):
+            # noinspection PyDataclass
             sample_video_info.duration_seconds = 10.0  # type: ignore[misc]
 
 
@@ -281,6 +284,7 @@ class TestRecordingConfig:
     def test_frozen_immutable(self, sample_config: RecordingConfig) -> None:
         """Test that dataclass is immutable."""
         with pytest.raises(AttributeError):
+            # noinspection PyDataclass
             sample_config.duration_seconds = 10.0  # type: ignore[misc]
 
 

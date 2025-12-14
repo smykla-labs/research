@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 from screen_recorder.actions import calculate_retry_delay
@@ -78,7 +80,7 @@ class TestVideoInfoProperties:
     def test_file_size_mb_calculation(self, file_size_bytes: int) -> None:
         """Test that file_size_mb is always correctly calculated."""
         video = VideoInfo(
-            path="/tmp/test.mov",
+            path=Path("/tmp/test.mov"),
             duration_seconds=5.0,
             frame_count=150,
             fps=30.0,
@@ -99,7 +101,7 @@ class TestVideoInfoProperties:
     def test_file_size_mb_non_negative(self, file_size_bytes: int) -> None:
         """Test that file_size_mb is never negative."""
         video = VideoInfo(
-            path="/tmp/test.mov",
+            path=Path("/tmp/test.mov"),
             duration_seconds=5.0,
             frame_count=150,
             fps=30.0,

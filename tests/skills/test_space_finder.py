@@ -24,6 +24,8 @@ from space_finder import (
     parse_spaces,
     sanitize_app_name,
 )
+
+# noinspection PyProtectedMember
 from space_finder.cli import (
     _handle_current,
     _handle_find,
@@ -202,6 +204,7 @@ class TestSpaceInfo:
     def test_frozen_immutable(self, sample_space_normal: SpaceInfo) -> None:
         """Test that SpaceInfo is immutable (frozen dataclass)."""
         with pytest.raises(AttributeError):
+            # noinspection PyDataclass
             sample_space_normal.index = 5  # type: ignore[misc]
 
     def test_to_dict(self, sample_space_fullscreen: SpaceInfo) -> None:

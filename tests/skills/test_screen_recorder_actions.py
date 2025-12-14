@@ -268,7 +268,7 @@ class TestRunVerifications:
             patch("screen_recorder.core.compute_image_hash", return_value="hash"),
             patch("screen_recorder.core.compute_hash_distance", return_value=10),
         ):
-            def create_frame(video, output, time_seconds=0):
+            def create_frame(_video, output, _time_seconds=0):
                 output.write_bytes(b"fake image")
                 return output
             mock_extract.side_effect = create_frame

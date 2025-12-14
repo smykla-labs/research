@@ -6,7 +6,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
+# noinspection PyProtectedMember
 from screen_recorder.actions import _build_scale_filter
+
+# noinspection PyProtectedMember
 from screen_recorder.core import (
     _describe_filters,
     _matches_config_filters,
@@ -117,6 +121,7 @@ class TestGetSpacesPlist:
     def test_successful_plist_read(self) -> None:
         """Test successful reading and parsing of spaces plist."""
         # Minimal plist XML structure
+        # noinspection HttpUrlsUsage
         plist_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -562,6 +567,7 @@ class TestComputeHashDistance:
             mock_imagehash.hex_to_hash.side_effect = [h1, h2]
             mock_getter.return_value = mock_imagehash
 
+            # noinspection SpellCheckingInspection
             result = compute_hash_distance("0123456789abcdef", "fedcba9876543210")
 
         assert result == 12

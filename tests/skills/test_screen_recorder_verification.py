@@ -344,7 +344,7 @@ class TestVerifyMotion:
         mock_ffmpeg_result = Mock()
         mock_ffmpeg_result.returncode = 0
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
             if "ffprobe" in cmd[0]:
                 return mock_ffprobe_result
@@ -358,7 +358,7 @@ class TestVerifyMotion:
             patch("screen_recorder.core.compute_hash_distance", return_value=10),
         ):
             # Set up extract_frame to create dummy files
-            def create_frame(video, output, time_seconds=0):
+            def create_frame(_video, output, _time_seconds=0):
                 output.write_bytes(b"fake image")
                 return output
             mock_extract.side_effect = create_frame
@@ -391,7 +391,7 @@ class TestVerifyMotion:
             patch("screen_recorder.core.compute_image_hash", return_value="same_hash"),
             patch("screen_recorder.core.compute_hash_distance", return_value=2),  # Below threshold
         ):
-            def create_frame(video, output, time_seconds=0):
+            def create_frame(_video, output, _time_seconds=0):
                 output.write_bytes(b"fake image")
                 return output
             mock_extract.side_effect = create_frame
@@ -445,7 +445,7 @@ class TestVerifyMotion:
         mock_ffmpeg_result.returncode = 1
         mock_ffmpeg_result.stderr = b"Error extracting frame"
 
-        def subprocess_side_effect(*args, **kwargs):
+        def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
             if "ffprobe" in cmd[0]:
                 return mock_ffprobe_result
@@ -482,7 +482,7 @@ class TestVerifyMotion:
             patch("screen_recorder.core.compute_image_hash", side_effect=["abc123", "def456"]),
             patch("screen_recorder.core.compute_hash_distance", return_value=15),
         ):
-            def create_frame(video, output, time_seconds=0):
+            def create_frame(_video, output, _time_seconds=0):
                 output.write_bytes(b"fake image")
                 return output
             mock_extract.side_effect = create_frame
@@ -512,7 +512,7 @@ class TestExtractFrame:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             # Simulate ffmpeg creating the output file
             output_path.write_bytes(b"fake image")
             return mock_result
@@ -574,7 +574,7 @@ class TestExtractFrame:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        def run_side_effect(*args, **kwargs):
+        def run_side_effect(*_args, **_kwargs):
             output_path.write_bytes(b"fake image")
             return mock_result
 
