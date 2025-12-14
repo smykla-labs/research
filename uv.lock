@@ -155,17 +155,17 @@ source = { editable = ".claude/skills/macos-screen-recorder" }
 
 [[package]]
 name = "macos-space-finder"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = ".claude/skills/macos-space-finder" }
 
 [[package]]
 name = "macos-verified-screenshot"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = ".claude/skills/macos-verified-screenshot" }
 
 [[package]]
 name = "macos-window-controller"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = ".claude/skills/macos-window-controller" }
 
 [[package]]

@@ -11,22 +11,22 @@ Find, activate, and screenshot macOS windows across Spaces. Supports filtering b
 
 ```bash
 # List ALL windows
-uv run python -m scripts --list
+uv run window-controller --list
 
 # Find windows by app name (partial match)
-uv run python -m scripts --find "GoLand"
+uv run window-controller --find "GoLand"
 
 # Find windows by title pattern (regex)
-uv run python -m scripts --find --title "research.*"
+uv run window-controller --find --title "research.*"
 
 # Activate window (switches to its Space)
-uv run python -m scripts --activate "GoLand"
+uv run window-controller --activate "GoLand"
 
 # Take screenshot of window
-uv run python -m scripts --screenshot "GoLand" --output ~/shot.png
+uv run window-controller --screenshot "GoLand" --output ~/shot.png
 
 # Get window info as JSON (for automation)
-uv run python -m scripts --find "GoLand" --json
+uv run window-controller --find "GoLand" --json
 ```
 
 ## Filtering Options
@@ -35,39 +35,39 @@ uv run python -m scripts --find "GoLand" --json
 
 ```bash
 # Partial match on kCGWindowOwnerName
-uv run python -m scripts --find "GoLand"
-uv run python -m scripts --find "Chrome"
+uv run window-controller --find "GoLand"
+uv run window-controller --find "Chrome"
 ```
 
 ### By Window Title (Regex)
 
 ```bash
 # Match window title with regex
-uv run python -m scripts --find --title "monokai-islands"
-uv run python -m scripts --find --title ".*\.py$"
-uv run python -m scripts --find "GoLand" --title "research"
+uv run window-controller --find --title "monokai-islands"
+uv run window-controller --find --title ".*\.py$"
+uv run window-controller --find "GoLand" --title "research"
 ```
 
 ### By Process Path
 
 ```bash
 # Filter by executable path
-uv run python -m scripts --find "GoLand" --path-contains "Applications"
-uv run python -m scripts --find "GoLand" --path-excludes "~/Applications/"
+uv run window-controller --find "GoLand" --path-contains "Applications"
+uv run window-controller --find "GoLand" --path-excludes "~/Applications/"
 ```
 
 ### By Command Line Arguments
 
 ```bash
 # Filter by process command line
-uv run python -m scripts --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
+uv run window-controller --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
 ```
 
 ### By PID
 
 ```bash
 # Find window by specific process ID
-uv run python -m scripts --find --pid 12345
+uv run window-controller --find --pid 12345
 ```
 
 ## JetBrains Sandbox IDEs
@@ -78,13 +78,13 @@ JetBrains sandbox IDEs (launched via `./gradlew runIde`) have a key difference:
 
 ```bash
 # Find sandbox IDE (reliable method)
-uv run python -m scripts --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
+uv run window-controller --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
 
 # Find by Gradle cache path
-uv run python -m scripts --find "Main" --path-contains ".gradle/caches"
+uv run window-controller --find "Main" --path-contains ".gradle/caches"
 
 # Find by project name in title
-uv run python -m scripts --find "Main" --title "my-project"
+uv run window-controller --find "Main" --title "my-project"
 ```
 
 ## How It Works
@@ -122,13 +122,13 @@ macOS automatically switches to the Space containing the activated window (when 
 
 ```bash
 # Take screenshot of specific window
-uv run python -m scripts --screenshot "GoLand" --output ~/shot.png
+uv run window-controller --screenshot "GoLand" --output ~/shot.png
 
 # Screenshot without activating first
-uv run python -m scripts --screenshot "GoLand" --no-activate
+uv run window-controller --screenshot "GoLand" --no-activate
 
 # Control settle time (default 1000ms)
-uv run python -m scripts --screenshot "GoLand" --settle-ms 2000
+uv run window-controller --screenshot "GoLand" --settle-ms 2000
 ```
 
 ## JSON Output
@@ -136,7 +136,7 @@ uv run python -m scripts --screenshot "GoLand" --settle-ms 2000
 For automation and scripting, use `--json` with `--find`:
 
 ```bash
-uv run python -m scripts --find "GoLand" --json
+uv run window-controller --find "GoLand" --json
 ```
 
 Output:
@@ -172,13 +172,13 @@ Verify the skill works by running:
 
 ```bash
 # Should list all windows with titles
-uv run python -m scripts --list
+uv run window-controller --list
 
 # Should show info for a running app
-uv run python -m scripts --find "Finder"
+uv run window-controller --find "Finder"
 
 # If you have an app in full-screen, this should switch and return:
-uv run python -m scripts --activate "GoLand"
+uv run window-controller --activate "GoLand"
 ```
 
 Expected `--list` output:

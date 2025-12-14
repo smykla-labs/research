@@ -1,6 +1,6 @@
 [project]
 name = "macos-window-controller"
-version = "0.1.0"
+version = "1.0.0"
 description = "macOS window detection, activation, and screenshot capture across Spaces"
 requires-python = ">=3.11"
 dependencies = []  # Managed by workspace root

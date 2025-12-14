@@ -11,23 +11,23 @@ Capture macOS window screenshots with automatic verification and retry logic. Th
 
 ```bash
 # Simple capture with default verification
-uv run python -m scripts --capture "GoLand"
+uv run verified-screenshot --capture "GoLand"
 
 # Capture with full verification
-uv run python -m scripts --capture "GoLand" --verify all
+uv run verified-screenshot --capture "GoLand" --verify all
 
 # Capture sandbox IDE (JetBrains via Gradle runIde)
 # Note: Sandbox IDEs appear as "Main", use --no-activate since AppleScript can't activate them
-uv run python -m scripts --capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+uv run verified-screenshot --capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 
 # Capture specific window by title
-uv run python -m scripts --capture "Chrome" --title "GitHub"
+uv run verified-screenshot --capture "Chrome" --title "GitHub"
 
 # Custom output path with 3 retries
-uv run python -m scripts --capture "Code" -o ~/screenshots/vscode.png -r 3
+uv run verified-screenshot --capture "Code" -o ~/screenshots/vscode.png -r 3
 
 # Find window info without capturing
-uv run python -m scripts --find "GoLand" --json
+uv run verified-screenshot --find "GoLand" --json
 ```
 
 ## How It Works
@@ -126,7 +126,7 @@ Uses [imagehash](https://github.com/JohannesBuchner/imagehash) for content verif
 ### Programmatic Use
 
 ```python
-from scripts import capture_verified, capture_simple, CaptureConfig, VerificationStrategy
+from verified_screenshot import capture_verified, capture_simple, CaptureConfig, VerificationStrategy
 
 # Simple capture
 result = capture_simple(app_name="GoLand", max_retries=3)
@@ -159,7 +159,7 @@ else:
 ### JSON Output
 
 ```bash
-uv run python -m scripts --capture "GoLand" --verify all --json
+uv run verified-screenshot --capture "GoLand" --verify all --json
 ```
 
 ```json
@@ -190,8 +190,7 @@ Use this skill to capture screenshots for verification:
 Skill tool: macos-verified-screenshot
 
 # Capture with verification
-cd ~/.claude/skills/macos-verified-screenshot
-uv run python -m scripts --capture "GoLand" --verify all -o ~/screenshot.png
+uv run verified-screenshot --capture "GoLand" --verify all -o ~/screenshot.png
 
 # If capture fails, it will retry up to 5 times
 # Final result indicates whether verification passed
@@ -200,16 +199,11 @@ uv run python -m scripts --capture "GoLand" --verify all -o ~/screenshot.png
 ## Testing
 
 ```bash
-cd ~/.claude/skills/macos-verified-screenshot
-
-# Install dependencies
-uv sync --all-extras
-
-# Run tests
-uv run pytest tests/ -v
+# Run tests from workspace root
+uv run pytest tests/skills/test_verified_screenshot.py -v
 
 # Run with coverage
-uv run pytest tests/ -v --cov=scripts --cov-report=term-missing
+uv run pytest tests/skills/test_verified_screenshot.py -v --cov=verified_screenshot --cov-report=term-missing
 ```
 
 ## Troubleshooting
@@ -240,7 +234,7 @@ uv run pytest tests/ -v --cov=scripts --cov-report=term-missing
 By default, activation switches to the target window's Space. To stay on current Space:
 
 ```bash
-uv run python -m scripts --capture "App" --no-activate
+uv run verified-screenshot --capture "App" --no-activate
 ```
 
 **Tradeoff**: Windows on other Spaces may not be fully rendered (could be stale/blank). The verification strategies will detect this and retry.
@@ -251,7 +245,7 @@ JetBrains sandbox IDEs appear as "Main" (Java process name), and AppleScript can
 
 ```bash
 # Must use --no-activate for sandbox IDEs
-uv run python -m scripts --capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+uv run verified-screenshot --capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 ```
 
 If the sandbox window needs to be active, manually switch to its Space before capturing.

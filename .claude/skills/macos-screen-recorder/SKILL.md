@@ -11,25 +11,25 @@ Record macOS screen with automatic verification, retry logic, and optimized form
 
 ```bash
 # Record a window for 5 seconds (default: GIF output)
-uv run python -m screen_recorder --record "GoLand" -d 5
+uv run screen-recorder --record "GoLand" -d 5
 
 # Record optimized for Discord upload (10MB max, WebP)
-uv run python -m screen_recorder --record "GoLand" -d 5 --preset discord
+uv run screen-recorder --record "GoLand" -d 5 --preset discord
 
 # Record optimized for GitHub README (GIF, ~5MB)
-uv run python -m screen_recorder --record "Code" -d 10 --preset github
+uv run screen-recorder --record "Code" -d 10 --preset github
 
 # Record optimized for JetBrains Marketplace (1280x800 GIF)
-uv run python -m screen_recorder --record "IntelliJ" -d 8 --preset jetbrains
+uv run screen-recorder --record "IntelliJ" -d 8 --preset jetbrains
 
 # Record full screen
-uv run python -m screen_recorder --full-screen -d 3 -o demo.gif
+uv run screen-recorder --full-screen -d 3 -o demo.gif
 
 # Record sandbox IDE (JetBrains via Gradle runIde)
-uv run python -m screen_recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+uv run screen-recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 
 # Check if ffmpeg is installed
-uv run python -m screen_recorder --check-deps
+uv run screen-recorder --check-deps
 ```
 
 ## How It Works
@@ -191,7 +191,7 @@ else:
 ### JSON Output
 
 ```bash
-uv run python -m screen_recorder --record "GoLand" -d 5 --preset github --json
+uv run screen-recorder --record "GoLand" -d 5 --preset github --json
 ```
 
 ```json
@@ -231,10 +231,10 @@ uv run python -m screen_recorder --record "GoLand" -d 5 --preset github --json
 Skill tool: macos-screen-recorder
 
 # Record with platform preset
-uv run python -m screen_recorder --record "GoLand" -d 5 --preset discord -o ~/demo.webp
+uv run screen-recorder --record "GoLand" -d 5 --preset discord -o ~/demo.webp
 
 # Verify dependencies first
-uv run python -m screen_recorder --check-deps
+uv run screen-recorder --check-deps
 ```
 
 ## Testing
@@ -262,7 +262,7 @@ brew install ffmpeg
 Verify installation:
 
 ```bash
-uv run python -m screen_recorder --check-deps
+uv run screen-recorder --check-deps
 ```
 
 ### "No window found matching filter"
@@ -291,7 +291,7 @@ uv run python -m screen_recorder --check-deps
 
 ```bash
 # Discord free limit is 10MB
-uv run python -m screen_recorder --record "App" -d 5 --preset discord
+uv run screen-recorder --record "App" -d 5 --preset discord
 ```
 
 If still too large:
@@ -314,7 +314,7 @@ For large GIFs, drag-drop into GitHub issue/PR to upload to GitHub's CDN instead
 JetBrains sandbox IDEs appear as "Main" and AppleScript cannot activate them:
 
 ```bash
-uv run python -m screen_recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate -d 10
+uv run screen-recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate -d 10
 ```
 
 Manually switch to the sandbox window's Space before recording.

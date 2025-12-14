@@ -1,6 +1,6 @@
 [project]
 name = "macos-verified-screenshot"
-version = "0.1.0"
+version = "1.0.0"
 description = "Capture macOS screenshots with verification and retry logic"
 requires-python = ">=3.11"
 dependencies = []  # Managed by workspace root

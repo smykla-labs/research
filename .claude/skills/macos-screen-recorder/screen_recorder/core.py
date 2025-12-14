@@ -69,6 +69,7 @@ def check_dependencies() -> dict[str, bool]:
     Returns:
         Dict mapping tool name to availability status.
     """
+    # noinspection PyDeprecation
     tools = {
         "screencapture": shutil.which("screencapture") is not None,
         "ffmpeg": shutil.which("ffmpeg") is not None,
@@ -83,6 +84,7 @@ def require_ffmpeg() -> None:
     Raises:
         DependencyError: If ffmpeg is not found.
     """
+    # noinspection PyDeprecation
     if not shutil.which("ffmpeg"):
         raise DependencyError(
             "ffmpeg not found. Install with: brew install ffmpeg"
@@ -95,6 +97,7 @@ def require_ffprobe() -> None:
     Raises:
         DependencyError: If ffprobe is not found.
     """
+    # noinspection PyDeprecation
     if not shutil.which("ffprobe"):
         raise DependencyError(
             "ffprobe not found. Install with: brew install ffmpeg"
@@ -215,8 +218,10 @@ def find_target_window(config: RecordingConfig) -> WindowTarget:
     Raises:
         WindowNotFoundError: If no matching window found.
     """
+    # noinspection PyPep8Naming
     Q = _get_quartz()
 
+    # noinspection PyUnresolvedReferences
     all_windows = Q.CGWindowListCopyWindowInfo(Q.kCGWindowListOptionAll, Q.kCGNullWindowID)
     if not all_windows:
         raise WindowNotFoundError("No windows available")
@@ -393,6 +398,7 @@ def compute_image_hash(image_path: Path) -> str:
     Returns:
         Hex string of the perceptual hash.
     """
+    # noinspection PyPep8Naming
     PILImage = _get_pil()
     imagehash = _get_imagehash()
 
@@ -595,7 +601,7 @@ def verify_motion(
             first_hash = compute_image_hash(first_frame)
 
             # Extract last frame (slightly before end to avoid edge issues)
-            last_time = max(0, info.duration_seconds - 0.1)
+            last_time = max(0.0, info.duration_seconds - 0.1)
             last_frame = extract_frame(video_path, tmppath / "last.png", last_time)
             last_hash = compute_image_hash(last_frame)
 
