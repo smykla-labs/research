@@ -1,10 +1,24 @@
 [tools]
 lefthook = "2.0.11"
+ruff = "0.8.4"
 shellspec = "0.28.1"
+uv = "0.5.14"
 
 [tasks.test]
-description = "Run all shellspec tests"
+description = "Run all tests (shellspec + pytest)"
+run = "shellspec && .venv/bin/pytest"
+
+[tasks."test:shell"]
+description = "Run shellspec tests only"
 run = "shellspec"
+
+[tasks."test:python"]
+description = "Run pytest tests only"
+run = ".venv/bin/pytest"
+
+[tasks."test:python:cov"]
+description = "Run pytest with coverage"
+run = ".venv/bin/pytest --cov=.claude/skills --cov-report=term-missing"
 
 [tasks."test:watch"]
 description = "Run tests for a specific spec file"

@@ -1,6 +1,20 @@
 # Lefthook configuration for .claude/ script testing
 # https://github.com/evilmartians/lefthook
 
+pre-commit:
+  parallel: true
+  commands:
+    lint-python:
+      glob: "**/*.py"
+      run: mise exec -- ruff check {staged_files}
+
+    test-python:
+      glob: ".claude/skills/**/scripts/*.py"
+      run: |
+        echo "🐍 Running Python tests for changed scripts..."
+        .venv/bin/pytest tests/test_find_space.py -v --tb=short
+        echo "✅ Python tests passed!"
+
 pre-push:
   parallel: false
   commands:
