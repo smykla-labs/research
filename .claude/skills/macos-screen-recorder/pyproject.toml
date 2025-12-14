@@ -1,0 +1,12 @@
+[project]
+name = "macos-screen-recorder"
+version = "1.0.0"
+description = "Record macOS screen with verification, retry logic, and format conversion for Discord, GitHub, JetBrains"
+requires-python = ">=3.11"
+dependencies = []  # Managed by workspace root
+
+[project.scripts]
+screen-recorder = "screen_recorder.cli:main"
+
+[tool.uv]
+package = true
