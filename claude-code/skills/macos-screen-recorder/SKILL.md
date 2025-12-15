@@ -42,6 +42,9 @@ uv run screen-recorder --full-screen -d 3 -o demo.gif
 # Record sandbox IDE (JetBrains via Gradle runIde)
 uv run screen-recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 
+# Record window on different Space (no activation, ScreenCaptureKit)
+uv run screen-recorder --record "Terminal" -d 5 --backend screencapturekit
+
 # Record absolute screen region (x=100, y=200, w=800, h=600)
 uv run screen-recorder -R 100,200,800,600 -d 5
 
@@ -69,22 +72,37 @@ uv run screen-recorder --check-deps
 
 ### Capture Backends
 
+The recorder supports multiple capture backends with different capabilities:
+
 | Feature | Backend | Cross-Space | Notes |
 |---------|---------|-------------|-------|
-| Video recording | `screencapture -v` | Requires activation | Built-in macOS tool |
+| Video recording | ScreenCaptureKit | Yes | macOS 12.3+, no activation needed |
+| Video recording | `screencapture -v` | Requires activation | Built-in macOS tool, fallback |
 | Region preview | ScreenCaptureKit | Yes | macOS 12.3+ |
 
-**Video Recording:**
+**Backend Selection** (`--backend`):
+
+- `auto` (default): Uses ScreenCaptureKit for window recording on macOS 12.3+, falls back to `screencapture` for full-screen or when unavailable
+- `screencapturekit`: Force ScreenCaptureKit (requires macOS 12.3+)
+- `quartz`: Force traditional `screencapture` command
+
+**ScreenCaptureKit Video** (default for window recording):
+- Uses SCStream + AVAssetWriter for video recording
+- Records windows across Spaces without activation or Space switching
+- Works with occluded/covered windows (captures window content directly)
+- Requires macOS 12.3+ and Screen Recording permission
+- Note: macOS 15 may have stability issues (PyObjC #647)
+
+**Traditional screencapture** (default for full-screen):
 - Uses macOS built-in `screencapture -v` command
 - Requires window activation to record windows on other Spaces
 - Space-aware recording automatically switches Spaces when needed
+- Always used for full-screen recording (`--full-screen`)
 
-**Region Preview (`--preview-region`):**
-- Uses ScreenCaptureKit on macOS 12.3+ for screenshot preview
+**Region Preview** (`--preview-region`):
+- Uses ScreenCaptureKit for screenshot preview
 - Can capture regions across Spaces without switching
 - Falls back to Quartz on older macOS versions
-
-**Note**: ScreenCaptureKit video streaming (SCStream + AVAssetWriter) is not yet implemented. Future versions may add non-activating video recording.
 
 5. **Format Conversion**: Converts to target format using ffmpeg:
    - **GIF**: Two-pass palette optimization with sierra2_4a dithering
@@ -227,6 +245,7 @@ uv run screen-recorder --record "Safari" -d 10
 | `--no-clicks`      |       | Don't show mouse clicks                              |
 | `--no-activate`    |       | Don't activate window first                          |
 | `--settle-ms`      |       | Wait time after activation (default: 500)            |
+| `--backend`        |       | Capture backend: auto, quartz, screencapturekit      |
 
 ### Output Options
 
