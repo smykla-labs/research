@@ -1074,6 +1074,7 @@ def preview_region(config: RecordingConfig) -> PreviewResult:
 
     This helps users iteratively refine region coordinates before recording.
     Uses the same window discovery and region calculation as recording.
+    Automatically returns to original Space after capturing.
 
     Args:
         config: Recording configuration with region settings.
@@ -1095,35 +1096,55 @@ def preview_region(config: RecordingConfig) -> PreviewResult:
             "or --record to capture a window's bounds."
         )
 
-    # Optionally activate window first
-    if target and config.activate_first:
-        settle_time = config.settle_ms / 1000.0
-        activate_window(target, settle_time)
-
-    # Generate output path for preview
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    if config.output_path:
-        output_path = Path(config.output_path)
-        if output_path.suffix.lower() != ".png":
-            output_path = output_path.with_suffix(".png")
-    else:
-        safe_name = (
-            re.sub(r"[^\w\-]", "_", target.app_name.lower())
-            if target else "preview"
-        )
-        output_path = Path("recordings") / f"{safe_name}_preview_{timestamp}.png"
-
-    # Take screenshot
-    capture_region_screenshot(output_path, region)
-
-    return PreviewResult(
-        screenshot_path=output_path,
-        region=region,
-        window_id=target.window_id if target else None,
-        app_name=target.app_name if target else None,
-        window_title=target.window_title if target else None,
-        window_bounds=target.bounds if target else None,
+    # Detect if we need to switch Spaces
+    space_ctx = _detect_space_switch_needed(target)
+    needs_space_switch = (
+        target is not None
+        and space_ctx.target_space_index is not None
+        and space_ctx.original_space_index != space_ctx.target_space_index
     )
+
+    try:
+        # Switch to target Space if needed
+        if needs_space_switch and target:
+            _switch_to_target_space(target, space_ctx, settle_time=1.0)
+
+            # CRITICAL: Refresh window bounds after Space switch
+            target, region = _find_target_if_needed(config)
+        elif target and config.activate_first:
+            # No Space switch needed, just activate
+            settle_time = config.settle_ms / 1000.0
+            activate_window(target, settle_time)
+
+        # Generate output path for preview
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        if config.output_path:
+            output_path = Path(config.output_path)
+            if output_path.suffix.lower() != ".png":
+                output_path = output_path.with_suffix(".png")
+        else:
+            safe_name = (
+                re.sub(r"[^\w\-]", "_", target.app_name.lower())
+                if target else "preview"
+            )
+            output_path = Path("recordings") / f"{safe_name}_preview_{timestamp}.png"
+
+        # Take screenshot
+        capture_region_screenshot(output_path, region)
+
+        return PreviewResult(
+            screenshot_path=output_path,
+            region=region,
+            window_id=target.window_id if target else None,
+            app_name=target.app_name if target else None,
+            window_title=target.window_title if target else None,
+            window_bounds=target.bounds if target else None,
+        )
+
+    finally:
+        # Always return to original Space after preview
+        if space_ctx.switched:
+            _return_to_original_space(space_ctx, settle_time=0.5)
 
 
 def record_simple(
