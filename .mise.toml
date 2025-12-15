@@ -2,7 +2,7 @@
 lefthook = "2.0.11"
 ruff = "0.8.4"
 shellspec = "0.28.1"
-uv = "0.5.14"
+uv = "0.9.17"
 
 [tasks.test]
 description = "Run all tests (shellspec + pytest)"
