@@ -57,7 +57,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.pylint]
-max-args = 12     # CLI commands need more args for options (Typer pattern: filters + screenshot opts)
+max-args = 18     # CLI commands need more args for options (Typer pattern: filters + capture/verify opts)
 max-returns = 7   # CLI main functions with multiple subcommands need more returns
 
 [tool.ruff.lint.per-file-ignores]
@@ -66,7 +66,7 @@ max-returns = 7   # CLI main functions with multiple subcommands need more retur
 # Allow print statements in skill packages (CLI output)
 "**/space_finder/*.py" = ["T201"]
 "**/screen_recorder/*.py" = ["T201"]
-"**/verified_screenshot/*.py" = ["T201"]
+"**/verified_screenshot/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports
 "**/window_controller/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (Quartz/psutil)
 "**/ocr_finder/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (EasyOCR is slow)
 "**/ui_inspector/*.py" = ["T201"]

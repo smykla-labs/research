@@ -23,7 +23,6 @@ from verified_screenshot import (
 from verified_screenshot.actions import calculate_retry_delay, generate_output_path
 from verified_screenshot.cli import (
     build_config,
-    create_parser,
     parse_retry_strategy,
     parse_verification_strategies,
 )
@@ -404,55 +403,56 @@ class TestVerifyText:
 # =============================================================================
 
 
-class TestParser:
-    """Tests for CLI argument parser."""
+class TestCLICommands:
+    """Tests for CLI commands via main()."""
 
-    def test_capture_action(self) -> None:
-        """Test --capture flag."""
-        parser = create_parser()
-        args = parser.parse_args(["--capture", "GoLand"])
-        assert args.capture == "GoLand"
+    def test_capture_command(
+        self, sample_capture_result: CaptureResult, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test capture command with app argument."""
+        with patch("verified_screenshot.cli.capture_verified") as mock_capture:
+            mock_capture.return_value = sample_capture_result
+            result = main(["capture", "TestApp"])
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Screenshot saved" in captured.out
 
-    def test_find_action(self) -> None:
-        """Test --find flag."""
-        parser = create_parser()
-        args = parser.parse_args(["--find", "Chrome"])
-        assert args.find == "Chrome"
+    def test_find_command(
+        self, sample_target: WindowTarget, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test find command with app argument."""
+        with patch("verified_screenshot.cli.find_target_window") as mock_find:
+            mock_find.return_value = sample_target
+            result = main(["find", "TestApp"])
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Found: TestApp" in captured.out
 
-    def test_short_flags(self) -> None:
-        """Test short flags."""
-        parser = create_parser()
-        args = parser.parse_args(["-c", "App", "-o", "out.png", "-j", "-r", "3"])
-        assert args.capture == "App"
-        assert args.output == "out.png"
-        assert args.json is True
-        assert args.retries == 3
+    def test_short_flags(self, sample_capture_result: CaptureResult) -> None:
+        """Test short flags work."""
+        with patch("verified_screenshot.cli.capture_verified") as mock_capture:
+            mock_capture.return_value = sample_capture_result
+            result = main(["capture", "App", "-o", "out.png", "-j", "-r", "3"])
+        assert result == 0
 
-    def test_verification_strategies(self) -> None:
-        """Test --verify flag."""
-        parser = create_parser()
-        args = parser.parse_args(["--capture", "App", "--verify", "basic", "content"])
-        assert "basic" in args.verify
-        assert "content" in args.verify
+    def test_verification_strategies(self, sample_capture_result: CaptureResult) -> None:
+        """Test --verify flag with multiple values."""
+        with patch("verified_screenshot.cli.capture_verified") as mock_capture:
+            mock_capture.return_value = sample_capture_result
+            result = main(["capture", "App", "--verify", "basic", "--verify", "content"])
+        assert result == 0
 
-    def test_retry_options(self) -> None:
+    def test_retry_options(self, sample_capture_result: CaptureResult) -> None:
         """Test retry options."""
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--capture",
-                "App",
-                "--retries",
-                "10",
-                "--retry-delay",
-                "1000",
-                "--retry-strategy",
-                "exponential",
-            ]
-        )
-        assert args.retries == 10
-        assert args.retry_delay == 1000
-        assert args.retry_strategy == "exponential"
+        with patch("verified_screenshot.cli.capture_verified") as mock_capture:
+            mock_capture.return_value = sample_capture_result
+            result = main([
+                "capture", "App",
+                "--retries", "10",
+                "--retry-delay", "1000",
+                "--retry-strategy", "exponential",
+            ])
+        assert result == 0
 
 
 class TestParseVerificationStrategies:
@@ -477,6 +477,12 @@ class TestParseVerificationStrategies:
         """Test parsing multiple strategies."""
         result = parse_verification_strategies(["basic", "content", "dimensions"])
         assert len(result) == 3
+
+    def test_default_when_none(self) -> None:
+        """Test default strategies when None passed."""
+        result = parse_verification_strategies(None)
+        assert VerificationStrategy.BASIC in result
+        assert VerificationStrategy.CONTENT in result
 
 
 class TestParseRetryStrategy:
@@ -503,32 +509,21 @@ class TestBuildConfig:
     """Tests for build_config function."""
 
     def test_build_basic_config(self) -> None:
-        """Test building config from args."""
-        parser = create_parser()
-        args = parser.parse_args(["--capture", "TestApp"])
-        config = build_config(args)
+        """Test building config from basic args."""
+        config = build_config("TestApp")
         assert config.app_name == "TestApp"
         assert config.max_retries == 5  # default
 
     def test_build_full_config(self) -> None:
         """Test building config with all options."""
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--capture",
-                "App",
-                "--title",
-                ".*test.*",
-                "--output",
-                "out.png",
-                "--retries",
-                "3",
-                "--verify",
-                "all",
-                "--no-activate",
-            ]
+        config = build_config(
+            "App",
+            title=".*test.*",
+            output="out.png",
+            retries=3,
+            verify=["all"],
+            no_activate=True,
         )
-        config = build_config(args)
         assert config.app_name == "App"
         assert config.title_pattern == ".*test.*"
         assert config.output_path == "out.png"
@@ -591,25 +586,25 @@ class TestGenerateOutputPath:
 class TestMain:
     """Tests for main function."""
 
-    def test_no_args_shows_help(self, capsys) -> None:
-        """Test that no args returns 1 and shows help."""
+    def test_no_args_shows_help(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test that no args returns 2 and shows missing command."""
         result = main([])
-        assert result == 1
+        assert result == 2  # Typer returns 2 for missing command
         captured = capsys.readouterr()
-        assert "usage:" in captured.out.lower() or "usage:" in captured.err.lower()
+        assert "Missing command" in captured.err
 
     def test_find_window_not_found(self) -> None:
         """Test find with non-existent window."""
         with patch("verified_screenshot.cli.find_target_window") as mock_find:
             mock_find.side_effect = WindowNotFoundError("Not found")
-            result = main(["--find", "NonExistent"])
+            result = main(["find", "NonExistent"])
         assert result == 1
 
     def test_capture_with_mock(self, sample_capture_result: CaptureResult) -> None:
         """Test capture action with mocked capture_verified."""
         with patch("verified_screenshot.cli.capture_verified") as mock_capture:
             mock_capture.return_value = sample_capture_result
-            result = main(["--capture", "TestApp"])
+            result = main(["capture", "TestApp"])
         assert result == 0
 
 

@@ -7,7 +7,7 @@ from .actions import (
     capture_window_image,
     sanitize_app_name,
 )
-from .cli import create_parser, main
+from .cli import main
 from .core import (
     compute_hash_distance,
     compute_image_hash,
@@ -57,7 +57,6 @@ __all__ = [
     "capture_window_image",
     "compute_hash_distance",
     "compute_image_hash",
-    "create_parser",
     "find_target_window",
     "get_image_dimensions",
     "is_image_blank",

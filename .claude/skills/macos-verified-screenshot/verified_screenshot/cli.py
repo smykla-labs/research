@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
-from typing import TYPE_CHECKING
+from typing import Annotated
+
+import typer
 
 from .actions import capture_verified
 from .core import find_target_window
@@ -16,115 +17,69 @@ from .models import (
     VerificationStrategy,
 )
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
+app = typer.Typer(
+    name="verified-screenshot",
+    help="Capture macOS screenshots with verification and retry logic.",
+)
 
-
-def create_parser() -> argparse.ArgumentParser:
-    """Create argument parser."""
-    parser = argparse.ArgumentParser(
-        description="Capture macOS screenshots with verification and retry logic.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --capture "GoLand"                     Capture GoLand window
-  %(prog)s --capture "GoLand" --verify all        Capture with full verification
-  %(prog)s --capture "Main" --args "sandbox"      Capture sandbox IDE
-  %(prog)s --capture "Chrome" --title "GitHub"    Capture Chrome with GitHub tab
-  %(prog)s --find "GoLand" --json                 Find window info only
-  %(prog)s --capture "Code" --retries 3 -o out.png
-
-Verification strategies:
-  basic       File exists, size > 0, valid image format
-  dimensions  Image dimensions match window bounds
-  content     Not blank, differs from previous (perceptual hash)
-  text        OCR verification of expected text
-  all         All strategies combined
-
-Retry strategies:
-  fixed       Fixed delay between retries (default)
-  exponential Exponential backoff
-  reactivate  Re-activate window before each retry
-        """,
-    )
-
-    actions = parser.add_argument_group("actions")
-    actions.add_argument("--capture", "-c", metavar="APP", help="Capture screenshot of window")
-    actions.add_argument("--find", "-f", metavar="APP", help="Find window without capturing")
-
-    filters = parser.add_argument_group("window filters")
-    filters.add_argument("--title", "-t", metavar="PATTERN", help="Regex for window title")
-    filters.add_argument("--pid", type=int, metavar="PID", help="Filter by process ID")
-    filters.add_argument("--path-contains", metavar="STR", help="Exe path must contain STR")
-    filters.add_argument("--path-excludes", metavar="STR", help="Exe path must NOT contain STR")
-    filters.add_argument("--args", "--args-contains", metavar="STR", help="Command line contains")
-
-    output_opts = parser.add_argument_group("output")
-    output_opts.add_argument("--output", "-o", metavar="PATH", help="Output path for screenshot")
-    output_opts.add_argument("--json", "-j", action="store_true", help="Output as JSON")
-
-    capture_opts = parser.add_argument_group("capture options")
-    capture_opts.add_argument(
-        "--no-activate", action="store_true", help="Don't activate window first"
-    )
-    capture_opts.add_argument(
-        "--settle-ms", type=int, default=1000, metavar="MS", help="Wait time after activation"
-    )
-    capture_opts.add_argument("--shadow", action="store_true", help="Include window shadow")
-
-    verify_opts = parser.add_argument_group("verification")
-    verify_opts.add_argument(
+# Common type aliases for options
+TitleOpt = Annotated[
+    str | None, typer.Option("--title", "-t", help="Regex for window title")
+]
+PidOpt = Annotated[int | None, typer.Option("--pid", help="Filter by process ID")]
+PathContainsOpt = Annotated[
+    str | None, typer.Option("--path-contains", help="Exe path must contain STR")
+]
+PathExcludesOpt = Annotated[
+    str | None, typer.Option("--path-excludes", help="Exe path must NOT contain STR")
+]
+ArgsContainsOpt = Annotated[
+    str | None, typer.Option("--args", "--args-contains", help="Command line contains STR")
+]
+OutputOpt = Annotated[str | None, typer.Option("--output", "-o", help="Output path")]
+JsonOpt = Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")]
+NoActivateOpt = Annotated[
+    bool, typer.Option("--no-activate", help="Don't activate window first")
+]
+SettleMsOpt = Annotated[
+    int, typer.Option("--settle-ms", help="Wait time after activation (default: 1000)")
+]
+ShadowOpt = Annotated[bool, typer.Option("--shadow", help="Include window shadow")]
+VerifyOpt = Annotated[
+    list[str] | None,
+    typer.Option(
         "--verify",
         "-v",
-        nargs="+",
-        choices=["basic", "dimensions", "content", "text", "all", "none"],
-        default=["basic", "content"],
-        help="Verification strategies (default: basic content)",
-    )
-    verify_opts.add_argument(
-        "--expected-text",
-        nargs="+",
-        metavar="TEXT",
-        help="Text to verify via OCR",
-    )
-    verify_opts.add_argument(
-        "--hash-threshold",
-        type=int,
-        default=5,
-        metavar="N",
-        help="Hamming distance threshold (default: 5)",
-    )
-
-    retry_opts = parser.add_argument_group("retry")
-    retry_opts.add_argument(
-        "--retries",
-        "-r",
-        type=int,
-        default=5,
-        metavar="N",
-        help="Maximum retry attempts (default: 5)",
-    )
-    retry_opts.add_argument(
-        "--retry-delay",
-        type=int,
-        default=500,
-        metavar="MS",
-        help="Delay between retries in ms (default: 500)",
-    )
-    retry_opts.add_argument(
-        "--retry-strategy",
-        choices=["fixed", "exponential", "reactivate"],
-        default="fixed",
-        help="Retry strategy (default: fixed)",
-    )
-
-    return parser
+        help="Verification strategies: basic, dimensions, content, text, all, none",
+    ),
+]
+ExpectedTextOpt = Annotated[
+    list[str] | None, typer.Option("--expected-text", help="Text to verify via OCR")
+]
+HashThresholdOpt = Annotated[
+    int, typer.Option("--hash-threshold", help="Hamming distance threshold (default: 5)")
+]
+RetriesOpt = Annotated[
+    int, typer.Option("--retries", "-r", help="Maximum retry attempts (default: 5)")
+]
+RetryDelayOpt = Annotated[
+    int, typer.Option("--retry-delay", help="Delay between retries in ms (default: 500)")
+]
+RetryStrategyOpt = Annotated[
+    str,
+    typer.Option(
+        "--retry-strategy", help="Retry strategy: fixed, exponential, reactivate"
+    ),
+]
 
 
 def parse_verification_strategies(
-    strategies: list[str],
+    strategies: list[str] | None,
 ) -> tuple[VerificationStrategy, ...]:
     """Parse verification strategy strings to enum values."""
+    if strategies is None:
+        strategies = ["basic", "content"]
+
     if "none" in strategies:
         return ()
     if "all" in strategies:
@@ -149,33 +104,51 @@ def parse_retry_strategy(strategy: str) -> RetryStrategy:
     return mapping.get(strategy, RetryStrategy.FIXED)
 
 
-def build_config(args) -> CaptureConfig:
-    """Build CaptureConfig from parsed arguments."""
+def build_config(
+    app_name: str,
+    *,
+    title: str | None = None,
+    pid: int | None = None,
+    path_contains: str | None = None,
+    path_excludes: str | None = None,
+    args_contains: str | None = None,
+    output: str | None = None,
+    no_activate: bool = False,
+    settle_ms: int = 1000,
+    shadow: bool = False,
+    verify: list[str] | None = None,
+    expected_text: list[str] | None = None,
+    hash_threshold: int = 5,
+    retries: int = 5,
+    retry_delay: int = 500,
+    retry_strategy: str = "fixed",
+) -> CaptureConfig:
+    """Build CaptureConfig from parameters."""
     return CaptureConfig(
-        app_name=args.capture or args.find,
-        title_pattern=args.title,
-        pid=args.pid,
-        path_contains=args.path_contains,
-        path_excludes=args.path_excludes,
-        args_contains=args.args,
-        output_path=args.output,
-        activate_first=not args.no_activate,
-        settle_ms=args.settle_ms,
-        no_shadow=not args.shadow,
-        verification_strategies=parse_verification_strategies(args.verify),
-        expected_text=tuple(args.expected_text) if args.expected_text else (),
-        hash_threshold=args.hash_threshold,
-        max_retries=args.retries,
-        retry_delay_ms=args.retry_delay,
-        retry_strategy=parse_retry_strategy(args.retry_strategy),
+        app_name=app_name,
+        title_pattern=title,
+        pid=pid,
+        path_contains=path_contains,
+        path_excludes=path_excludes,
+        args_contains=args_contains,
+        output_path=output,
+        activate_first=not no_activate,
+        settle_ms=settle_ms,
+        no_shadow=not shadow,
+        verification_strategies=parse_verification_strategies(verify),
+        expected_text=tuple(expected_text) if expected_text else (),
+        hash_threshold=hash_threshold,
+        max_retries=retries,
+        retry_delay_ms=retry_delay,
+        retry_strategy=parse_retry_strategy(retry_strategy),
     )
 
 
-def _handle_find(args, config: CaptureConfig) -> int:
-    """Handle --find action."""
+def _handle_find(config: CaptureConfig, *, json_output: bool = False) -> int:
+    """Handle find action."""
     target = find_target_window(config)
 
-    if args.json:
+    if json_output:
         print(json.dumps(target.to_dict(), indent=2))
     else:
         print(f"Found: {target.app_name}")
@@ -192,11 +165,11 @@ def _handle_find(args, config: CaptureConfig) -> int:
     return 0
 
 
-def _handle_capture(args, config: CaptureConfig) -> int:
-    """Handle --capture action."""
+def _handle_capture(config: CaptureConfig, *, json_output: bool = False) -> int:
+    """Handle capture action."""
     result = capture_verified(config)
 
-    if args.json:
+    if json_output:
         print(json.dumps(result.to_dict(), indent=2))
     else:
         status = "verified" if result.verified else "unverified"
@@ -208,39 +181,113 @@ def _handle_capture(args, config: CaptureConfig) -> int:
         if result.verifications:
             print("  Verifications:")
             for v in result.verifications:
-                icon = "  " if v.passed else "  "
+                icon = "✓" if v.passed else "✗"
                 print(f"    {icon} {v.strategy.value}: {v.message}")
 
     return 0 if result.verified else 1
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """Main entry point.
-
-    Args:
-        argv: Command line arguments (defaults to sys.argv[1:]).
-
-    Returns:
-        Exit code (0 for success, non-zero for errors).
-    """
-    parser = create_parser()
-    args = parser.parse_args(argv)
-
-    if not any([args.capture, args.find]):
-        parser.print_help()
-        return 1
-
+@app.command("find")
+def find_cmd(
+    app_name: Annotated[str, typer.Argument(help="Application name")],
+    title: TitleOpt = None,
+    pid: PidOpt = None,
+    path_contains: PathContainsOpt = None,
+    path_excludes: PathExcludesOpt = None,
+    args_contains: ArgsContainsOpt = None,
+    json_output: JsonOpt = False,
+) -> None:
+    """Find window without capturing."""
     try:
-        config = build_config(args)
-
-        if args.find:
-            return _handle_find(args, config)
-        if args.capture:
-            return _handle_capture(args, config)
+        config = build_config(
+            app_name,
+            title=title,
+            pid=pid,
+            path_contains=path_contains,
+            path_excludes=path_excludes,
+            args_contains=args_contains,
+        )
+        result = _handle_find(config, json_output=json_output)
+        if result != 0:
+            raise typer.Exit(result)
 
     except ScreenshotError as e:
-        output = {"error": str(e)} if args.json else f"Error: {e}"
-        print(json.dumps(output) if args.json else output, file=sys.stderr)
-        return 1
+        if json_output:
+            print(json.dumps({"error": str(e)}), file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
 
-    return 0
+
+@app.command("capture")
+def capture_cmd(
+    app_name: Annotated[str, typer.Argument(help="Application name")],
+    title: TitleOpt = None,
+    pid: PidOpt = None,
+    path_contains: PathContainsOpt = None,
+    path_excludes: PathExcludesOpt = None,
+    args_contains: ArgsContainsOpt = None,
+    output: OutputOpt = None,
+    json_output: JsonOpt = False,
+    no_activate: NoActivateOpt = False,
+    settle_ms: SettleMsOpt = 1000,
+    shadow: ShadowOpt = False,
+    verify: VerifyOpt = None,
+    expected_text: ExpectedTextOpt = None,
+    hash_threshold: HashThresholdOpt = 5,
+    retries: RetriesOpt = 5,
+    retry_delay: RetryDelayOpt = 500,
+    retry_strategy: RetryStrategyOpt = "fixed",
+) -> None:
+    """Capture screenshot of window with verification."""
+    try:
+        config = build_config(
+            app_name,
+            title=title,
+            pid=pid,
+            path_contains=path_contains,
+            path_excludes=path_excludes,
+            args_contains=args_contains,
+            output=output,
+            no_activate=no_activate,
+            settle_ms=settle_ms,
+            shadow=shadow,
+            verify=verify,
+            expected_text=expected_text,
+            hash_threshold=hash_threshold,
+            retries=retries,
+            retry_delay=retry_delay,
+            retry_strategy=retry_strategy,
+        )
+        result = _handle_capture(config, json_output=json_output)
+        if result != 0:
+            raise typer.Exit(result)
+
+    except ScreenshotError as e:
+        if json_output:
+            print(json.dumps({"error": str(e)}), file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Main entry point for verified-screenshot CLI.
+
+    Args:
+        argv: Command-line arguments (default: sys.argv[1:]).
+
+    Returns:
+        Exit code (0 for success, non-zero for error).
+    """
+    if argv is not None:
+        sys.argv = ["verified-screenshot", *list(argv)]
+    try:
+        app(prog_name="verified-screenshot")
+        return 0
+    except SystemExit as e:
+        return e.code if isinstance(e.code, int) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -11,6 +11,7 @@
 # Temporary files
 tmp/
 *.tmp
+screenshots/
 
 # Claude Code session handovers (personal context)
 .claude/sessions/
