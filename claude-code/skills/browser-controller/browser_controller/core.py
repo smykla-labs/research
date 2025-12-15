@@ -9,6 +9,9 @@ from .backends.cdp import DEFAULT_CDP_PORT, discover_chrome
 from .backends.marionette import DEFAULT_MARIONETTE_PORT, discover_firefox
 from .models import BrowserNotFoundError, BrowserType
 
+# URL scheme pattern for normalization
+URL_SCHEME_PATTERN = r"^[a-zA-Z][a-zA-Z0-9+.-]*://"
+
 
 def detect_running_browsers(
     chrome_port: int = DEFAULT_CDP_PORT,
@@ -114,7 +117,7 @@ def normalize_url(url: str) -> str:
         return url
 
     # Check if scheme is present
-    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url):
+    if not re.match(URL_SCHEME_PATTERN, url):
         return f"https://{url}"
 
     return url

@@ -323,9 +323,9 @@ class MarionetteBackend:
 
             # Get attributes via JavaScript
             attrs_script = """
-            var el = arguments[0];
-            var attrs = {};
-            for (var i = 0; i < el.attributes.length; i++) {
+            const el = arguments[0];
+            const attrs = {};
+            for (let i = 0; i < el.attributes.length; i++) {
                 attrs[el.attributes[i].name] = el.attributes[i].value;
             }
             return attrs;

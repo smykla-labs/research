@@ -39,6 +39,33 @@ from ..models import (
 )
 
 DEFAULT_CDP_PORT = 9222
+CDP_RESPONSE_TIMEOUT = 10
+CDP_MAX_ITERATIONS = 1000
+
+
+def _create_js_wrapper(
+    selector_json: str,
+    action_code: str,
+    return_props: str = "tagName: el.tagName",
+) -> str:
+    """Create a JavaScript wrapper for element operations with consistent error handling.
+
+    Args:
+        selector_json: JSON-encoded selector string.
+        action_code: JavaScript code to execute on the element.
+        return_props: Properties to return on success (default: tagName).
+
+    Returns:
+        Complete JavaScript function as a string.
+    """
+    return f"""
+    (function() {{
+        const el = document.querySelector({selector_json});
+        if (!el) return {{success: false, error: 'Element not found'}};
+        {action_code}
+        return {{success: true, {return_props}}};
+    }})()
+    """
 
 
 @functools.cache
@@ -196,14 +223,32 @@ class CDPBackend:
 
         await conn.ws.send(json.dumps(message))
 
-        while True:
-            response_text = await conn.ws.recv()
+        iteration_count = 0
+
+        while iteration_count < CDP_MAX_ITERATIONS:
+            try:
+                response_text = await asyncio.wait_for(
+                    conn.ws.recv(), timeout=CDP_RESPONSE_TIMEOUT
+                )
+            except TimeoutError as e:
+                raise BrowserConnectionError(
+                    f"Timed out waiting for response to command '{method}' (id={msg_id}) "
+                    f"after {CDP_RESPONSE_TIMEOUT} seconds"
+                ) from e
+
             response = json.loads(response_text)
             if response.get("id") == msg_id:
                 if "error" in response:
                     error_msg = response["error"].get("message", str(response["error"]))
                     raise BrowserConnectionError(f"CDP error: {error_msg}")
                 return response.get("result", {})
+
+            iteration_count += 1
+
+        raise BrowserConnectionError(
+            f"Exceeded maximum iterations ({CDP_MAX_ITERATIONS}) waiting for response to "
+            f"command '{method}' (id={msg_id})"
+        )
 
     async def navigate_to(self, target_id: str, url: str) -> ActionResult:
         """Navigate tab to URL.
@@ -301,14 +346,7 @@ class CDPBackend:
         """
         conn = await self.connect_to_target(target_id)
 
-        script = f"""
-        (function() {{
-            const el = document.querySelector({json.dumps(selector)});
-            if (!el) return {{success: false, error: 'Element not found'}};
-            el.click();
-            return {{success: true, tagName: el.tagName}};
-        }})()
-        """
+        script = _create_js_wrapper(json.dumps(selector), "el.click();")
         result = await self.send_command(
             conn,
             "Runtime.evaluate",
@@ -341,17 +379,11 @@ class CDPBackend:
         """
         conn = await self.connect_to_target(target_id)
 
-        script = f"""
-        (function() {{
-            const el = document.querySelector({json.dumps(selector)});
-            if (!el) return {{success: false, error: 'Element not found'}};
-            el.focus();
+        action_code = f"""el.focus();
             el.value = {json.dumps(value)};
             el.dispatchEvent(new Event('input', {{bubbles: true}}));
-            el.dispatchEvent(new Event('change', {{bubbles: true}}));
-            return {{success: true, tagName: el.tagName}};
-        }})()
-        """
+            el.dispatchEvent(new Event('change', {{bubbles: true}}));"""
+        script = _create_js_wrapper(json.dumps(selector), action_code)
         result = await self.send_command(
             conn,
             "Runtime.evaluate",
@@ -557,9 +589,9 @@ class CDPBackend:
         """
         import time
 
-        start = time.time()
+        start = time.monotonic()
 
-        while time.time() - start < timeout:
+        while time.monotonic() - start < timeout:
             try:
                 return await self.get_element_info(target_id, selector)
             except ElementNotFoundError:
