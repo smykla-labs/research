@@ -131,6 +131,24 @@ uv run window-controller --screenshot "GoLand" --no-activate
 uv run window-controller --screenshot "GoLand" --settle-ms 2000
 ```
 
+### Capture Backends
+
+Two capture backends are available for screenshots:
+
+| Backend | Availability | Cross-Space | Notes |
+|---------|-------------|-------------|-------|
+| `quartz` | All macOS | Requires activation | Legacy `CGWindowListCreateImage` |
+| `screencapturekit` | macOS 12.3+ | Yes | No activation needed |
+
+**ScreenCaptureKit (macOS 12.3+):**
+- Captures windows on ANY Space without switching
+- Works with occluded (covered) windows
+- No window activation required
+- Cannot capture minimized windows
+- Requires Screen Recording permission
+
+The screenshot command automatically uses ScreenCaptureKit when available (macOS 12.3+) and falls back to Quartz on older systems. Use `--no-activate` with ScreenCaptureKit to capture windows on other Spaces without switching.
+
 ## JSON Output
 
 For automation and scripting, use `--json` with `--find`:
@@ -216,7 +234,10 @@ Enable "When switching to an application, switch to a Space with open windows" i
 
 ## Technical References
 
+- [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) - Apple's modern capture API (macOS 12.3+)
+- [ScreenCaptureKit WWDC22](https://developer.apple.com/videos/play/wwdc2022/10156/) - Introduction video
 - [CGWindowListCopyWindowInfo](https://developer.apple.com/documentation/coregraphics/1455137-cgwindowlistcopywindowinfo)
+- [CGWindowListCreateImage](https://developer.apple.com/documentation/coregraphics/1454852-cgwindowlistcreateimage) - Legacy screenshot API (deprecated macOS 15)
 - [Identifying Spaces in Mac OS X](https://ianyh.com/blog/identifying-spaces-in-mac-os-x/)
 - [psutil Documentation](https://psutil.readthedocs.io/)
 - [PyObjC Quartz Framework](https://pyobjc.readthedocs.io/en/latest/apinotes/Quartz.html)

@@ -26,6 +26,9 @@ uv run verified-screenshot --capture "Chrome" --title "GitHub"
 # Custom output path with 3 retries
 uv run verified-screenshot --capture "Code" -o ~/screenshots/vscode.png -r 3
 
+# Capture without Space switching (uses ScreenCaptureKit on macOS 12.3+)
+uv run verified-screenshot --capture "GoLand" --backend screencapturekit
+
 # Find window info without capturing
 uv run verified-screenshot --find "GoLand" --json
 ```
@@ -61,6 +64,30 @@ uv run verified-screenshot --find "GoLand" --json
 | `text` | Correct content | OCR finds expected text |
 | `all` | Full verification | All above strategies combined |
 | `none` | Skip verification | Capture only, no verification |
+
+### Capture Backends
+
+Two capture backends are available:
+
+| Backend | Availability | Cross-Space | Activation Required |
+|---------|-------------|-------------|---------------------|
+| `quartz` | All macOS | No | Yes |
+| `screencapturekit` | macOS 12.3+ | Yes | No |
+| `auto` (default) | - | - | Auto-selects best |
+
+**ScreenCaptureKit (macOS 12.3+):**
+- Captures windows on ANY Space without switching
+- Works with occluded (covered) windows
+- No window activation required
+- Cannot capture minimized windows
+- Requires Screen Recording permission
+
+**Quartz (legacy):**
+- Uses `CGWindowListCreateImage` (deprecated in macOS 15)
+- Requires window activation to capture other Spaces
+- Works on all macOS versions
+
+When using `--backend auto` (default), ScreenCaptureKit is used when available. Use `--backend quartz` to force the legacy backend.
 
 ### Perceptual Hashing
 
@@ -99,11 +126,12 @@ Uses [imagehash](https://github.com/JohannesBuchner/imagehash) for content verif
 
 ### Capture Options
 
-| Flag | Description |
-|------|-------------|
-| `--no-activate` | Don't activate window first |
-| `--settle-ms` | Wait time after activation (default: 1000) |
-| `--shadow` | Include window shadow |
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--no-activate` | | Don't activate window first |
+| `--settle-ms` | | Wait time after activation (default: 1000) |
+| `--shadow` | | Include window shadow |
+| `--backend` | `-b` | Capture backend: auto, quartz, screencapturekit |
 
 ### Verification Options
 
@@ -231,13 +259,19 @@ uv run pytest tests/skills/test_verified_screenshot.py -v --cov=verified_screens
 
 ### Avoiding Space switching
 
-By default, activation switches to the target window's Space. To stay on current Space:
+By default, activation switches to the target window's Space. Two options:
 
+**Option 1: Use ScreenCaptureKit (recommended for macOS 12.3+)**
+```bash
+uv run verified-screenshot --capture "App" --backend screencapturekit
+```
+Captures windows on ANY Space without switching. Works with covered windows too.
+
+**Option 2: Disable activation**
 ```bash
 uv run verified-screenshot --capture "App" --no-activate
 ```
-
-**Tradeoff**: Windows on other Spaces may not be fully rendered (could be stale/blank). The verification strategies will detect this and retry.
+**Tradeoff**: Uses Quartz backend which cannot capture windows on other Spaces (produces transparent/stale image). Only use if window is on current Space.
 
 ### Sandbox IDEs (JetBrains runIde)
 
@@ -268,6 +302,7 @@ Grant these permissions in System Settings > Privacy & Security:
 
 Required:
 - `pyobjc-framework-Quartz>=10.0` - macOS Quartz framework bindings
+- `pyobjc-framework-ScreenCaptureKit>=10.0` - ScreenCaptureKit bindings (macOS 12.3+)
 - `psutil>=5.9` - Process information
 - `pillow>=10.0` - Image processing
 - `imagehash>=4.3` - Perceptual hashing
@@ -277,7 +312,9 @@ Optional:
 
 ## Technical References
 
-- [CGWindowListCreateImage](https://developer.apple.com/documentation/coregraphics/1454852-cgwindowlistcreateimage) - Apple CoreGraphics API
+- [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit) - Apple's modern capture API (macOS 12.3+)
+- [ScreenCaptureKit WWDC22](https://developer.apple.com/videos/play/wwdc2022/10156/) - Introduction video
+- [CGWindowListCreateImage](https://developer.apple.com/documentation/coregraphics/1454852-cgwindowlistcreateimage) - Legacy CoreGraphics API (deprecated macOS 15)
 - [imagehash](https://github.com/JohannesBuchner/imagehash) - Perceptual hashing library
 - [pytesseract](https://github.com/madmaze/pytesseract) - Python Tesseract wrapper
 - [PyObjC](https://pyobjc.readthedocs.io/) - Python Objective-C bridge
