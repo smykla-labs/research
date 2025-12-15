@@ -290,6 +290,7 @@ class RecordingConfig:
     duration_seconds: float = DEFAULT_DURATION_SECONDS
     max_duration_seconds: float = DEFAULT_MAX_DURATION_SECONDS
     show_clicks: bool = True
+    capture_backend: CaptureBackend = CaptureBackend.AUTO
 
     # Output settings
     output_path: str | None = None
@@ -333,6 +334,7 @@ class RecordingConfig:
             "duration_seconds": self.duration_seconds,
             "max_duration_seconds": self.max_duration_seconds,
             "show_clicks": self.show_clicks,
+            "capture_backend": self.capture_backend.value,
             "output_path": self.output_path,
             "output_format": self.output_format.value,
             "preset": self.preset.value if self.preset else None,

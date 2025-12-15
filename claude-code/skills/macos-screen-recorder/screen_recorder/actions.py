@@ -25,6 +25,7 @@ from .models import (
     DEFAULT_FPS,
     DEFAULT_QUALITY,
     PRESET_CONFIGS,
+    CaptureBackend,
     CaptureError,
     ConversionError,
     DurationLimitError,
@@ -41,6 +42,7 @@ from .models import (
     WindowBounds,
     WindowTarget,
 )
+from .screencapturekit import is_video_streaming_supported, record_window_with_sck
 
 if TYPE_CHECKING:
     pass
@@ -966,6 +968,34 @@ def _find_target_if_needed(
     return target, region
 
 
+def _should_use_sck_video(ctx: _RecordingContext) -> bool:
+    """Determine if ScreenCaptureKit video should be used for recording.
+
+    Args:
+        ctx: Recording context.
+
+    Returns:
+        True if SCK video should be used, False otherwise.
+
+    Raises:
+        CaptureError: If SCK video is explicitly requested but unavailable.
+    """
+    if ctx.config.capture_backend == CaptureBackend.QUARTZ:
+        return False
+
+    if ctx.config.capture_backend == CaptureBackend.SCREENCAPTUREKIT:
+        if not is_video_streaming_supported():
+            raise CaptureError("ScreenCaptureKit video requested but not available")
+        return True
+
+    # AUTO: use SCK when available for window recording
+    return (
+        is_video_streaming_supported()
+        and ctx.target is not None
+        and not ctx.config.full_screen
+    )
+
+
 def _execute_single_attempt(
     ctx: _RecordingContext,
     attempt: int,
@@ -984,12 +1014,24 @@ def _execute_single_attempt(
 
     # Record screen
     try:
-        record_screen_region(
-            attempt_raw,
-            ctx.config.duration_seconds,
-            region=ctx.region if not ctx.config.full_screen else None,
-            show_clicks=ctx.config.show_clicks,
-        )
+        if _should_use_sck_video(ctx):
+            # Use ScreenCaptureKit video recording (works across Spaces)
+            if ctx.target is None:
+                raise CaptureError("Target window required for SCK recording")
+            record_window_with_sck(
+                ctx.target.window_id,
+                attempt_raw,
+                ctx.config.duration_seconds,
+                fps=ctx.config.fps or 30,
+            )
+        else:
+            # Use traditional screencapture command
+            record_screen_region(
+                attempt_raw,
+                ctx.config.duration_seconds,
+                region=ctx.region if not ctx.config.full_screen else None,
+                show_clicks=ctx.config.show_clicks,
+            )
     except CaptureError as e:
         if attempt == ctx.config.max_retries:
             raise MaxRetriesError(f"Recording failed after {attempt} attempts: {e}") from e
