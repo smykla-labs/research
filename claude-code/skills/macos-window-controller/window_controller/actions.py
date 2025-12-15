@@ -12,11 +12,13 @@ from pathlib import Path
 from .core import _get_quartz, find_window
 from .models import (
     ActivationError,
+    CaptureBackend,
     ScreenshotError,
     WindowFilter,
     WindowInfo,
     WindowNotFoundError,
 )
+from .screencapturekit import capture_with_screencapturekit, is_screencapturekit_available
 
 # =============================================================================
 # Space Detection and Switching
@@ -165,22 +167,81 @@ def _return_to_original_space(ctx: _SpaceContext, settle_time: float = 0.5) -> N
                 _activate_by_app_name("Finder", settle_time)
 
 
+def resolve_backend(backend: CaptureBackend) -> CaptureBackend:
+    """Resolve AUTO backend to actual backend.
+
+    Args:
+        backend: Requested backend (may be AUTO).
+
+    Returns:
+        Resolved backend (SCREENCAPTUREKIT or QUARTZ).
+    """
+    if backend == CaptureBackend.AUTO:
+        if is_screencapturekit_available():
+            return CaptureBackend.SCREENCAPTUREKIT
+        return CaptureBackend.QUARTZ
+    return backend
+
+
+def _capture_with_quartz(window: WindowInfo, output_path: Path) -> Path:
+    """Capture window using legacy Quartz/CGWindowListCreateImage.
+
+    Args:
+        window: Window to capture.
+        output_path: Path to save screenshot.
+
+    Returns:
+        Path to saved screenshot.
+
+    Raises:
+        ScreenshotError: If capture fails.
+    """
+    Q = _get_quartz()
+
+    image = Q.CGWindowListCreateImage(
+        Q.CGRectNull,
+        Q.kCGWindowListOptionIncludingWindow,
+        window.window_id,
+        Q.kCGWindowImageDefault,
+    )
+    if image is None:
+        raise ScreenshotError(f"Failed to capture window {window.window_id}")
+
+    url = Q.CFURLCreateWithFileSystemPath(
+        None, str(output_path.absolute()), Q.kCFURLPOSIXPathStyle, False
+    )
+    dest = Q.CGImageDestinationCreateWithURL(url, "public.png", 1, None)
+    if dest is None:
+        raise ScreenshotError(f"Failed to create destination: {output_path}")
+
+    Q.CGImageDestinationAddImage(dest, image, None)
+    if not Q.CGImageDestinationFinalize(dest):
+        raise ScreenshotError(f"Failed to finalize image: {output_path}")
+
+    return output_path
+
+
 def take_screenshot(
     f: WindowFilter,
     output_path: str | Path | None = None,
     activate_first: bool = True,
     settle_ms: int = 1000,
+    backend: CaptureBackend = CaptureBackend.AUTO,
 ) -> Path:
     """Take a screenshot of a window.
 
+    When using ScreenCaptureKit backend (macOS 12.3+), activation is skipped
+    because SCK can capture windows across Spaces without switching.
+
     Automatically returns to original Space after capturing if activation
-    caused a Space switch.
+    caused a Space switch (Quartz backend only).
 
     Args:
         f: Window filter to find the target window.
         output_path: Path to save screenshot (auto-generated if None).
-        activate_first: Whether to activate window before capture.
+        activate_first: Whether to activate window before capture (ignored for SCK).
         settle_ms: Milliseconds to wait after activation.
+        backend: Capture backend to use (AUTO, QUARTZ, or SCREENCAPTUREKIT).
 
     Returns:
         Path to the saved screenshot.
@@ -189,11 +250,15 @@ def take_screenshot(
         WindowNotFoundError: If no matching window found.
         ScreenshotError: If capture fails.
     """
-    Q = _get_quartz()
-
     window = find_window(f)
     if not window:
         raise WindowNotFoundError("No window found matching filter")
+
+    # Resolve backend once
+    resolved_backend = resolve_backend(backend)
+
+    # ScreenCaptureKit doesn't require activation - it captures across Spaces
+    skip_activation = resolved_backend == CaptureBackend.SCREENCAPTUREKIT
 
     # Detect current Space before any activation
     space_ctx = _SpaceContext(
@@ -203,20 +268,22 @@ def take_screenshot(
         switched=False,
     )
 
-    # Check if we need to switch Spaces
+    # Check if we need to switch Spaces (only relevant for Quartz backend)
     needs_space_switch = (
         activate_first
+        and not skip_activation
         and window.space_index is not None
         and space_ctx.original_space_index != window.space_index
     )
 
     try:
-        if activate_first:
-            # Use the found window's app name directly to avoid race condition
+        # Only activate for Quartz backend when requested
+        if activate_first and not skip_activation:
             _activate_by_app_name(window.app_name, settle_ms / 1000.0)
             if needs_space_switch:
                 space_ctx.switched = True
 
+        # Generate output path if not provided
         if output_path is None:
             screenshots_dir = Path("screenshots")
             screenshots_dir.mkdir(exist_ok=True)
@@ -228,29 +295,13 @@ def take_screenshot(
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        image = Q.CGWindowListCreateImage(
-            Q.CGRectNull,
-            Q.kCGWindowListOptionIncludingWindow,
-            window.window_id,
-            Q.kCGWindowImageDefault,
-        )
-        if image is None:
-            raise ScreenshotError(f"Failed to capture window {window.window_id}")
+        # Capture using selected backend
+        if resolved_backend == CaptureBackend.SCREENCAPTUREKIT:
+            return capture_with_screencapturekit(window, output_path)
 
-        url = Q.CFURLCreateWithFileSystemPath(
-            None, str(output_path.absolute()), Q.kCFURLPOSIXPathStyle, False
-        )
-        dest = Q.CGImageDestinationCreateWithURL(url, "public.png", 1, None)
-        if dest is None:
-            raise ScreenshotError(f"Failed to create destination: {output_path}")
-
-        Q.CGImageDestinationAddImage(dest, image, None)
-        if not Q.CGImageDestinationFinalize(dest):
-            raise ScreenshotError(f"Failed to finalize image: {output_path}")
-
-        return output_path
+        return _capture_with_quartz(window, output_path)
 
     finally:
-        # Always return to original Space after screenshot
+        # Return to original Space after screenshot (Quartz backend only)
         if space_ctx.switched:
             _return_to_original_space(space_ctx, settle_time=0.5)

@@ -1,6 +1,6 @@
 """macOS Window Controller - Find, activate, and screenshot windows across Spaces."""
 
-from .actions import activate_window, sanitize_app_name, take_screenshot
+from .actions import activate_window, resolve_backend, sanitize_app_name, take_screenshot
 from .cli import main
 from .core import (
     filter_windows,
@@ -14,6 +14,7 @@ from .core import (
 from .models import (
     SPACES_PLIST_PATH,
     ActivationError,
+    CaptureBackend,
     PlistReadError,
     ScreenshotError,
     WindowError,
@@ -21,10 +22,12 @@ from .models import (
     WindowInfo,
     WindowNotFoundError,
 )
+from .screencapturekit import is_screencapturekit_available
 
 __all__ = [
     "SPACES_PLIST_PATH",
     "ActivationError",
+    "CaptureBackend",
     "PlistReadError",
     "ScreenshotError",
     "WindowError",
@@ -39,7 +42,9 @@ __all__ = [
     "get_process_info",
     "get_spaces_plist",
     "get_window_space_mapping",
+    "is_screencapturekit_available",
     "main",
+    "resolve_backend",
     "sanitize_app_name",
     "take_screenshot",
 ]
