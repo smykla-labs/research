@@ -552,59 +552,51 @@ class TestCLIBuildConfig:
 
     def test_build_config_basic(self) -> None:
         """Test building config from basic args."""
-        filter_opts = WindowFilterOptions()
+        filter_opts = WindowFilterOptions(app_name="TestApp")
         recording_opts = RecordingOptions(duration=5.0)
         output_opts = OutputOptions()
         format_opts = FormatOptions()
         retry_opts = RetryOptions()
 
-        config = build_config(
-            "TestApp", filter_opts, recording_opts, output_opts, format_opts, retry_opts
-        )
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.app_name == "TestApp"
         assert config.duration_seconds == 5.0
 
     def test_build_config_with_preset(self) -> None:
         """Test building config with preset."""
-        filter_opts = WindowFilterOptions()
+        filter_opts = WindowFilterOptions(app_name="App")
         recording_opts = RecordingOptions()
         output_opts = OutputOptions(preset="github")
         format_opts = FormatOptions()
         retry_opts = RetryOptions()
 
-        config = build_config(
-            "App", filter_opts, recording_opts, output_opts, format_opts, retry_opts
-        )
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.preset == PlatformPreset.GITHUB
 
     def test_build_config_with_filters(self) -> None:
         """Test building config with window filters."""
-        filter_opts = WindowFilterOptions(title="Test.*", args_contains="sandbox")
+        filter_opts = WindowFilterOptions(app_name="App", title="Test.*", args_contains="sandbox")
         recording_opts = RecordingOptions()
         output_opts = OutputOptions()
         format_opts = FormatOptions()
         retry_opts = RetryOptions()
 
-        config = build_config(
-            "App", filter_opts, recording_opts, output_opts, format_opts, retry_opts
-        )
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.title_pattern == "Test.*"
         assert config.args_contains == "sandbox"
 
     def test_build_config_with_format(self) -> None:
         """Test building config with format."""
-        filter_opts = WindowFilterOptions()
+        filter_opts = WindowFilterOptions(app_name="App")
         recording_opts = RecordingOptions()
         output_opts = OutputOptions(format_str="webp")
         format_opts = FormatOptions()
         retry_opts = RetryOptions()
 
-        config = build_config(
-            "App", filter_opts, recording_opts, output_opts, format_opts, retry_opts
-        )
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.output_format == OutputFormat.WEBP
 
@@ -616,9 +608,7 @@ class TestCLIBuildConfig:
         format_opts = FormatOptions()
         retry_opts = RetryOptions()
 
-        config = build_config(
-            None, filter_opts, recording_opts, output_opts, format_opts, retry_opts
-        )
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.full_screen is True
         assert config.duration_seconds == 3.0
@@ -731,9 +721,7 @@ class TestCLIRegionOptions:
         format_opts = FormatOptions()
         retry_opts = RetryOptions()
 
-        config = build_config(
-            None, filter_opts, recording_opts, output_opts, format_opts, retry_opts
-        )
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.region is not None
         assert config.region.x == 100.0
@@ -743,15 +731,13 @@ class TestCLIRegionOptions:
 
     def test_build_config_with_window_region(self) -> None:
         """Test building config with --window-region."""
-        filter_opts = WindowFilterOptions()
+        filter_opts = WindowFilterOptions(app_name="TestApp")
         recording_opts = RecordingOptions(window_region="0,400,800,300")
         output_opts = OutputOptions()
         format_opts = FormatOptions()
         retry_opts = RetryOptions()
 
-        config = build_config(
-            "TestApp", filter_opts, recording_opts, output_opts, format_opts, retry_opts
-        )
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.window_relative_region is not None
         assert config.window_relative_region.x == 0.0
@@ -761,16 +747,14 @@ class TestCLIRegionOptions:
 
     def test_window_region_requires_app_name(self) -> None:
         """Test --window-region requires app_name."""
-        filter_opts = WindowFilterOptions()
+        filter_opts = WindowFilterOptions()  # No app_name
         recording_opts = RecordingOptions(window_region="0,400,800,300", full_screen=True)
         output_opts = OutputOptions()
         format_opts = FormatOptions()
         retry_opts = RetryOptions()
 
         with pytest.raises(typer.BadParameter, match="requires an app name"):
-            build_config(
-                None, filter_opts, recording_opts, output_opts, format_opts, retry_opts
-            )
+            build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
 
 class TestRecordingConfigWindowRelativeRegion:

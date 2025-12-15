@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import dataclass
 from typing import Annotated
 
 import typer
@@ -17,7 +18,27 @@ app = typer.Typer(
     help="macOS Window Controller - Find, activate, and screenshot windows.",
 )
 
-# Common type aliases for options
+
+# =============================================================================
+# Option dataclasses for grouping related CLI options
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class WindowFilterOptions:
+    """Window filter options for finding target windows."""
+
+    title: str | None = None
+    pid: int | None = None
+    path_contains: str | None = None
+    path_excludes: str | None = None
+    args_contains: str | None = None
+
+
+# =============================================================================
+# Common type aliases for Typer options
+# =============================================================================
+
 AppArg = Annotated[str | None, typer.Argument(help="Application name")]
 AppArgRequired = Annotated[str, typer.Argument(help="Application name")]
 TitleOpt = Annotated[str | None, typer.Option("--title", "-t", help="Regex for window title")]
@@ -35,23 +56,41 @@ AllWindowsOpt = Annotated[bool, typer.Option("--all-windows", help="Include non-
 JsonOpt = Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")]
 
 
-def _build_filter(
-    app_name: str | None = None,
-    title: str | None = None,
-    pid: int | None = None,
-    path_contains: str | None = None,
-    path_excludes: str | None = None,
-    args_contains: str | None = None,
-    all_windows: bool = False,
-) -> WindowFilter:
-    """Build WindowFilter from arguments."""
-    return WindowFilter(
-        app_name=app_name if app_name else None,
-        title_pattern=title,
+# =============================================================================
+# Helper functions for building option objects
+# =============================================================================
+
+
+def _build_filter_options(
+    title: str | None,
+    pid: int | None,
+    path_contains: str | None,
+    path_excludes: str | None,
+    args_contains: str | None,
+) -> WindowFilterOptions:
+    """Build window filter options from CLI params."""
+    return WindowFilterOptions(
+        title=title,
         pid=pid,
         path_contains=path_contains,
         path_excludes=path_excludes,
         args_contains=args_contains,
+    )
+
+
+def _build_filter(
+    app_name: str | None,
+    filter_opts: WindowFilterOptions,
+    all_windows: bool,
+) -> WindowFilter:
+    """Build WindowFilter from option objects."""
+    return WindowFilter(
+        app_name=app_name if app_name else None,
+        title_pattern=filter_opts.title,
+        pid=filter_opts.pid,
+        path_contains=filter_opts.path_contains,
+        path_excludes=filter_opts.path_excludes,
+        args_contains=filter_opts.args_contains,
         main_window_only=not all_windows,
     )
 
@@ -96,7 +135,7 @@ def list_cmd(
 
 
 @app.command("find")
-def find_cmd(
+def find_cmd(  # noqa: PLR0913
     app_name: AppArg = None,
     title: TitleOpt = None,
     pid: PidOpt = None,
@@ -108,15 +147,8 @@ def find_cmd(
 ) -> None:
     """Find window by app name and filters."""
     try:
-        f = _build_filter(
-            app_name=app_name,
-            title=title,
-            pid=pid,
-            path_contains=path_contains,
-            path_excludes=path_excludes,
-            args_contains=args_contains,
-            all_windows=all_windows,
-        )
+        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        f = _build_filter(app_name, filter_opts, all_windows)
         windows = find_windows(f)
 
         if not windows:
@@ -145,7 +177,7 @@ def find_cmd(
 
 
 @app.command("activate")
-def activate_cmd(
+def activate_cmd(  # noqa: PLR0913
     app_name: AppArgRequired,
     title: TitleOpt = None,
     pid: PidOpt = None,
@@ -157,15 +189,8 @@ def activate_cmd(
 ) -> None:
     """Activate window by app name."""
     try:
-        f = _build_filter(
-            app_name=app_name,
-            title=title,
-            pid=pid,
-            path_contains=path_contains,
-            path_excludes=path_excludes,
-            args_contains=args_contains,
-            all_windows=all_windows,
-        )
+        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        f = _build_filter(app_name, filter_opts, all_windows)
         window = activate_window(f)
 
         if json_output:
@@ -180,7 +205,7 @@ def activate_cmd(
 
 
 @app.command("screenshot")
-def screenshot_cmd(
+def screenshot_cmd(  # noqa: PLR0913
     app_name: AppArgRequired,
     output: Annotated[str | None, typer.Option("--output", "-o", help="Output path")] = None,
     no_activate: Annotated[
@@ -199,15 +224,8 @@ def screenshot_cmd(
 ) -> None:
     """Take screenshot of window."""
     try:
-        f = _build_filter(
-            app_name=app_name,
-            title=title,
-            pid=pid,
-            path_contains=path_contains,
-            path_excludes=path_excludes,
-            args_contains=args_contains,
-            all_windows=all_windows,
-        )
+        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        f = _build_filter(app_name, filter_opts, all_windows)
         path = take_screenshot(f, output, not no_activate, settle_ms)
 
         if json_output:

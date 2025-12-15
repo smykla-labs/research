@@ -66,6 +66,7 @@ app = typer.Typer(
 class WindowFilterOptions:
     """Window filter options for finding target windows."""
 
+    app_name: str | None = None
     title: str | None = None
     pid: int | None = None
     path_contains: str | None = None
@@ -321,46 +322,6 @@ def parse_region(region_str: str | None) -> WindowBounds | None:
 # =============================================================================
 
 
-def _build_filter_options(
-    title: str | None,
-    pid: int | None,
-    path_contains: str | None,
-    path_excludes: str | None,
-    args_contains: str | None,
-) -> WindowFilterOptions:
-    """Build WindowFilterOptions from CLI args."""
-    return WindowFilterOptions(
-        title=title,
-        pid=pid,
-        path_contains=path_contains,
-        path_excludes=path_excludes,
-        args_contains=args_contains,
-    )
-
-
-def _build_recording_options(
-    duration: float,
-    max_duration: float,
-    region: str | None,
-    window_region: str | None,
-    no_clicks: bool,
-    no_activate: bool,
-    settle_ms: int,
-    full_screen: bool = False,
-) -> RecordingOptions:
-    """Build RecordingOptions from CLI args."""
-    return RecordingOptions(
-        duration=duration,
-        max_duration=max_duration,
-        region=region,
-        window_region=window_region,
-        no_clicks=no_clicks,
-        no_activate=no_activate,
-        settle_ms=settle_ms,
-        full_screen=full_screen,
-    )
-
-
 def _build_output_options(
     output: str | None,
     format_str: str,
@@ -409,7 +370,6 @@ def _build_retry_options(
 
 
 def build_config(
-    app_name: str | None,
     filter_opts: WindowFilterOptions,
     recording_opts: RecordingOptions,
     output_opts: OutputOptions,
@@ -422,12 +382,12 @@ def build_config(
     window_relative_region = parse_region(recording_opts.window_region)
 
     # Validate: window-region requires a window target
-    if window_relative_region and not app_name:
+    if window_relative_region and not filter_opts.app_name:
         msg = "--window-region requires an app name to specify the target window"
         raise typer.BadParameter(msg)
 
     return RecordingConfig(
-        app_name=app_name,
+        app_name=filter_opts.app_name,
         title_pattern=filter_opts.title,
         pid=filter_opts.pid,
         path_contains=filter_opts.path_contains,
@@ -588,7 +548,7 @@ def check_deps_cmd(
 
 
 @app.command("find")
-def find_cmd(
+def find_cmd(  # noqa: PLR0913
     app_name: Annotated[str, typer.Argument(help="Application name")],
     title: TitleOpt = None,
     pid: PidOpt = None,
@@ -599,14 +559,16 @@ def find_cmd(
 ) -> None:
     """Find window without recording."""
     try:
-        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
-        recording_opts = RecordingOptions()
-        output_opts = OutputOptions()
-        format_opts = FormatOptions()
-        retry_opts = RetryOptions()
-
+        filter_opts = WindowFilterOptions(
+            app_name=app_name,
+            title=title,
+            pid=pid,
+            path_contains=path_contains,
+            path_excludes=path_excludes,
+            args_contains=args_contains,
+        )
         config = build_config(
-            app_name, filter_opts, recording_opts, output_opts, format_opts, retry_opts
+            filter_opts, RecordingOptions(), OutputOptions(), FormatOptions(), RetryOptions()
         )
         result = _handle_find(config, json_output=json_output)
         if result != 0:
@@ -621,7 +583,7 @@ def find_cmd(
 
 
 @app.command("preview-region")
-def preview_region_cmd(
+def preview_region_cmd(  # noqa: PLR0913
     app_name: Annotated[str | None, typer.Argument(help="Application name")] = None,
     title: TitleOpt = None,
     pid: PidOpt = None,
@@ -643,14 +605,17 @@ def preview_region_cmd(
         raise typer.Exit(1)
 
     try:
-        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        filter_opts = WindowFilterOptions(
+            app_name=app_name,
+            title=title,
+            pid=pid,
+            path_contains=path_contains,
+            path_excludes=path_excludes,
+            args_contains=args_contains,
+        )
         recording_opts = RecordingOptions(region=region, window_region=window_region)
-        output_opts = OutputOptions()
-        format_opts = FormatOptions()
-        retry_opts = RetryOptions()
-
         config = build_config(
-            app_name, filter_opts, recording_opts, output_opts, format_opts, retry_opts
+            filter_opts, recording_opts, OutputOptions(), FormatOptions(), RetryOptions()
         )
         result = _handle_preview_region(config, json_output=json_output)
         if result != 0:
@@ -696,17 +661,28 @@ def record_cmd(  # noqa: PLR0913 - Typer CLI requires many options
 ) -> None:
     """Record window of specified application."""
     try:
-        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
-        recording_opts = _build_recording_options(
-            duration, max_duration, region, window_region, no_clicks, no_activate, settle_ms
+        filter_opts = WindowFilterOptions(
+            app_name=app_name,
+            title=title,
+            pid=pid,
+            path_contains=path_contains,
+            path_excludes=path_excludes,
+            args_contains=args_contains,
+        )
+        recording_opts = RecordingOptions(
+            duration=duration,
+            max_duration=max_duration,
+            region=region,
+            window_region=window_region,
+            no_clicks=no_clicks,
+            no_activate=no_activate,
+            settle_ms=settle_ms,
         )
         output_opts = _build_output_options(output, format_str, preset, keep_raw)
         format_opts = _build_format_options(fps, max_width, max_height, quality, max_size)
         retry_opts = _build_retry_options(verify, retries, retry_delay, retry_strategy)
 
-        config = build_config(
-            app_name, filter_opts, recording_opts, output_opts, format_opts, retry_opts
-        )
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
         result = _handle_record(config, json_output=json_output)
         if result != 0:
             raise typer.Exit(result)
@@ -743,14 +719,11 @@ def full_screen_cmd(  # noqa: PLR0913 - Typer CLI requires many options
 ) -> None:
     """Record full screen instead of window."""
     try:
-        filter_opts = WindowFilterOptions()
-        recording_opts = _build_recording_options(
-            duration,
-            max_duration,
-            region,
-            window_region=None,
+        recording_opts = RecordingOptions(
+            duration=duration,
+            max_duration=max_duration,
+            region=region,
             no_clicks=no_clicks,
-            no_activate=False,  # Not applicable for full screen
             settle_ms=settle_ms,
             full_screen=True,
         )
@@ -759,7 +732,7 @@ def full_screen_cmd(  # noqa: PLR0913 - Typer CLI requires many options
         retry_opts = _build_retry_options(verify, retries, retry_delay, retry_strategy)
 
         config = build_config(
-            None, filter_opts, recording_opts, output_opts, format_opts, retry_opts
+            WindowFilterOptions(), recording_opts, output_opts, format_opts, retry_opts
         )
         result = _handle_record(config, json_output=json_output)
         if result != 0:

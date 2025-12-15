@@ -33,6 +33,7 @@ app = typer.Typer(
 class WindowFilterOptions:
     """Window filter options for finding target windows."""
 
+    app_name: str | None = None
     title: str | None = None
     pid: int | None = None
     path_contains: str | None = None
@@ -137,23 +138,6 @@ RetryStrategyOpt = Annotated[
 # =============================================================================
 
 
-def _build_filter_options(
-    title: str | None,
-    pid: int | None,
-    path_contains: str | None,
-    path_excludes: str | None,
-    args_contains: str | None,
-) -> WindowFilterOptions:
-    """Build window filter options from CLI params."""
-    return WindowFilterOptions(
-        title=title,
-        pid=pid,
-        path_contains=path_contains,
-        path_excludes=path_excludes,
-        args_contains=args_contains,
-    )
-
-
 def _build_capture_options(
     no_activate: bool,
     settle_ms: int,
@@ -241,7 +225,6 @@ def parse_retry_strategy(strategy: str) -> RetryStrategy:
 
 
 def build_config(
-    app_name: str,
     filter_opts: WindowFilterOptions,
     capture_opts: CaptureOptions,
     output_opts: OutputOptions,
@@ -250,7 +233,7 @@ def build_config(
 ) -> CaptureConfig:
     """Build CaptureConfig from option objects."""
     return CaptureConfig(
-        app_name=app_name,
+        app_name=filter_opts.app_name,
         title_pattern=filter_opts.title,
         pid=filter_opts.pid,
         path_contains=filter_opts.path_contains,
@@ -313,7 +296,7 @@ def _handle_capture(config: CaptureConfig, *, json_output: bool = False) -> int:
 
 
 @app.command("find")
-def find_cmd(
+def find_cmd(  # noqa: PLR0913
     app_name: Annotated[str, typer.Argument(help="Application name")],
     title: TitleOpt = None,
     pid: PidOpt = None,
@@ -324,14 +307,17 @@ def find_cmd(
 ) -> None:
     """Find window without capturing."""
     try:
-        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
-        capture_opts = CaptureOptions()
-        output_opts = _build_output_options(None, json_output)
-        verify_opts = VerificationOptions()
-        retry_opts = RetryOptions()
-
+        filter_opts = WindowFilterOptions(
+            app_name=app_name,
+            title=title,
+            pid=pid,
+            path_contains=path_contains,
+            path_excludes=path_excludes,
+            args_contains=args_contains,
+        )
         config = build_config(
-            app_name, filter_opts, capture_opts, output_opts, verify_opts, retry_opts
+            filter_opts, CaptureOptions(), OutputOptions(json_output=json_output),
+            VerificationOptions(), RetryOptions()
         )
         result = _handle_find(config, json_output=json_output)
         if result != 0:
@@ -346,7 +332,7 @@ def find_cmd(
 
 
 @app.command("capture")
-def capture_cmd(
+def capture_cmd(  # noqa: PLR0913
     app_name: Annotated[str, typer.Argument(help="Application name")],
     title: TitleOpt = None,
     pid: PidOpt = None,
@@ -367,15 +353,20 @@ def capture_cmd(
 ) -> None:
     """Capture screenshot of window with verification."""
     try:
-        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        filter_opts = WindowFilterOptions(
+            app_name=app_name,
+            title=title,
+            pid=pid,
+            path_contains=path_contains,
+            path_excludes=path_excludes,
+            args_contains=args_contains,
+        )
         capture_opts = _build_capture_options(no_activate, settle_ms, shadow)
         output_opts = _build_output_options(output, json_output)
         verify_opts = _build_verification_options(verify, expected_text, hash_threshold)
         retry_opts = _build_retry_options(retries, retry_delay, retry_strategy)
 
-        config = build_config(
-            app_name, filter_opts, capture_opts, output_opts, verify_opts, retry_opts
-        )
+        config = build_config(filter_opts, capture_opts, output_opts, verify_opts, retry_opts)
         result = _handle_capture(config, json_output=json_output)
         if result != 0:
             raise typer.Exit(result)

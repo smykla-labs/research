@@ -79,7 +79,7 @@ def list_cmd(
 
 
 @app.command("find")
-def find_cmd(
+def find_cmd(  # noqa: PLR0913
     text: Annotated[str, typer.Argument(help="Text to search for")],
     image: ImagePath,
     exact: ExactMatch = False,
@@ -122,7 +122,7 @@ def find_cmd(
 
 
 @app.command("click")
-def click_cmd(
+def click_cmd(  # noqa: PLR0913
     text: Annotated[str, typer.Argument(help="Text to search for")],
     image: ImagePath,
     exact: ExactMatch = False,

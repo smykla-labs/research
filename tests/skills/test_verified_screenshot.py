@@ -519,8 +519,7 @@ class TestBuildConfig:
         )
 
         config = build_config(
-            "TestApp",
-            WindowFilterOptions(),
+            WindowFilterOptions(app_name="TestApp"),
             CaptureOptions(),
             OutputOptions(),
             VerificationOptions(),
@@ -540,8 +539,7 @@ class TestBuildConfig:
         )
 
         config = build_config(
-            "App",
-            WindowFilterOptions(title=".*test.*"),
+            WindowFilterOptions(app_name="App", title=".*test.*"),
             CaptureOptions(no_activate=True),
             OutputOptions(output="out.png"),
             VerificationOptions(verify=["all"]),
