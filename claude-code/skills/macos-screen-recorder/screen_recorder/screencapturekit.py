@@ -375,6 +375,89 @@ def _find_sc_window(window_id: int, timeout: float = 5.0):
     return result_window[0]
 
 
+def _setup_stream_configuration(sc_window, fps: int):
+    """Setup SCStreamConfiguration for recording.
+
+    Args:
+        sc_window: SCWindow to record.
+        fps: Frames per second.
+
+    Returns:
+        Configured SCStreamConfiguration.
+    """
+    SC = _get_screencapturekit()
+    CM = _get_coremedia()
+
+    config = SC.SCStreamConfiguration.alloc().init()
+    config.setWidth_(int(sc_window.frame().size.width * 2))
+    config.setHeight_(int(sc_window.frame().size.height * 2))
+    config.setMinimumFrameInterval_(CM.CMTimeMake(1, fps))
+    config.setQueueDepth_(5)
+    config.setShowsCursor_(False)
+    config.setPixelFormat_(1111970369)
+
+    return config
+
+
+def _start_stream_capture(stream, handler, recording_context: _RecordingContext) -> None:
+    """Start SCStream capture and wait for recording to begin.
+
+    Args:
+        stream: SCStream to start.
+        handler: Stream output handler.
+        recording_context: Recording context.
+
+    Raises:
+        CaptureError: If stream fails to start or add handler.
+    """
+    SC = _get_screencapturekit()
+
+    error = stream.addStreamOutput_type_sampleHandlerQueue_error_(
+        handler, SC.SCStreamOutputTypeScreen, None, None
+    )[1]
+
+    if error:
+        raise CaptureError(f"Failed to add stream output: {error}")
+
+    start_error = [None]
+
+    def start_handler(err):
+        start_error[0] = err
+
+    stream.startCaptureWithCompletionHandler_(start_handler)
+
+    # Wait for start completion
+    import time
+
+    time.sleep(0.5)
+
+    if start_error[0]:
+        raise CaptureError(f"Failed to start capture: {start_error[0]}")
+
+    if not recording_context.started.wait(timeout=5.0):
+        raise CaptureError("Recording did not start within timeout")
+
+
+def _wait_for_recording_completion(
+    recording_context: _RecordingContext, timeout: float
+) -> None:
+    """Wait for recording to complete using NSRunLoop.
+
+    Args:
+        recording_context: Recording context.
+        timeout: Timeout in seconds.
+    """
+    Foundation = _get_corefoundation()
+
+    run_loop = Foundation.NSRunLoop.currentRunLoop()
+    deadline = Foundation.NSDate.dateWithTimeIntervalSinceNow_(timeout)
+
+    while not recording_context.completed.is_set():
+        run_loop.runMode_beforeDate_(Foundation.NSDefaultRunLoopMode, deadline)
+        if Foundation.NSDate.date().compare_(deadline) == Foundation.NSOrderedDescending:
+            break
+
+
 def record_window_with_sck(
     window_id: int,
     output_path: Path,
@@ -401,7 +484,6 @@ def record_window_with_sck(
         raise CaptureError("ScreenCaptureKit requires macOS 12.3 or later")
 
     SC = _get_screencapturekit()
-    Foundation = _get_corefoundation()
 
     if timeout is None:
         timeout = duration_seconds + 10.0
@@ -413,16 +495,7 @@ def record_window_with_sck(
     content_filter = SC.SCContentFilter.alloc().initWithDesktopIndependentWindow_(
         sc_window
     )
-
-    config = SC.SCStreamConfiguration.alloc().init()
-    config.setWidth_(int(sc_window.frame().size.width * 2))
-    config.setHeight_(int(sc_window.frame().size.height * 2))
-    config.setMinimumFrameInterval_(
-        Foundation.CMTimeMake(1, fps)
-    )
-    config.setQueueDepth_(5)
-    config.setShowsCursor_(False)
-    config.setPixelFormat_(1111970369)
+    config = _setup_stream_configuration(sc_window, fps)
 
     recording_context = _RecordingContext(output_path, duration_seconds)
     video_writer = _VideoWriter(
@@ -445,30 +518,8 @@ def record_window_with_sck(
         if stream is None:
             raise CaptureError("Failed to create SCStream")
 
-        error = stream.addStreamOutput_type_sampleHandlerQueue_error_(
-            handler, SC.SCStreamOutputTypeScreen, None, None
-        )[1]
-
-        if error:
-            raise CaptureError(f"Failed to add stream output: {error}")
-
-        started = stream.startCaptureWithCompletionHandler_(lambda _err: None)
-        if not started:
-            raise CaptureError("Failed to start capture")
-
-        if not recording_context.started.wait(timeout=5.0):
-            raise CaptureError("Recording did not start within timeout")
-
-        run_loop = Foundation.NSRunLoop.currentRunLoop()
-        deadline = Foundation.NSDate.dateWithTimeIntervalSinceNow_(timeout)
-
-        while not recording_context.completed.is_set():
-            run_loop.runMode_beforeDate_(Foundation.NSDefaultRunLoopMode, deadline)
-            if (
-                Foundation.NSDate.date().compare_(deadline)
-                == Foundation.NSOrderedDescending
-            ):
-                break
+        _start_stream_capture(stream, handler, recording_context)
+        _wait_for_recording_completion(recording_context, timeout)
 
         stream.stopCaptureWithCompletionHandler_(lambda _err: None)
 
