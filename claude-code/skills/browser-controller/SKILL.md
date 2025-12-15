@@ -164,6 +164,16 @@ Close a tab:
 browser-controller close TAB_ID
 ```
 
+### cleanup
+
+Kill orphaned browser processes with remote debugging:
+
+```bash
+browser-controller cleanup              # With confirmation
+browser-controller cleanup --dry-run    # Show without killing
+browser-controller cleanup --force      # No confirmation
+```
+
 ## Common Options
 
 | Option | Description |
@@ -178,31 +188,29 @@ browser-controller close TAB_ID
 
 **IMPORTANT:** Always clean up browser resources after use unless the user explicitly requests otherwise.
 
-### Browser Processes
+### cleanup Command
 
-When launching a browser with remote debugging for testing/automation:
+Use the built-in `cleanup` command to find and kill orphaned browser processes:
 
-1. **Always quit the browser when done** - Don't leave debug-enabled browsers running
-2. **Check for orphaned processes** after testing sessions:
+```bash
+# Show what would be killed (dry run)
+browser-controller cleanup --dry-run
 
-   ```bash
-   # Find Chrome debug instances
-   ps aux | grep -E "remote-debugging-port|chrome-debug" | grep -v grep
+# Kill with confirmation prompt
+browser-controller cleanup
 
-   # Find Firefox marionette instances
-   ps aux | grep -E "marionette" | grep -v grep
-   ```
+# Kill without confirmation
+browser-controller cleanup --force
 
-3. **Kill orphaned processes:**
+# JSON output for scripting
+browser-controller cleanup --json
+```
 
-   ```bash
-   # Quit Chrome gracefully
-   osascript -e 'quit app "Google Chrome"'
+The cleanup command finds processes matching:
 
-   # Or kill by pattern
-   pkill -f "user-data-dir.*chrome-debug"
-   pkill -f "puppeteer_dev_chrome_profile"
-   ```
+- Chrome with `--remote-debugging-port`
+- Chrome with debug user-data-dir patterns (`chrome-debug`, `puppeteer`)
+- Firefox with `--marionette`
 
 ### Connection Cleanup
 
@@ -220,7 +228,7 @@ finally:
 
 ### Screen Sharing Indicator (macOS)
 
-If you see "Currently Sharing" in the macOS menu bar after using this skill, a browser process launched from the terminal is still running. Quit the browser or kill the process to dismiss the indicator.
+If you see "Currently Sharing" in the macOS menu bar after using this skill, run `cleanup` or restart your terminal. The indicator appears when a browser with CDP/Marionette is launched as a child process of the terminal.
 
 ## How It Works
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from typing import Annotated
 
@@ -418,6 +419,139 @@ def close_cmd(
     except BrowserError as e:
         _print_error(str(e), json_output)
         raise typer.Exit(1) from e
+
+
+def _find_debug_browser_processes() -> list[dict]:
+    """Find browser processes running with remote debugging enabled.
+
+    Returns:
+        List of process info dicts with pid, name, and command.
+    """
+    processes = []
+
+    # Patterns to match debug-enabled browsers
+    patterns = [
+        ("Chrome", "remote-debugging-port"),
+        ("Chrome", "chrome-debug"),
+        ("Chrome", "puppeteer"),
+        ("Firefox", "marionette"),
+    ]
+
+    try:
+        result = subprocess.run(
+            ["ps", "aux"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        for line in result.stdout.splitlines()[1:]:  # Skip header
+            parts = line.split(None, 10)
+            if len(parts) < 11:
+                continue
+
+            pid = parts[1]
+            command = parts[10]
+
+            for browser_name, pattern in patterns:
+                if pattern in command.lower():
+                    # Skip grep itself
+                    if "grep" in command:
+                        continue
+
+                    processes.append({
+                        "pid": int(pid),
+                        "browser": browser_name,
+                        "pattern": pattern,
+                        "command": command[:100] + "..." if len(command) > 100 else command,
+                    })
+                    break
+
+    except (subprocess.SubprocessError, OSError):
+        pass
+
+    return processes
+
+
+def _kill_processes(processes: list[dict], verbose: bool = True) -> int:
+    """Kill a list of processes by PID.
+
+    Returns:
+        Number of successfully killed processes.
+    """
+    killed = 0
+
+    for proc in processes:
+        try:
+            subprocess.run(["kill", str(proc["pid"])], check=True, capture_output=True)
+            if verbose:
+                print(f"Killed PID {proc['pid']}")
+            killed += 1
+        except subprocess.SubprocessError as e:
+            if verbose:
+                print(f"Failed to kill PID {proc['pid']}: {e}")
+
+    return killed
+
+
+def _print_processes(processes: list[dict]) -> None:
+    """Print process list in human-readable format."""
+    print(f"Found {len(processes)} debug-enabled browser process(es):")
+    print("-" * 60)
+
+    for proc in processes:
+        print(f"  PID {proc['pid']}: {proc['browser']} ({proc['pattern']})")
+        print(f"      {proc['command']}")
+
+    print()
+
+
+@app.command("cleanup")
+def cleanup_cmd(
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", "-n", help="Show what would be killed without killing"),
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option("--force", "-f", help="Kill without confirmation"),
+    ] = False,
+    json_output: JsonOpt = False,
+) -> None:
+    """Kill orphaned browser processes with remote debugging enabled."""
+    processes = _find_debug_browser_processes()
+
+    if not processes:
+        if json_output:
+            print(json.dumps({"processes": [], "killed": 0}))
+        else:
+            print("No debug-enabled browser processes found.")
+        return
+
+    if json_output:
+        if dry_run:
+            print(json.dumps({"processes": processes, "dry_run": True}))
+            return
+
+        killed = _kill_processes(processes, verbose=False)
+        print(json.dumps({"processes": processes, "killed": killed}))
+        return
+
+    _print_processes(processes)
+
+    if dry_run:
+        print("Dry run - no processes killed.")
+        return
+
+    if not force:
+        confirm = typer.confirm("Kill these processes?")
+        if not confirm:
+            print("Aborted.")
+            raise typer.Exit(0)
+
+    killed = _kill_processes(processes)
+
+    print(f"\nKilled {killed}/{len(processes)} process(es).")
 
 
 def main(argv: list[str] | None = None) -> int:
