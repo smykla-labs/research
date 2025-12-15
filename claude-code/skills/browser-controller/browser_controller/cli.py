@@ -33,6 +33,9 @@ app = typer.Typer(
     help="Browser Controller - Control Chrome and Firefox via CDP/Marionette.",
 )
 
+# Maximum length for displaying process command strings
+MAX_COMMAND_DISPLAY_LENGTH = 100
+
 
 # =============================================================================
 # Common type aliases for Typer options
@@ -446,26 +449,37 @@ def _find_debug_browser_processes() -> list[dict]:
         )
 
         for line in result.stdout.splitlines()[1:]:  # Skip header
-            parts = line.split(None, 10)
-            if len(parts) < 11:
+            try:
+                parts = line.split(None, 10)
+                if len(parts) < 11:
+                    continue
+
+                pid = parts[1]
+                command = parts[10]
+                command_lower = command.lower()
+
+                for browser_name, pattern in patterns:
+                    if pattern in command_lower:
+                        # Skip grep itself
+                        if "grep" in command:
+                            continue
+
+                        # Truncate long commands for display
+                        cmd_display = (
+                            command[:MAX_COMMAND_DISPLAY_LENGTH] + "..."
+                            if len(command) > MAX_COMMAND_DISPLAY_LENGTH
+                            else command
+                        )
+                        processes.append({
+                            "pid": int(pid),
+                            "browser": browser_name,
+                            "pattern": pattern,
+                            "command": cmd_display,
+                        })
+                        break
+            except (ValueError, IndexError):
+                # Skip lines that don't match expected ps aux format
                 continue
-
-            pid = parts[1]
-            command = parts[10]
-
-            for browser_name, pattern in patterns:
-                if pattern in command.lower():
-                    # Skip grep itself
-                    if "grep" in command:
-                        continue
-
-                    processes.append({
-                        "pid": int(pid),
-                        "browser": browser_name,
-                        "pattern": pattern,
-                        "command": command[:100] + "..." if len(command) > 100 else command,
-                    })
-                    break
 
     except (subprocess.SubprocessError, OSError):
         pass

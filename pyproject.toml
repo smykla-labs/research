@@ -111,5 +111,6 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
-module = ["plistlib", "Quartz", "psutil", "PIL", "imagehash", "easyocr", "atomacos", "ScreenCaptureKit", "websockets", "marionette_driver", "marionette_driver.marionette", "marionette_driver.By"]
+# Third-party packages without type stubs
+module = ["plistlib", "Quartz", "psutil", "PIL", "imagehash", "easyocr", "atomacos", "ScreenCaptureKit", "websockets", "marionette_driver.*"]
 ignore_missing_imports = true
