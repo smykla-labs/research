@@ -1,0 +1,12 @@
+[project]
+name = "macos-ui-inspector"
+version = "1.0.0"
+description = "Inspect live macOS UI elements via Accessibility API (atomacos)"
+requires-python = ">=3.11"
+dependencies = []  # Managed by workspace root
+
+[project.scripts]
+ui-inspector = "ui_inspector.cli:main"
+
+[tool.uv]
+package = true

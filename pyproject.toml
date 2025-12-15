@@ -10,6 +10,9 @@ dependencies = [
     "psutil>=5.9",
     "pillow>=10.0",
     "imagehash>=4.3",
+    # UI detection skills
+    "easyocr>=1.7",
+    "atomacos>=3.2",
 ]
 
 [dependency-groups]
@@ -60,6 +63,8 @@ max-returns = 7  # CLI main functions with multiple subcommands need more return
 "**/screen_recorder/*.py" = ["T201"]
 "**/verified_screenshot/*.py" = ["T201"]
 "**/window_controller/*.py" = ["T201"]
+"**/ocr_finder/*.py" = ["T201"]
+"**/ui_inspector/*.py" = ["T201"]
 "tests/**/*.py" = [
     "S101",    # Allow assert in tests
     "PLR2004", # Allow magic values in tests
@@ -89,5 +94,5 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
-module = ["plistlib", "Quartz", "psutil", "PIL", "imagehash"]
+module = ["plistlib", "Quartz", "psutil", "PIL", "imagehash", "easyocr", "atomacos"]
 ignore_missing_imports = true
