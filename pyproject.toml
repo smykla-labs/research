@@ -73,6 +73,8 @@ max-returns = 7  # CLI main functions with multiple subcommands need more return
     "RUF001",  # Allow ambiguous characters in test strings
     "SIM117",  # Allow nested with statements (pytest.raises with context managers)
     "S108",    # Allow hardcoded /tmp paths in tests
+    "PLC0415", # Allow imports inside functions (delayed import for slow packages like EasyOCR)
+    "PLW1510", # Allow subprocess.run without check (tests handle return codes manually)
 ]
 
 [tool.pytest.ini_options]
@@ -83,6 +85,10 @@ addopts = [
     "-v",
     "--tb=short",
     "--strict-markers",
+]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
 
 [tool.mypy]
