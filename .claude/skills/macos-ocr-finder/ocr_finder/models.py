@@ -71,3 +71,12 @@ class TextMatch:
             "click_x": self.click_coords[0],
             "click_y": self.click_coords[1],
         }
+
+
+@dataclass(frozen=True)
+class SearchOptions:
+    """Options for text search operations."""
+
+    exact: bool = False
+    case_sensitive: bool = False
+    min_confidence: float = 0.5
