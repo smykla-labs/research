@@ -33,10 +33,10 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 
 ### Claude Code Configuration
 
-- `.claude/agents/agent-manager.md` - Meta-agent for creating/modifying/transforming subagents
-- `.claude/agents/command-manager.md` - Creates slash commands for subagents and workflows
-- `.claude/commands/manager/agent.md` - Slash command to invoke agent-manager (`/manager/agent`)
-- `.claude/commands/manager/command.md` - Slash command to invoke command-manager (`/manager/command`)
+- `claude-code/agents/agent-manager.md` - Meta-agent for creating/modifying/transforming subagents
+- `claude-code/agents/command-manager.md` - Creates slash commands for subagents and workflows
+- `claude-code/commands/manager/agent.md` - Slash command to invoke agent-manager (`/manager/agent`)
+- `claude-code/commands/manager/command.md` - Slash command to invoke command-manager (`/manager/command`)
 
 ### Working Directories
 
@@ -44,7 +44,7 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 
 ## Running CLI Skills
 
-Skills in `.claude/skills/` are workspace members but not installed as entry point scripts. Use one of these methods to run them:
+Skills in `claude-code/skills/` are workspace members but not installed as entry point scripts. Use one of these methods to run them:
 
 ### Method 1: PYTHONPATH (Recommended)
 
@@ -52,13 +52,13 @@ From project root, set PYTHONPATH to the skill directory:
 
 ```bash
 # General pattern
-PYTHONPATH=.claude/skills/<skill-name> python -m <module>.cli [command] [args]
+PYTHONPATH=claude-code/skills/<skill-name> python -m <module>.cli [command] [args]
 
 # Examples
-PYTHONPATH=.claude/skills/macos-ui-inspector python -m ui_inspector.cli --help
-PYTHONPATH=.claude/skills/macos-ui-inspector python -m ui_inspector.cli list --app Finder
-PYTHONPATH=.claude/skills/macos-ocr-finder python -m ocr_finder.cli --help
-PYTHONPATH=.claude/skills/macos-space-finder python -m space_finder.cli --help
+PYTHONPATH=claude-code/skills/macos-ui-inspector python -m ui_inspector.cli --help
+PYTHONPATH=claude-code/skills/macos-ui-inspector python -m ui_inspector.cli list --app Finder
+PYTHONPATH=claude-code/skills/macos-ocr-finder python -m ocr_finder.cli --help
+PYTHONPATH=claude-code/skills/macos-space-finder python -m space_finder.cli --help
 ```
 
 ### Method 2: Change Directory
@@ -67,11 +67,11 @@ Use semicolon to chain cd with python command in single bash invocation:
 
 ```bash
 # General pattern
-cd .claude/skills/<skill-name>; python -m <module>.cli [command] [args]
+cd claude-code/skills/<skill-name>; python -m <module>.cli [command] [args]
 
 # Examples
-cd .claude/skills/macos-ui-inspector; python -m ui_inspector.cli --help
-cd .claude/skills/macos-ui-inspector; python -m ui_inspector.cli list --app Finder
+cd claude-code/skills/macos-ui-inspector; python -m ui_inspector.cli --help
+cd claude-code/skills/macos-ui-inspector; python -m ui_inspector.cli list --app Finder
 ```
 
 **Note:** Do NOT use `&&` for chaining cd commands across separate Bash tool calls - each call runs in a fresh shell. Use `;` within a single Bash call.
@@ -119,7 +119,7 @@ This repository contains a two-agent workflow system for structured development:
   6. Knowledge capture (if applicable)
   7. Commit implementation changes only
 - **Progress update ordering**: Progress reflects work done, not verification status—update immediately after implementation, before lint/test/commit
-- **Knowledge capture**: Updates CLAUDE.md or `.claude/session-{topic}.md` for insights
+- **Knowledge capture**: Updates CLAUDE.md or session notes for insights
 - **Commit/PR style**: Focus on WHAT/WHY, exclude phase numbers and task completion status
 
 ## Key Principles
@@ -168,7 +168,7 @@ For quality review (subagents cannot invoke quality reviewers):
 ```
 STATUS: READY_FOR_REVIEW
 agent_name: {name}
-agent_location: {.claude/agents/ or ~/.claude/agents/}
+agent_location: {claude-code/agents/ or ~/.claude/agents/}
 slash_command: {yes: /command-name | no}
 content:
 ~~~markdown
