@@ -461,7 +461,7 @@ class TestCLIIntegration:
         """Test --list CLI command."""
         from ocr_finder.cli import main
 
-        exit_code = main(["--list", "--image", str(simple_text_image), "--min-confidence", "0"])
+        exit_code = main(["list", "--image", str(simple_text_image), "--min-confidence", "0"])
 
         assert exit_code == 0
 
@@ -477,7 +477,7 @@ class TestCLIIntegration:
         from ocr_finder.cli import main
 
         exit_code = main(
-            ["--list", "--image", str(simple_text_image), "--json", "--min-confidence", "0"]
+            ["list", "--image", str(simple_text_image), "--json", "--min-confidence", "0"]
         )
 
         assert exit_code == 0
@@ -497,7 +497,7 @@ class TestCLIIntegration:
         """Test --find CLI command."""
         from ocr_finder.cli import main
 
-        exit_code = main(["--find", "file", "--image", str(menu_image), "--min-confidence", "0"])
+        exit_code = main(["find", "file", "--image", str(menu_image), "--min-confidence", "0"])
 
         # May or may not find depending on OCR accuracy
         # Just verify it runs without crashing
@@ -510,7 +510,7 @@ class TestCLIIntegration:
         from ocr_finder.cli import main
 
         exit_code = main(
-            ["--find", "file", "--image", str(menu_image), "--json", "--min-confidence", "0"]
+            ["find", "file", "--image", str(menu_image), "--json", "--min-confidence", "0"]
         )
 
         captured = capsys.readouterr()
@@ -527,7 +527,7 @@ class TestCLIIntegration:
 
         # First find something that exists
         list_code = main(
-            ["--list", "--image", str(simple_text_image), "--json", "--min-confidence", "0"]
+            ["list", "--image", str(simple_text_image), "--json", "--min-confidence", "0"]
         )
         list_captured = capsys.readouterr()
 
@@ -539,7 +539,7 @@ class TestCLIIntegration:
                 first_text = data[0]["text"]
                 click_code = main(
                     [
-                        "--click",
+                        "click",
                         first_text,
                         "--image",
                         str(simple_text_image),
@@ -567,7 +567,7 @@ class TestCLIIntegration:
 
         # First find something that exists
         list_code = main(
-            ["--list", "--image", str(simple_text_image), "--json", "--min-confidence", "0"]
+            ["list", "--image", str(simple_text_image), "--json", "--min-confidence", "0"]
         )
         list_captured = capsys.readouterr()
 
@@ -578,7 +578,7 @@ class TestCLIIntegration:
                 first_text = data[0]["text"]
                 click_code = main(
                     [
-                        "--click",
+                        "click",
                         first_text,
                         "--image",
                         str(simple_text_image),
@@ -600,11 +600,13 @@ class TestCLIIntegration:
         """Test error handling for non-existent image."""
         from ocr_finder.cli import main
 
-        exit_code = main(["--list", "--image", "/nonexistent/path/image.png"])
+        exit_code = main(["list", "--image", "/nonexistent/path/image.png"])
 
-        assert exit_code == 1
+        # Typer returns exit code 2 for validation errors (path doesn't exist)
+        assert exit_code == 2
         captured = capsys.readouterr()
-        assert "error" in captured.err.lower()
+        # Typer may wrap the message across lines, so check for "not exist" fragment
+        assert "not exist" in captured.err.lower()
 
     def test_cli_exact_flag(
         self, simple_text_image: Path, capsys: pytest.CaptureFixture[str]
@@ -613,12 +615,12 @@ class TestCLIIntegration:
         from ocr_finder.cli import main
 
         # Without exact: partial match
-        code1 = main(["--find", "hel", "--image", str(simple_text_image), "--min-confidence", "0"])
+        code1 = main(["find", "hel", "--image", str(simple_text_image), "--min-confidence", "0"])
         _ = capsys.readouterr()  # Clear captured output
 
         # With exact: no partial match
         code2 = main(
-            ["--find", "hel", "--image", str(simple_text_image), "--exact", "--min-confidence", "0"]
+            ["find", "hel", "--image", str(simple_text_image), "--exact", "--min-confidence", "0"]
         )
         _ = capsys.readouterr()  # Clear captured output
 

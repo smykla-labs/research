@@ -266,7 +266,7 @@ class TestScreenshotOcrPipeline:
             pytest.skip("Could not capture Finder screenshot")
 
         exit_code = ocr_main(
-            ["--list", "--image", str(captured), "--json", "--min-confidence", "0"]
+            ["list", "--image", str(captured), "--json", "--min-confidence", "0"]
         )
 
         assert exit_code == 0
@@ -330,7 +330,7 @@ class TestCrossSkillValidation:
         from ui_inspector.cli import main as ui_main
 
         # Get UI Inspector JSON
-        ui_exit = ui_main(["--app", "Finder", "--list", "--json"])
+        ui_exit = ui_main(["list", "--app", "Finder", "--json"])
         ui_captured = capsys.readouterr()
 
         if ui_exit != 0 or not ui_captured.out.strip():
@@ -351,7 +351,7 @@ class TestCrossSkillValidation:
         if captured is None:
             pytest.skip("Could not capture Finder screenshot")
 
-        ocr_exit = ocr_main(["--list", "--image", str(captured), "--json", "--min-confidence", "0"])
+        ocr_exit = ocr_main(["list", "--image", str(captured), "--json", "--min-confidence", "0"])
         ocr_captured = capsys.readouterr()
 
         if ocr_exit == 0:
@@ -408,9 +408,10 @@ class TestCombinedErrorHandling:
         """Test OCR error when screenshot doesn't exist."""
         from ocr_finder.cli import main as ocr_main
 
-        exit_code = ocr_main(["--list", "--image", "/nonexistent/path/screenshot.png"])
+        exit_code = ocr_main(["list", "--image", "/nonexistent/path/screenshot.png"])
 
-        assert exit_code == 1
+        # Typer returns exit code 2 for validation errors (path doesn't exist)
+        assert exit_code == 2
 
     def test_ui_inspector_on_nonexistent_app(self) -> None:
         """Test UI Inspector error for non-existent app."""
