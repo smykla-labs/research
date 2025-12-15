@@ -1,14 +1,14 @@
 # shellcheck shell=bash
-# spec/support/script_coverage.sh - Check test coverage for bash scripts in .claude/
+# spec/support/script_coverage.sh - Check test coverage for bash scripts in claude-code/
 
-# Find all markdown files with executable bash scripts in .claude/commands
-# Note: .claude/agents/ files are excluded because their bash blocks are
+# Find all markdown files with executable bash scripts in claude-code/commands
+# Note: claude-code/agents/ files are excluded because their bash blocks are
 # documentation examples (showing patterns), not actual executable scripts.
 # Only commands have executable scripts via !`backtick` pre-exec syntax.
 # Usage: list_scripts_with_bash
 # Returns: List of command files containing ```bash blocks
 list_scripts_with_bash() {
-  local search_dirs=(".claude/commands")
+  local search_dirs=("claude-code/commands")
 
   for dir in "${search_dirs[@]}"; do
     if [[ -d "${dir}" ]]; then
@@ -22,14 +22,14 @@ list_scripts_with_bash() {
   done
 }
 
-# Convert a .claude/ path to its corresponding spec file path
-# Usage: get_spec_path ".claude/commands/git/clean-gone.md"
+# Convert a claude-code/ path to its corresponding spec file path
+# Usage: get_spec_path "claude-code/commands/git/clean-gone.md"
 # Returns: "spec/commands/git/clean_gone_spec.sh"
 get_spec_path() {
   local source_path="$1"
 
-  # Remove .claude/ prefix
-  local relative_path="${source_path#.claude/}"
+  # Remove claude-code/ prefix
+  local relative_path="${source_path#claude-code/}"
 
   # Change .md extension to _spec.sh and replace - with _
   local spec_name
@@ -41,7 +41,7 @@ get_spec_path() {
 }
 
 # Check if a script file has corresponding tests
-# Usage: has_tests ".claude/commands/git/clean-gone.md"
+# Usage: has_tests "claude-code/commands/git/clean-gone.md"
 # Returns: 0 if tests exist, 1 if not
 has_tests() {
   local source_path="$1"
@@ -93,7 +93,7 @@ check_coverage() {
   done < <(list_scripts_with_bash)
 
   if [[ ${total} -eq 0 ]]; then
-    echo "No bash scripts found in .claude/"
+    echo "No bash scripts found in claude-code/"
     return 0
   fi
 

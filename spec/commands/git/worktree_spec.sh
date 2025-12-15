@@ -1,4 +1,5 @@
 # shellcheck shell=bash
+# shellcheck disable=SC2016  # Single quotes are intentional (checking for literal $)
 # shellcheck disable=SC2329  # Functions invoked indirectly by shellspec
 # spec/commands/git/worktree_spec.sh - Tests for worktree-manager agent scripts
 #
@@ -299,6 +300,14 @@ Describe "worktree-manager agent scripts"
     It "includes direnv allow in clipboard command"
       script=$(extract_readable_script)
       The value "${script}" should include "direnv allow"
+    End
+
+    It "uses printf without trailing newline for clipboard"
+      # printf '%s' avoids trailing newline that echo would add
+      script=$(extract_readable_script)
+      The value "${script}" should include "printf '%s'"
+      The value "${script}" should not include 'echo "cd $W'
+      The value "${script}" should not include "echo 'cd \$W"
     End
   End
 
