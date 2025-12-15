@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Annotated
+
+import typer
 
 from .actions import preview_region, record_verified
 from .core import check_dependencies, find_target_window
@@ -27,27 +29,7 @@ from .models import (
     WindowBounds,
 )
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-
-def create_parser() -> argparse.ArgumentParser:
-    """Create argument parser."""
-    parser = argparse.ArgumentParser(
-        description="Record macOS screen with verification, retry logic, and format conversion.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --record "GoLand" -d 5                Record GoLand for 5 seconds
-  %(prog)s --record "GoLand" --preset discord    Record optimized for Discord
-  %(prog)s --record "Chrome" --title "GitHub"    Record Chrome with GitHub tab
-  %(prog)s --record "Code" -d 10 -o demo.gif     Record VS Code to demo.gif
-  %(prog)s --full-screen -d 3 -o screen.webp     Full screen for 3 seconds
-  %(prog)s --find "GoLand" --json                Find window info only
-  %(prog)s --check-deps                          Check ffmpeg availability
-  %(prog)s -R 100,200,800,600 -d 5               Record absolute screen region
-  %(prog)s --record "GoLand" --window-region 0,400,800,300  Record terminal area
-
+EPILOG = """
 Platform presets:
   discord     WebP, 10MB max, 10fps, 720px max (no Nitro)
   github      GIF, ~5MB, 10fps, 600px max (README optimized)
@@ -66,151 +48,185 @@ Verification strategies:
   frames      Minimum frame count check
   motion      First/last frames differ (content changed)
   all         All strategies combined
-        """,
-    )
+"""
 
-    # Actions
-    actions = parser.add_argument_group("actions")
-    actions.add_argument(
-        "--record", "-r", metavar="APP", help="Record window of specified application"
-    )
-    actions.add_argument("--find", "-f", metavar="APP", help="Find window without recording")
-    actions.add_argument(
-        "--full-screen", "-F", action="store_true", help="Record full screen instead of window"
-    )
-    actions.add_argument(
-        "--check-deps", action="store_true", help="Check availability of required tools"
-    )
-    actions.add_argument(
-        "--preview-region",
-        action="store_true",
-        help="Take screenshot of region for coordinate verification",
-    )
+app = typer.Typer(
+    name="screen-recorder",
+    help="Record macOS screen with verification, retry logic, and format conversion.",
+    epilog=EPILOG,
+)
 
-    # Window filters
-    filters = parser.add_argument_group("window filters")
-    filters.add_argument("--title", "-t", metavar="PATTERN", help="Regex pattern for window title")
-    filters.add_argument("--pid", type=int, metavar="PID", help="Filter by process ID")
-    filters.add_argument("--path-contains", metavar="STR", help="Executable path must contain STR")
-    filters.add_argument(
-        "--path-excludes", metavar="STR", help="Executable path must NOT contain STR"
-    )
-    filters.add_argument(
-        "--args", "--args-contains", metavar="STR", help="Command line must contain STR"
-    )
 
-    # Recording settings
-    rec_opts = parser.add_argument_group("recording options")
-    rec_opts.add_argument(
+# =============================================================================
+# Option dataclasses for grouping related CLI options
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class WindowFilterOptions:
+    """Window filter options for finding target windows."""
+
+    title: str | None = None
+    pid: int | None = None
+    path_contains: str | None = None
+    path_excludes: str | None = None
+    args_contains: str | None = None
+
+
+@dataclass(frozen=True)
+class RecordingOptions:
+    """Recording options for capture settings."""
+
+    duration: float = DEFAULT_DURATION_SECONDS
+    max_duration: float = DEFAULT_MAX_DURATION_SECONDS
+    region: str | None = None
+    window_region: str | None = None
+    no_clicks: bool = False
+    no_activate: bool = False
+    settle_ms: int = DEFAULT_SETTLE_MS
+    full_screen: bool = False
+
+
+@dataclass(frozen=True)
+class OutputOptions:
+    """Output options for file and format settings."""
+
+    output: str | None = None
+    format_str: str = "gif"
+    preset: str | None = None
+    keep_raw: bool = False
+
+
+@dataclass(frozen=True)
+class FormatOptions:
+    """Format options for video encoding settings."""
+
+    fps: int | None = None
+    max_width: int | None = None
+    max_height: int | None = None
+    quality: int | None = None
+    max_size: float | None = None
+
+
+@dataclass(frozen=True)
+class RetryOptions:
+    """Retry and verification options."""
+
+    verify: list[str] | None = None
+    retries: int = DEFAULT_MAX_RETRIES
+    retry_delay: int = DEFAULT_RETRY_DELAY_MS
+    retry_strategy: str = "fixed"
+
+
+# =============================================================================
+# Common type aliases for Typer options
+# =============================================================================
+
+# Window filter options
+TitleOpt = Annotated[
+    str | None, typer.Option("--title", "-t", help="Regex pattern for window title")
+]
+PidOpt = Annotated[int | None, typer.Option("--pid", help="Filter by process ID")]
+PathContainsOpt = Annotated[
+    str | None, typer.Option("--path-contains", help="Exe path must contain STR")
+]
+PathExcludesOpt = Annotated[
+    str | None, typer.Option("--path-excludes", help="Exe path must NOT contain STR")
+]
+ArgsContainsOpt = Annotated[
+    str | None, typer.Option("--args", "--args-contains", help="Command line contains STR")
+]
+
+# Recording options
+DurationOpt = Annotated[
+    float,
+    typer.Option(
         "--duration",
         "-d",
-        type=float,
-        default=DEFAULT_DURATION_SECONDS,
-        metavar="SEC",
         help=f"Recording duration in seconds (default: {DEFAULT_DURATION_SECONDS})",
-    )
-    rec_opts.add_argument(
-        "--max-duration",
-        type=float,
-        default=DEFAULT_MAX_DURATION_SECONDS,
-        metavar="SEC",
-        help=f"Maximum allowed duration (default: {DEFAULT_MAX_DURATION_SECONDS})",
-    )
-    rec_opts.add_argument(
-        "--region", "-R", metavar="X,Y,W,H", help="Absolute screen region: x,y,width,height"
-    )
-    rec_opts.add_argument(
-        "--window-region",
-        metavar="X,Y,W,H",
-        help="Window-relative region (requires --record): x,y,w,h offset from window",
-    )
-    rec_opts.add_argument(
-        "--no-clicks", action="store_true", help="Don't show mouse clicks in recording"
-    )
-    rec_opts.add_argument(
-        "--no-activate", action="store_true", help="Don't activate window before recording"
-    )
-    rec_opts.add_argument(
-        "--settle-ms",
-        type=int,
-        default=DEFAULT_SETTLE_MS,
-        metavar="MS",
-        help=f"Wait time after activation (default: {DEFAULT_SETTLE_MS})",
-    )
+    ),
+]
+MaxDurationOpt = Annotated[
+    float,
+    typer.Option(
+        "--max-duration", help=f"Maximum allowed duration (default: {DEFAULT_MAX_DURATION_SECONDS})"
+    ),
+]
+RegionOpt = Annotated[
+    str | None, typer.Option("--region", "-R", help="Absolute screen region: x,y,width,height")
+]
+WindowRegionOpt = Annotated[
+    str | None,
+    typer.Option("--window-region", help="Window-relative region: x,y,w,h offset from window"),
+]
+NoClicksOpt = Annotated[
+    bool, typer.Option("--no-clicks", help="Don't show mouse clicks in recording")
+]
+NoActivateOpt = Annotated[
+    bool, typer.Option("--no-activate", help="Don't activate window before recording")
+]
+SettleMsOpt = Annotated[
+    int,
+    typer.Option("--settle-ms", help=f"Wait time after activation (default: {DEFAULT_SETTLE_MS})"),
+]
 
-    # Output options
-    output_opts = parser.add_argument_group("output options")
-    output_opts.add_argument("--output", "-o", metavar="PATH", help="Output path for recording")
-    output_opts.add_argument(
-        "--format",
-        choices=["gif", "webp", "mp4", "mov"],
-        default="gif",
-        help="Output format (default: gif)",
-    )
-    output_opts.add_argument(
-        "--preset",
-        "-p",
-        choices=["discord", "github", "jetbrains", "raw", "custom"],
-        help="Platform optimization preset",
-    )
-    output_opts.add_argument(
-        "--keep-raw", action="store_true", help="Keep original .mov file after conversion"
-    )
-    output_opts.add_argument("--json", "-j", action="store_true", help="Output result as JSON")
+# Output options
+OutputOpt = Annotated[str | None, typer.Option("--output", "-o", help="Output path for recording")]
+FormatOpt = Annotated[
+    str, typer.Option("--format", help="Output format: gif, webp, mp4, mov (default: gif)")
+]
+PresetOpt = Annotated[
+    str | None,
+    typer.Option("--preset", "-p", help="Platform preset: discord, github, jetbrains, raw, custom"),
+]
+KeepRawOpt = Annotated[
+    bool, typer.Option("--keep-raw", help="Keep original .mov file after conversion")
+]
+JsonOpt = Annotated[bool, typer.Option("--json", "-j", help="Output result as JSON")]
 
-    # Format settings
-    fmt_opts = parser.add_argument_group("format settings (override preset)")
-    fmt_opts.add_argument(
-        "--fps", type=int, metavar="N", help=f"Target frame rate (default: preset or {DEFAULT_FPS})"
-    )
-    fmt_opts.add_argument("--max-width", type=int, metavar="PX", help="Maximum width in pixels")
-    fmt_opts.add_argument("--max-height", type=int, metavar="PX", help="Maximum height in pixels")
-    fmt_opts.add_argument(
-        "--quality",
-        "-q",
-        type=int,
-        metavar="N",
-        help=f"Quality for lossy formats 0-100 (default: {DEFAULT_QUALITY})",
-    )
-    fmt_opts.add_argument(
-        "--max-size", type=float, metavar="MB", help="Target maximum file size in MB"
-    )
+# Format options
+FpsOpt = Annotated[
+    int | None, typer.Option("--fps", help=f"Target frame rate (default: preset or {DEFAULT_FPS})")
+]
+MaxWidthOpt = Annotated[int | None, typer.Option("--max-width", help="Maximum width in pixels")]
+MaxHeightOpt = Annotated[int | None, typer.Option("--max-height", help="Maximum height in pixels")]
+QualityOpt = Annotated[
+    int | None,
+    typer.Option(
+        "--quality", "-q", help=f"Quality for lossy formats 0-100 (default: {DEFAULT_QUALITY})"
+    ),
+]
+MaxSizeOpt = Annotated[
+    float | None, typer.Option("--max-size", help="Target maximum file size in MB")
+]
 
-    # Verification
-    verify_opts = parser.add_argument_group("verification")
-    verify_opts.add_argument(
+# Retry options
+VerifyOpt = Annotated[
+    list[str] | None,
+    typer.Option(
         "--verify",
         "-v",
-        nargs="+",
-        choices=["basic", "duration", "frames", "motion", "all", "none"],
-        default=["basic", "duration"],
-        help="Verification strategies (default: basic duration)",
-    )
+        help="Verification strategies: basic, duration, frames, motion, all, none",
+    ),
+]
+RetriesOpt = Annotated[
+    int, typer.Option("--retries", help=f"Maximum retry attempts (default: {DEFAULT_MAX_RETRIES})")
+]
+RetryDelayOpt = Annotated[
+    int,
+    typer.Option(
+        "--retry-delay", help=f"Delay between retries in ms (default: {DEFAULT_RETRY_DELAY_MS})"
+    ),
+]
+RetryStrategyOpt = Annotated[
+    str,
+    typer.Option("--retry-strategy", help="Retry strategy: fixed, exponential, reactivate"),
+]
 
-    # Retry options
-    retry_opts = parser.add_argument_group("retry options")
-    retry_opts.add_argument(
-        "--retries",
-        type=int,
-        default=DEFAULT_MAX_RETRIES,
-        metavar="N",
-        help=f"Maximum retry attempts (default: {DEFAULT_MAX_RETRIES})",
-    )
-    retry_opts.add_argument(
-        "--retry-delay",
-        type=int,
-        default=DEFAULT_RETRY_DELAY_MS,
-        metavar="MS",
-        help=f"Delay between retries in ms (default: {DEFAULT_RETRY_DELAY_MS})",
-    )
-    retry_opts.add_argument(
-        "--retry-strategy",
-        choices=["fixed", "exponential", "reactivate"],
-        default="fixed",
-        help="Retry strategy (default: fixed)",
-    )
 
-    return parser
+# =============================================================================
+# Parsing helpers
+# =============================================================================
 
 
 def parse_output_format(format_str: str) -> OutputFormat:
@@ -238,8 +254,11 @@ def parse_preset(preset_str: str | None) -> PlatformPreset | None:
     return mapping.get(preset_str)
 
 
-def parse_verification_strategies(strategies: list[str]) -> tuple[VerificationStrategy, ...]:
+def parse_verification_strategies(strategies: list[str] | None) -> tuple[VerificationStrategy, ...]:
     """Parse verification strategy strings to enum values."""
+    if strategies is None:
+        strategies = ["basic", "duration"]
+
     if "none" in strategies:
         return ()
     if "all" in strategies:
@@ -277,74 +296,177 @@ def parse_region(region_str: str | None) -> WindowBounds | None:
         WindowBounds or None if not provided.
 
     Raises:
-        argparse.ArgumentTypeError: If format is invalid.
+        typer.BadParameter: If format is invalid.
     """
     if not region_str:
         return None
 
     parts = region_str.split(",")
     if len(parts) != REGION_PARTS_COUNT:
-        raise argparse.ArgumentTypeError(f"Region must be x,y,width,height: {region_str}")
+        raise typer.BadParameter(f"Region must be x,y,width,height: {region_str}")
 
     try:
         x, y, w, h = (float(p.strip()) for p in parts)
     except ValueError as e:
-        raise argparse.ArgumentTypeError(f"Invalid region values: {region_str}") from e
+        raise typer.BadParameter(f"Invalid region values: {region_str}") from e
 
     if w <= 0 or h <= 0:
-        raise argparse.ArgumentTypeError(f"Region width and height must be positive: {region_str}")
+        raise typer.BadParameter(f"Region width and height must be positive: {region_str}")
 
     return WindowBounds(x=x, y=y, width=w, height=h)
 
 
-def build_config(args) -> RecordingConfig:
-    """Build RecordingConfig from parsed arguments."""
-    # Parse region arguments
-    region = parse_region(args.region)
-    window_relative_region = parse_region(args.window_region)
+# =============================================================================
+# Option builders
+# =============================================================================
 
-    # Validate: window-region requires a window target
-    if window_relative_region and not args.record:
-        raise argparse.ArgumentTypeError(
-            "--window-region requires --record to specify the target window"
-        )
 
-    return RecordingConfig(
-        app_name=args.record or args.find,
-        title_pattern=args.title,
-        pid=args.pid,
-        path_contains=args.path_contains,
-        path_excludes=args.path_excludes,
-        args_contains=args.args,
-        region=region,
-        window_relative_region=window_relative_region,
-        full_screen=args.full_screen,
-        duration_seconds=args.duration,
-        max_duration_seconds=args.max_duration,
-        show_clicks=not args.no_clicks,
-        output_path=args.output,
-        output_format=parse_output_format(args.format),
-        preset=parse_preset(args.preset),
-        fps=args.fps,
-        max_width=args.max_width,
-        max_height=args.max_height,
-        quality=args.quality,
-        max_size_mb=args.max_size,
-        activate_first=not args.no_activate,
-        settle_ms=args.settle_ms,
-        keep_raw=args.keep_raw,
-        verification_strategies=parse_verification_strategies(args.verify),
-        max_retries=args.retries,
-        retry_delay_ms=args.retry_delay,
-        retry_strategy=parse_retry_strategy(args.retry_strategy),
+def _build_filter_options(
+    title: str | None,
+    pid: int | None,
+    path_contains: str | None,
+    path_excludes: str | None,
+    args_contains: str | None,
+) -> WindowFilterOptions:
+    """Build WindowFilterOptions from CLI args."""
+    return WindowFilterOptions(
+        title=title,
+        pid=pid,
+        path_contains=path_contains,
+        path_excludes=path_excludes,
+        args_contains=args_contains,
     )
 
 
-def _handle_check_deps(args) -> int:
-    """Handle --check-deps action."""
+def _build_recording_options(
+    duration: float,
+    max_duration: float,
+    region: str | None,
+    window_region: str | None,
+    no_clicks: bool,
+    no_activate: bool,
+    settle_ms: int,
+    full_screen: bool = False,
+) -> RecordingOptions:
+    """Build RecordingOptions from CLI args."""
+    return RecordingOptions(
+        duration=duration,
+        max_duration=max_duration,
+        region=region,
+        window_region=window_region,
+        no_clicks=no_clicks,
+        no_activate=no_activate,
+        settle_ms=settle_ms,
+        full_screen=full_screen,
+    )
+
+
+def _build_output_options(
+    output: str | None,
+    format_str: str,
+    preset: str | None,
+    keep_raw: bool,
+) -> OutputOptions:
+    """Build OutputOptions from CLI args."""
+    return OutputOptions(
+        output=output,
+        format_str=format_str,
+        preset=preset,
+        keep_raw=keep_raw,
+    )
+
+
+def _build_format_options(
+    fps: int | None,
+    max_width: int | None,
+    max_height: int | None,
+    quality: int | None,
+    max_size: float | None,
+) -> FormatOptions:
+    """Build FormatOptions from CLI args."""
+    return FormatOptions(
+        fps=fps,
+        max_width=max_width,
+        max_height=max_height,
+        quality=quality,
+        max_size=max_size,
+    )
+
+
+def _build_retry_options(
+    verify: list[str] | None,
+    retries: int,
+    retry_delay: int,
+    retry_strategy: str,
+) -> RetryOptions:
+    """Build RetryOptions from CLI args."""
+    return RetryOptions(
+        verify=verify,
+        retries=retries,
+        retry_delay=retry_delay,
+        retry_strategy=retry_strategy,
+    )
+
+
+def build_config(
+    app_name: str | None,
+    filter_opts: WindowFilterOptions,
+    recording_opts: RecordingOptions,
+    output_opts: OutputOptions,
+    format_opts: FormatOptions,
+    retry_opts: RetryOptions,
+) -> RecordingConfig:
+    """Build RecordingConfig from grouped option objects."""
+    # Parse region arguments
+    parsed_region = parse_region(recording_opts.region)
+    window_relative_region = parse_region(recording_opts.window_region)
+
+    # Validate: window-region requires a window target
+    if window_relative_region and not app_name:
+        msg = "--window-region requires an app name to specify the target window"
+        raise typer.BadParameter(msg)
+
+    return RecordingConfig(
+        app_name=app_name,
+        title_pattern=filter_opts.title,
+        pid=filter_opts.pid,
+        path_contains=filter_opts.path_contains,
+        path_excludes=filter_opts.path_excludes,
+        args_contains=filter_opts.args_contains,
+        region=parsed_region,
+        window_relative_region=window_relative_region,
+        full_screen=recording_opts.full_screen,
+        duration_seconds=recording_opts.duration,
+        max_duration_seconds=recording_opts.max_duration,
+        show_clicks=not recording_opts.no_clicks,
+        output_path=output_opts.output,
+        output_format=parse_output_format(output_opts.format_str),
+        preset=parse_preset(output_opts.preset),
+        fps=format_opts.fps,
+        max_width=format_opts.max_width,
+        max_height=format_opts.max_height,
+        quality=format_opts.quality,
+        max_size_mb=format_opts.max_size,
+        activate_first=not recording_opts.no_activate,
+        settle_ms=recording_opts.settle_ms,
+        keep_raw=output_opts.keep_raw,
+        verification_strategies=parse_verification_strategies(retry_opts.verify),
+        max_retries=retry_opts.retries,
+        retry_delay_ms=retry_opts.retry_delay,
+        retry_strategy=parse_retry_strategy(retry_opts.retry_strategy),
+    )
+
+
+# =============================================================================
+# Action handlers
+# =============================================================================
+
+
+def _handle_check_deps(*, json_output: bool = False) -> int:
+    """Handle check-deps action."""
     deps = check_dependencies()
 
-    if args.json:
+    if json_output:
         print(json.dumps(deps, indent=2))
     else:
         print("Dependency check:")
@@ -360,11 +482,11 @@ def _handle_check_deps(args) -> int:
     return 0 if all(deps.values()) else 1
 
 
-def _handle_find(args, config: RecordingConfig) -> int:
-    """Handle --find action."""
+def _handle_find(config: RecordingConfig, *, json_output: bool = False) -> int:
+    """Handle find action."""
     target = find_target_window(config)
 
-    if args.json:
+    if json_output:
         print(json.dumps(target.to_dict(), indent=2))
     else:
         print(f"Found: {target.app_name}")
@@ -382,11 +504,11 @@ def _handle_find(args, config: RecordingConfig) -> int:
     return 0
 
 
-def _handle_preview_region(args, config: RecordingConfig) -> int:
-    """Handle --preview-region action."""
+def _handle_preview_region(config: RecordingConfig, *, json_output: bool = False) -> int:
+    """Handle preview-region action."""
     result = preview_region(config)
 
-    if args.json:
+    if json_output:
         print(json.dumps(result.to_dict(), indent=2))
     else:
         print(f"Preview saved: {result.screenshot_path}")
@@ -397,7 +519,7 @@ def _handle_preview_region(args, config: RecordingConfig) -> int:
             print(f"  Window bounds: {result.window_bounds.as_region}")
 
         print("\nUse these coordinates with:")
-        print(f"  screen-recorder -R {result.region.as_region} -d 5")
+        print(f"  screen-recorder record -R {result.region.as_region} -d 5")
 
         if result.app_name and result.window_bounds:
             print("\nOr use window-relative coordinates:")
@@ -406,17 +528,17 @@ def _handle_preview_region(args, config: RecordingConfig) -> int:
             w = int(result.region.width)
             h = int(result.region.height)
             rel_region = f"{rel_x},{rel_y},{w},{h}"
-            app = result.app_name
-            print(f'  screen-recorder --record "{app}" --window-region {rel_region} -d 5')
+            app_name = result.app_name
+            print(f'  screen-recorder record "{app_name}" --window-region {rel_region} -d 5')
 
     return 0
 
 
-def _handle_record(args, config: RecordingConfig) -> int:
-    """Handle --record or --full-screen action."""
+def _handle_record(config: RecordingConfig, *, json_output: bool = False) -> int:
+    """Handle record or full-screen action."""
     result = record_verified(config)
 
-    if args.json:
+    if json_output:
         print(json.dumps(result.to_dict(), indent=2))
     else:
         status = "✅ verified" if result.verified else "❌ unverified"
@@ -450,54 +572,224 @@ def _handle_record(args, config: RecordingConfig) -> int:
     return 0 if result.verified else 1
 
 
-def _dispatch_action(args, config: RecordingConfig) -> int:
-    """Dispatch to the appropriate action handler."""
-    if args.preview_region:
-        return _handle_preview_region(args, config)
-
-    if args.find:
-        return _handle_find(args, config)
-
-    if args.record or args.full_screen:
-        return _handle_record(args, config)
-
-    return 0
+# =============================================================================
+# CLI commands
+# =============================================================================
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """Main entry point.
+@app.command("check-deps")
+def check_deps_cmd(
+    json_output: JsonOpt = False,
+) -> None:
+    """Check availability of required tools (ffmpeg, screencapture)."""
+    result = _handle_check_deps(json_output=json_output)
+    if result != 0:
+        raise typer.Exit(result)
 
-    Args:
-        argv: Command line arguments (defaults to sys.argv[1:]).
 
-    Returns:
-        Exit code (0 for success, non-zero for errors).
-    """
-    parser = create_parser()
-    args = parser.parse_args(argv)
+@app.command("find")
+def find_cmd(
+    app_name: Annotated[str, typer.Argument(help="Application name")],
+    title: TitleOpt = None,
+    pid: PidOpt = None,
+    path_contains: PathContainsOpt = None,
+    path_excludes: PathExcludesOpt = None,
+    args_contains: ArgsContainsOpt = None,
+    json_output: JsonOpt = False,
+) -> None:
+    """Find window without recording."""
+    try:
+        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        recording_opts = RecordingOptions()
+        output_opts = OutputOptions()
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
 
-    # Handle special actions
-    if args.check_deps:
-        return _handle_check_deps(args)
+        config = build_config(
+            app_name, filter_opts, recording_opts, output_opts, format_opts, retry_opts
+        )
+        result = _handle_find(config, json_output=json_output)
+        if result != 0:
+            raise typer.Exit(result)
 
-    # Preview region requires region or record (for window bounds)
-    has_region_target = any([args.region, args.window_region, args.record])
-    if args.preview_region and not has_region_target:
+    except RecordingError as e:
+        if json_output:
+            print(json.dumps({"error": str(e)}), file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+
+
+@app.command("preview-region")
+def preview_region_cmd(
+    app_name: Annotated[str | None, typer.Argument(help="Application name")] = None,
+    title: TitleOpt = None,
+    pid: PidOpt = None,
+    path_contains: PathContainsOpt = None,
+    path_excludes: PathExcludesOpt = None,
+    args_contains: ArgsContainsOpt = None,
+    region: RegionOpt = None,
+    window_region: WindowRegionOpt = None,
+    json_output: JsonOpt = False,
+) -> None:
+    """Take screenshot of region for coordinate verification."""
+    # Validate: need region or window target
+    has_region_target = any([region, window_region, app_name])
+    if not has_region_target:
         print(
-            "Error: --preview-region requires --region, --window-region, or --record",
+            "Error: preview-region requires --region, --window-region, or an app name",
             file=sys.stderr,
         )
-        return 1
-
-    # Validate: need an action
-    if not any([args.record, args.find, args.full_screen, args.preview_region]):
-        parser.print_help()
-        return 1
+        raise typer.Exit(1)
 
     try:
-        config = build_config(args)
-        return _dispatch_action(args, config)
-    except (RecordingError, ValueError) as e:
-        output = {"error": str(e)} if args.json else f"Error: {e}"
-        print(json.dumps(output) if args.json else output, file=sys.stderr)
-        return 1
+        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        recording_opts = RecordingOptions(region=region, window_region=window_region)
+        output_opts = OutputOptions()
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
+
+        config = build_config(
+            app_name, filter_opts, recording_opts, output_opts, format_opts, retry_opts
+        )
+        result = _handle_preview_region(config, json_output=json_output)
+        if result != 0:
+            raise typer.Exit(result)
+
+    except RecordingError as e:
+        if json_output:
+            print(json.dumps({"error": str(e)}), file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+
+
+@app.command("record")
+def record_cmd(  # noqa: PLR0913 - Typer CLI requires many options
+    app_name: Annotated[str, typer.Argument(help="Application name")],
+    title: TitleOpt = None,
+    pid: PidOpt = None,
+    path_contains: PathContainsOpt = None,
+    path_excludes: PathExcludesOpt = None,
+    args_contains: ArgsContainsOpt = None,
+    duration: DurationOpt = DEFAULT_DURATION_SECONDS,
+    max_duration: MaxDurationOpt = DEFAULT_MAX_DURATION_SECONDS,
+    region: RegionOpt = None,
+    window_region: WindowRegionOpt = None,
+    no_clicks: NoClicksOpt = False,
+    no_activate: NoActivateOpt = False,
+    settle_ms: SettleMsOpt = DEFAULT_SETTLE_MS,
+    output: OutputOpt = None,
+    format_str: FormatOpt = "gif",
+    preset: PresetOpt = None,
+    keep_raw: KeepRawOpt = False,
+    fps: FpsOpt = None,
+    max_width: MaxWidthOpt = None,
+    max_height: MaxHeightOpt = None,
+    quality: QualityOpt = None,
+    max_size: MaxSizeOpt = None,
+    verify: VerifyOpt = None,
+    retries: RetriesOpt = DEFAULT_MAX_RETRIES,
+    retry_delay: RetryDelayOpt = DEFAULT_RETRY_DELAY_MS,
+    retry_strategy: RetryStrategyOpt = "fixed",
+    json_output: JsonOpt = False,
+) -> None:
+    """Record window of specified application."""
+    try:
+        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        recording_opts = _build_recording_options(
+            duration, max_duration, region, window_region, no_clicks, no_activate, settle_ms
+        )
+        output_opts = _build_output_options(output, format_str, preset, keep_raw)
+        format_opts = _build_format_options(fps, max_width, max_height, quality, max_size)
+        retry_opts = _build_retry_options(verify, retries, retry_delay, retry_strategy)
+
+        config = build_config(
+            app_name, filter_opts, recording_opts, output_opts, format_opts, retry_opts
+        )
+        result = _handle_record(config, json_output=json_output)
+        if result != 0:
+            raise typer.Exit(result)
+
+    except RecordingError as e:
+        if json_output:
+            print(json.dumps({"error": str(e)}), file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+
+
+@app.command("full-screen")
+def full_screen_cmd(  # noqa: PLR0913 - Typer CLI requires many options
+    duration: DurationOpt = DEFAULT_DURATION_SECONDS,
+    max_duration: MaxDurationOpt = DEFAULT_MAX_DURATION_SECONDS,
+    region: RegionOpt = None,
+    no_clicks: NoClicksOpt = False,
+    settle_ms: SettleMsOpt = DEFAULT_SETTLE_MS,
+    output: OutputOpt = None,
+    format_str: FormatOpt = "gif",
+    preset: PresetOpt = None,
+    keep_raw: KeepRawOpt = False,
+    fps: FpsOpt = None,
+    max_width: MaxWidthOpt = None,
+    max_height: MaxHeightOpt = None,
+    quality: QualityOpt = None,
+    max_size: MaxSizeOpt = None,
+    verify: VerifyOpt = None,
+    retries: RetriesOpt = DEFAULT_MAX_RETRIES,
+    retry_delay: RetryDelayOpt = DEFAULT_RETRY_DELAY_MS,
+    retry_strategy: RetryStrategyOpt = "fixed",
+    json_output: JsonOpt = False,
+) -> None:
+    """Record full screen instead of window."""
+    try:
+        filter_opts = WindowFilterOptions()
+        recording_opts = _build_recording_options(
+            duration,
+            max_duration,
+            region,
+            window_region=None,
+            no_clicks=no_clicks,
+            no_activate=False,  # Not applicable for full screen
+            settle_ms=settle_ms,
+            full_screen=True,
+        )
+        output_opts = _build_output_options(output, format_str, preset, keep_raw)
+        format_opts = _build_format_options(fps, max_width, max_height, quality, max_size)
+        retry_opts = _build_retry_options(verify, retries, retry_delay, retry_strategy)
+
+        config = build_config(
+            None, filter_opts, recording_opts, output_opts, format_opts, retry_opts
+        )
+        result = _handle_record(config, json_output=json_output)
+        if result != 0:
+            raise typer.Exit(result)
+
+    except RecordingError as e:
+        if json_output:
+            print(json.dumps({"error": str(e)}), file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Main entry point for screen-recorder CLI.
+
+    Args:
+        argv: Command-line arguments (default: sys.argv[1:]).
+
+    Returns:
+        Exit code (0 for success, non-zero for error).
+    """
+    if argv is not None:
+        sys.argv = ["screen-recorder", *list(argv)]
+    try:
+        app(prog_name="screen-recorder")
+        return 0
+    except SystemExit as e:
+        return e.code if isinstance(e.code, int) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

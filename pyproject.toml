@@ -65,7 +65,7 @@ max-returns = 7   # CLI main functions with multiple subcommands need more retur
 "**/skills/**/cli.py" = ["B008"]
 # Allow print statements in skill packages (CLI output)
 "**/space_finder/*.py" = ["T201"]
-"**/screen_recorder/*.py" = ["T201"]
+"**/screen_recorder/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (Quartz/ffmpeg)
 "**/verified_screenshot/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports
 "**/window_controller/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (Quartz/psutil)
 "**/ocr_finder/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (EasyOCR is slow)
