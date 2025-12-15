@@ -108,9 +108,7 @@ class TestActivateWindow:
 
         assert "cannot activate" in str(exc_info.value).lower()
 
-    def test_osascript_failure_raises_capture_error(
-        self, sample_target: WindowTarget
-    ) -> None:
+    def test_osascript_failure_raises_capture_error(self, sample_target: WindowTarget) -> None:
         """Test CaptureError on osascript failure."""
         mock_result = Mock()
         mock_result.returncode = 1
@@ -217,17 +215,19 @@ class TestRunVerifications:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         config = RecordingConfig(
             duration_seconds=5.0,
             verification_strategies=(
                 VerificationStrategy.BASIC,
                 VerificationStrategy.DURATION,
-            )
+            ),
         )
 
         with (
@@ -248,17 +248,22 @@ class TestRunVerifications:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "150"
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "150",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         config = RecordingConfig(
-            duration_seconds=5.0,
-            verification_strategies=(VerificationStrategy.ALL,)
+            duration_seconds=5.0, verification_strategies=(VerificationStrategy.ALL,)
         )
 
         with (
@@ -268,9 +273,11 @@ class TestRunVerifications:
             patch("screen_recorder.core.compute_image_hash", return_value="hash"),
             patch("screen_recorder.core.compute_hash_distance", return_value=10),
         ):
+
             def create_frame(_video, output, _time_seconds=0):
                 output.write_bytes(b"fake image")
                 return output
+
             mock_extract.side_effect = create_frame
 
             results = run_verifications(video_path, config)
@@ -372,9 +379,7 @@ class TestGenerateOutputPath:
         assert str(final_path) == "/tmp/myrecording.gif"
         assert raw_path.suffix == ".mov"
 
-    def test_output_path_as_directory_appends_filename(
-        self, sample_target: WindowTarget
-    ) -> None:
+    def test_output_path_as_directory_appends_filename(self, sample_target: WindowTarget) -> None:
         """Test output_path as directory appends generated filename."""
         config = RecordingConfig(output_path="/tmp/recordings")
         raw_path, final_path = generate_output_path(config, sample_target)

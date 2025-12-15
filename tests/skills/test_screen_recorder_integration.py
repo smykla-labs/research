@@ -42,13 +42,14 @@ def mock_window_target() -> WindowTarget:
 @pytest.fixture
 def mock_ffprobe_success() -> bytes:
     """Create successful ffprobe response."""
-    return json.dumps({
-        "streams": [{
-            "width": 800, "height": 600,
-            "avg_frame_rate": "30/1", "nb_read_frames": "150"
-        }],
-        "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-    }).encode()
+    return json.dumps(
+        {
+            "streams": [
+                {"width": 800, "height": 600, "avg_frame_rate": "30/1", "nb_read_frames": "150"}
+            ],
+            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+        }
+    ).encode()
 
 
 # =============================================================================
@@ -109,9 +110,7 @@ class TestRecordVerifiedSuccess:
         assert result.app_name == "TestApp"
         assert result.window_id == 12345
 
-    def test_success_with_full_screen(
-        self, tmp_path: Path, mock_ffprobe_success: bytes
-    ) -> None:
+    def test_success_with_full_screen(self, tmp_path: Path, mock_ffprobe_success: bytes) -> None:
         """Test successful full screen recording (no window target)."""
 
         def subprocess_side_effect(*args, **_kwargs):
@@ -184,10 +183,12 @@ class TestRecordVerifiedRetry:
             elif "ffprobe" in cmd[0]:
                 # First attempt: short duration (fails), second: correct duration
                 duration = "2.0" if attempt_count[0] == 1 else "5.0"
-                proc_result.stdout = json.dumps({
-                    "streams": [{"width": 800, "height": 600, "avg_frame_rate": "30/1"}],
-                    "format": {"duration": duration, "size": "1000000", "format_name": "mov"}
-                }).encode()
+                proc_result.stdout = json.dumps(
+                    {
+                        "streams": [{"width": 800, "height": 600, "avg_frame_rate": "30/1"}],
+                        "format": {"duration": duration, "size": "1000000", "format_name": "mov"},
+                    }
+                ).encode()
             elif "ffmpeg" in cmd[0]:
                 output = cmd[-1]
                 Path(output).write_bytes(b"fake gif")
@@ -244,10 +245,12 @@ class TestRecordVerifiedErrors:
                         break
             elif "ffprobe" in cmd[0]:
                 # Always return short duration (fails verification)
-                proc_result.stdout = json.dumps({
-                    "streams": [{"width": 800, "height": 600, "avg_frame_rate": "30/1"}],
-                    "format": {"duration": "1.0", "size": "1000", "format_name": "mov"}
-                }).encode()
+                proc_result.stdout = json.dumps(
+                    {
+                        "streams": [{"width": 800, "height": 600, "avg_frame_rate": "30/1"}],
+                        "format": {"duration": "1.0", "size": "1000", "format_name": "mov"},
+                    }
+                ).encode()
 
             return proc_result
 
@@ -296,7 +299,7 @@ class TestRecordVerifiedErrors:
 
         with patch(
             "screen_recorder.actions.find_target_window",
-            side_effect=WindowNotFoundError("No window found")
+            side_effect=WindowNotFoundError("No window found"),
         ):
             with pytest.raises(WindowNotFoundError):
                 record_verified(config)
@@ -413,18 +416,17 @@ class TestRecordVerifiedOptions:
 class TestRecordSimple:
     """Tests for record_simple convenience function."""
 
-    def test_simple_recording(
-        self, tmp_path: Path, mock_window_target: WindowTarget
-    ) -> None:
+    def test_simple_recording(self, tmp_path: Path, mock_window_target: WindowTarget) -> None:
         """Test record_simple convenience wrapper."""
         # Use 3 second duration to match requested duration
-        ffprobe_3s = json.dumps({
-            "streams": [{
-                "width": 800, "height": 600,
-                "avg_frame_rate": "30/1", "nb_read_frames": "90"
-            }],
-            "format": {"duration": "3.0", "size": "600000", "format_name": "mov"}
-        }).encode()
+        ffprobe_3s = json.dumps(
+            {
+                "streams": [
+                    {"width": 800, "height": 600, "avg_frame_rate": "30/1", "nb_read_frames": "90"}
+                ],
+                "format": {"duration": "3.0", "size": "600000", "format_name": "mov"},
+            }
+        ).encode()
 
         def subprocess_side_effect(*args, **_kwargs):
             cmd = args[0]
@@ -1088,9 +1090,7 @@ class TestSpaceSwitching:
         assert len(captured_regions) == 1
         assert captured_regions[0] == "50,50,1200,800"
 
-    def test_returns_to_space_even_on_recording_failure(
-        self, tmp_path: Path
-    ) -> None:
+    def test_returns_to_space_even_on_recording_failure(self, tmp_path: Path) -> None:
         """Test Space is returned even when recording fails."""
         activate_calls: list[str] = []
 
@@ -1118,10 +1118,12 @@ class TestSpaceSwitching:
                         break
             elif "ffprobe" in cmd[0]:
                 # Always return short duration to fail verification
-                proc_result.stdout = json.dumps({
-                    "streams": [{"width": 800, "height": 600, "avg_frame_rate": "30/1"}],
-                    "format": {"duration": "0.5", "size": "1000", "format_name": "mov"}
-                }).encode()
+                proc_result.stdout = json.dumps(
+                    {
+                        "streams": [{"width": 800, "height": 600, "avg_frame_rate": "30/1"}],
+                        "format": {"duration": "0.5", "size": "1000", "format_name": "mov"},
+                    }
+                ).encode()
 
             return proc_result
 

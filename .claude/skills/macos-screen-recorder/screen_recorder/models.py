@@ -315,8 +315,7 @@ class RecordingConfig:
             "args_contains": self.args_contains,
             "region": self.region.to_dict() if self.region else None,
             "window_relative_region": (
-                self.window_relative_region.to_dict()
-                if self.window_relative_region else None
+                self.window_relative_region.to_dict() if self.window_relative_region else None
             ),
             "full_screen": self.full_screen,
             "duration_seconds": self.duration_seconds,

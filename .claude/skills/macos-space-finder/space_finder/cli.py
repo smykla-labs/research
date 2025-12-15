@@ -55,25 +55,29 @@ Examples:
     )
 
     parser.add_argument(
-        "--list", "-l",
+        "--list",
+        "-l",
         action="store_true",
         help="List all spaces with their details",
     )
 
     parser.add_argument(
-        "--current", "-c",
+        "--current",
+        "-c",
         action="store_true",
         help="Print the current space's application name",
     )
 
     parser.add_argument(
-        "--go", "-g",
+        "--go",
+        "-g",
         metavar="APP",
         help="Switch to the space containing APP, then return to original",
     )
 
     parser.add_argument(
-        "--json", "-j",
+        "--json",
+        "-j",
         action="store_true",
         help="Output as JSON",
     )
@@ -112,9 +116,7 @@ def _handle_current(spaces: Sequence[SpaceInfo], *, json_output: bool = False) -
     return 0
 
 
-def _handle_go(
-    spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool = False
-) -> int:
+def _handle_go(spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool = False) -> int:
     """Handle --go command."""
     try:
         target, original, success = go_to_space(spaces, app_query)
@@ -150,9 +152,7 @@ def _handle_go(
     return 0
 
 
-def _handle_find(
-    spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool = False
-) -> int:
+def _handle_find(spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool = False) -> int:
     """Handle find (positional argument) command."""
     matches = find_space_by_app(spaces, app_query)
 

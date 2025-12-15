@@ -558,9 +558,7 @@ class TestHandlers:
         assert "Idx" in captured.out
         assert "GoLand" in captured.out
 
-    def test_handle_current_with_app(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_handle_current_with_app(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test --current handler with app space."""
         spaces = [
             SpaceInfo(
@@ -759,9 +757,7 @@ class TestMain:
         captured = capsys.readouterr()
         assert "usage:" in captured.out.lower()
 
-    def test_main_list(
-        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_main_list(self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]) -> None:
         """Test main with --list."""
         plist_bytes = plistlib.dumps(sample_plist_data)
 

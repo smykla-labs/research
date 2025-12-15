@@ -471,13 +471,20 @@ class TestCLIParser:
     def test_filter_options(self) -> None:
         """Test filter options."""
         parser = create_parser()
-        args = parser.parse_args([
-            "--find", "Main",
-            "--title", "project.*",
-            "--pid", "12345",
-            "--path-contains", ".gradle",
-            "--args-contains", "sandbox",
-        ])
+        args = parser.parse_args(
+            [
+                "--find",
+                "Main",
+                "--title",
+                "project.*",
+                "--pid",
+                "12345",
+                "--path-contains",
+                ".gradle",
+                "--args-contains",
+                "sandbox",
+            ]
+        )
         assert args.find == "Main"
         assert args.title == "project.*"
         assert args.pid == 12345
@@ -487,11 +494,15 @@ class TestCLIParser:
     def test_screenshot_options(self) -> None:
         """Test screenshot-specific options."""
         parser = create_parser()
-        args = parser.parse_args([
-            "--screenshot", "GoLand",
-            "--no-activate",
-            "--settle-ms", "2000",
-        ])
+        args = parser.parse_args(
+            [
+                "--screenshot",
+                "GoLand",
+                "--no-activate",
+                "--settle-ms",
+                "2000",
+            ]
+        )
         assert args.screenshot == "GoLand"
         assert args.no_activate is True
         assert args.settle_ms == 2000

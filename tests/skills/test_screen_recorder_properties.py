@@ -29,9 +29,7 @@ class TestWindowBoundsProperties:
         height=st.floats(min_value=1, max_value=10000, allow_nan=False, allow_infinity=False),
     )
     @settings(max_examples=100)
-    def test_as_region_always_valid(
-        self, x: float, y: float, width: float, height: float
-    ) -> None:
+    def test_as_region_always_valid(self, x: float, y: float, width: float, height: float) -> None:
         """Test that as_region is always valid for any positive dimensions."""
         bounds = WindowBounds(x=x, y=y, width=width, height=height)
         region = bounds.as_region
@@ -94,9 +92,7 @@ class TestVideoInfoProperties:
         expected_mb = file_size_bytes / (1024 * 1024)
         assert video.file_size_mb == expected_mb
 
-    @given(
-        file_size_bytes=st.integers(min_value=0, max_value=10_000_000_000)
-    )
+    @given(file_size_bytes=st.integers(min_value=0, max_value=10_000_000_000))
     @settings(max_examples=100)
     def test_file_size_mb_non_negative(self, file_size_bytes: int) -> None:
         """Test that file_size_mb is never negative."""
@@ -196,6 +192,4 @@ class TestRetryDelayProperties:
 
         # With base_delay <= 10 and attempt <= 10, max delay is 10 * 2^9 = 5120s
         max_reasonable = base_delay * (2 ** (attempt - 1))
-        assert delay <= max_reasonable, (
-            f"Delay {delay}s exceeds reasonable bound {max_reasonable}s"
-        )
+        assert delay <= max_reasonable, f"Delay {delay}s exceeds reasonable bound {max_reasonable}s"

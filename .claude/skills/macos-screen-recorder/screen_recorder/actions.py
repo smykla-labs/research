@@ -361,8 +361,10 @@ def convert_to_gif(
         [
             "ffmpeg",
             "-y",
-            "-i", str(input_path),
-            "-filter_complex", filter_complex,
+            "-i",
+            str(input_path),
+            "-filter_complex",
+            filter_complex,
             str(output_path),
         ],
         capture_output=True,
@@ -412,13 +414,20 @@ def convert_to_webp(
         [
             "ffmpeg",
             "-y",
-            "-i", str(input_path),
-            "-vf", vf,
-            "-vcodec", "libwebp",
-            "-lossless", "0",
-            "-compression_level", "4",
-            "-q:v", str(settings.quality),
-            "-loop", "0" if settings.loop else "1",
+            "-i",
+            str(input_path),
+            "-vf",
+            vf,
+            "-vcodec",
+            "libwebp",
+            "-lossless",
+            "0",
+            "-compression_level",
+            "4",
+            "-q:v",
+            str(settings.quality),
+            "-loop",
+            "0" if settings.loop else "1",
             "-an",  # No audio
             str(output_path),
         ],
@@ -469,20 +478,27 @@ def convert_to_mp4(
     cmd = [
         "ffmpeg",
         "-y",
-        "-i", str(input_path),
+        "-i",
+        str(input_path),
     ]
 
     if filters:
         cmd.extend(["-vf", ",".join(filters)])
 
-    cmd.extend([
-        "-c:v", "libx264",
-        "-crf", str(settings.crf),
-        "-preset", "medium",
-        "-pix_fmt", "yuv420p",
-        "-an",  # No audio for screen recordings
-        str(output_path),
-    ])
+    cmd.extend(
+        [
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(settings.crf),
+            "-preset",
+            "medium",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",  # No audio for screen recordings
+            str(output_path),
+        ]
+    )
 
     result = subprocess.run(cmd, capture_output=True, check=False)
 
@@ -523,6 +539,7 @@ def convert_video(
         # No conversion needed
         if input_path != output_path:
             import shutil
+
             shutil.copy2(input_path, output_path)
         return output_path
 
@@ -625,9 +642,7 @@ def run_verifications(
             results.append(verify_basic(video_path))
 
         elif strategy == VerificationStrategy.DURATION:
-            results.append(
-                verify_duration(video_path, config.duration_seconds)
-            )
+            results.append(verify_duration(video_path, config.duration_seconds))
 
         elif strategy == VerificationStrategy.FRAMES:
             results.append(
@@ -785,8 +800,7 @@ def _handle_window_activation(
 ) -> None:
     """Handle window activation or retry delay."""
     should_activate = target and (
-        config.activate_first or
-        (attempt > 1 and config.retry_strategy == RetryStrategy.REACTIVATE)
+        config.activate_first or (attempt > 1 and config.retry_strategy == RetryStrategy.REACTIVATE)
     )
 
     if should_activate and target:
@@ -905,9 +919,7 @@ def record_verified(config: RecordingConfig) -> RecordingResult:
             _cleanup_failed_attempt(result.raw_path, result.final_path)
 
         # All retries exhausted
-        failed_strategies = [
-            v.strategy.value for v in last_result.verifications if not v.passed
-        ]
+        failed_strategies = [v.strategy.value for v in last_result.verifications if not v.passed]
         raise MaxRetriesError(
             f"Verification failed after {config.max_retries} attempts. "
             f"Failed checks: {', '.join(failed_strategies)}"
@@ -926,13 +938,15 @@ def _find_target_if_needed(
     target: WindowTarget | None = None
     region: WindowBounds | None = config.region
 
-    has_window_filters = any([
-        config.app_name,
-        config.title_pattern,
-        config.pid,
-        config.path_contains,
-        config.args_contains,
-    ])
+    has_window_filters = any(
+        [
+            config.app_name,
+            config.title_pattern,
+            config.pid,
+            config.path_contains,
+            config.args_contains,
+        ]
+    )
 
     if has_window_filters:
         target = find_target_window(config)
@@ -1041,9 +1055,7 @@ def _handle_successful_attempt(
     )
 
     paths = _AttemptPaths(raw=actual_raw, final=actual_final, attempt_num=result.attempt)
-    return _build_recording_result(
-        ctx, paths, result.video_info, result.verifications, True
-    )
+    return _build_recording_result(ctx, paths, result.video_info, result.verifications, True)
 
 
 @dataclass(frozen=True)
@@ -1123,10 +1135,7 @@ def preview_region(config: RecordingConfig) -> PreviewResult:
             if output_path.suffix.lower() != ".png":
                 output_path = output_path.with_suffix(".png")
         else:
-            safe_name = (
-                re.sub(r"[^\w\-]", "_", target.app_name.lower())
-                if target else "preview"
-            )
+            safe_name = re.sub(r"[^\w\-]", "_", target.app_name.lower()) if target else "preview"
             output_path = Path("recordings") / f"{safe_name}_preview_{timestamp}.png"
 
         # Take screenshot

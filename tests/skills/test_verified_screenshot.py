@@ -438,12 +438,18 @@ class TestParser:
     def test_retry_options(self) -> None:
         """Test retry options."""
         parser = create_parser()
-        args = parser.parse_args([
-            "--capture", "App",
-            "--retries", "10",
-            "--retry-delay", "1000",
-            "--retry-strategy", "exponential",
-        ])
+        args = parser.parse_args(
+            [
+                "--capture",
+                "App",
+                "--retries",
+                "10",
+                "--retry-delay",
+                "1000",
+                "--retry-strategy",
+                "exponential",
+            ]
+        )
         assert args.retries == 10
         assert args.retry_delay == 1000
         assert args.retry_strategy == "exponential"
@@ -507,14 +513,21 @@ class TestBuildConfig:
     def test_build_full_config(self) -> None:
         """Test building config with all options."""
         parser = create_parser()
-        args = parser.parse_args([
-            "--capture", "App",
-            "--title", ".*test.*",
-            "--output", "out.png",
-            "--retries", "3",
-            "--verify", "all",
-            "--no-activate",
-        ])
+        args = parser.parse_args(
+            [
+                "--capture",
+                "App",
+                "--title",
+                ".*test.*",
+                "--output",
+                "out.png",
+                "--retries",
+                "3",
+                "--verify",
+                "all",
+                "--no-activate",
+            ]
+        )
         config = build_config(args)
         assert config.app_name == "App"
         assert config.title_pattern == ".*test.*"

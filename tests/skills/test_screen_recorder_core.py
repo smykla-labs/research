@@ -48,6 +48,7 @@ class TestCheckDependencies:
 
     def test_missing_ffmpeg(self) -> None:
         """Test when ffmpeg is missing."""
+
         def which_side_effect(tool: str) -> str | None:
             if tool == "ffmpeg":
                 return None
@@ -184,11 +185,7 @@ class TestGetWindowSpaceMapping:
 
     def test_plist_without_monitors_returns_empty(self) -> None:
         """Test empty dict when no Monitors key."""
-        plist_data = {
-            "SpacesDisplayConfiguration": {
-                "Management Data": {}
-            }
-        }
+        plist_data = {"SpacesDisplayConfiguration": {"Management Data": {}}}
         result = get_window_space_mapping(plist_data)
         assert result == {}
 
@@ -585,19 +582,24 @@ class TestGetVideoInfo:
     def sample_ffprobe_output(self) -> bytes:
         """Sample ffprobe JSON output."""
         import json
-        return json.dumps({
-            "streams": [{
-                "width": 1920,
-                "height": 1080,
-                "avg_frame_rate": "30/1",
-                "nb_read_frames": "150",
-            }],
-            "format": {
-                "duration": "5.0",
-                "size": "5000000",
-                "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+
+        return json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "150",
+                    }
+                ],
+                "format": {
+                    "duration": "5.0",
+                    "size": "5000000",
+                    "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+                },
             }
-        }).encode()
+        ).encode()
 
     def test_parses_ffprobe_output(self, sample_ffprobe_output: bytes, tmp_path: Path) -> None:
         """Test successful parsing of ffprobe output."""
@@ -646,15 +648,19 @@ class TestGetVideoInfo:
         video_path = tmp_path / "test.mov"
         video_path.write_bytes(b"fake")
 
-        ffprobe_output = json.dumps({
-            "streams": [{
-                "width": 1280,
-                "height": 720,
-                "avg_frame_rate": "30000/1001",
-                "nb_read_frames": "150",
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        ffprobe_output = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1280,
+                        "height": 720,
+                        "avg_frame_rate": "30000/1001",
+                        "nb_read_frames": "150",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         mock_result = Mock()
         mock_result.returncode = 0
@@ -675,14 +681,18 @@ class TestGetVideoInfo:
         video_path = tmp_path / "test.mov"
         video_path.write_bytes(b"fake")
 
-        ffprobe_output = json.dumps({
-            "streams": [{
-                "width": 1280,
-                "height": 720,
-                "avg_frame_rate": "30/1",
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        ffprobe_output = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1280,
+                        "height": 720,
+                        "avg_frame_rate": "30/1",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         mock_result = Mock()
         mock_result.returncode = 0

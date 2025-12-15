@@ -72,148 +72,142 @@ Verification strategies:
     # Actions
     actions = parser.add_argument_group("actions")
     actions.add_argument(
-        "--record", "-r", metavar="APP",
-        help="Record window of specified application"
+        "--record", "-r", metavar="APP", help="Record window of specified application"
+    )
+    actions.add_argument("--find", "-f", metavar="APP", help="Find window without recording")
+    actions.add_argument(
+        "--full-screen", "-F", action="store_true", help="Record full screen instead of window"
     )
     actions.add_argument(
-        "--find", "-f", metavar="APP",
-        help="Find window without recording"
+        "--check-deps", action="store_true", help="Check availability of required tools"
     )
     actions.add_argument(
-        "--full-screen", "-F", action="store_true",
-        help="Record full screen instead of window"
-    )
-    actions.add_argument(
-        "--check-deps", action="store_true",
-        help="Check availability of required tools"
-    )
-    actions.add_argument(
-        "--preview-region", action="store_true",
-        help="Take screenshot of region for coordinate verification"
+        "--preview-region",
+        action="store_true",
+        help="Take screenshot of region for coordinate verification",
     )
 
     # Window filters
     filters = parser.add_argument_group("window filters")
+    filters.add_argument("--title", "-t", metavar="PATTERN", help="Regex pattern for window title")
+    filters.add_argument("--pid", type=int, metavar="PID", help="Filter by process ID")
+    filters.add_argument("--path-contains", metavar="STR", help="Executable path must contain STR")
     filters.add_argument(
-        "--title", "-t", metavar="PATTERN",
-        help="Regex pattern for window title"
+        "--path-excludes", metavar="STR", help="Executable path must NOT contain STR"
     )
     filters.add_argument(
-        "--pid", type=int, metavar="PID",
-        help="Filter by process ID"
-    )
-    filters.add_argument(
-        "--path-contains", metavar="STR",
-        help="Executable path must contain STR"
-    )
-    filters.add_argument(
-        "--path-excludes", metavar="STR",
-        help="Executable path must NOT contain STR"
-    )
-    filters.add_argument(
-        "--args", "--args-contains", metavar="STR",
-        help="Command line must contain STR"
+        "--args", "--args-contains", metavar="STR", help="Command line must contain STR"
     )
 
     # Recording settings
     rec_opts = parser.add_argument_group("recording options")
     rec_opts.add_argument(
-        "--duration", "-d", type=float, default=DEFAULT_DURATION_SECONDS,
-        metavar="SEC", help=f"Recording duration in seconds (default: {DEFAULT_DURATION_SECONDS})"
+        "--duration",
+        "-d",
+        type=float,
+        default=DEFAULT_DURATION_SECONDS,
+        metavar="SEC",
+        help=f"Recording duration in seconds (default: {DEFAULT_DURATION_SECONDS})",
     )
     rec_opts.add_argument(
-        "--max-duration", type=float, default=DEFAULT_MAX_DURATION_SECONDS,
-        metavar="SEC", help=f"Maximum allowed duration (default: {DEFAULT_MAX_DURATION_SECONDS})"
+        "--max-duration",
+        type=float,
+        default=DEFAULT_MAX_DURATION_SECONDS,
+        metavar="SEC",
+        help=f"Maximum allowed duration (default: {DEFAULT_MAX_DURATION_SECONDS})",
     )
     rec_opts.add_argument(
-        "--region", "-R", metavar="X,Y,W,H",
-        help="Absolute screen region: x,y,width,height"
+        "--region", "-R", metavar="X,Y,W,H", help="Absolute screen region: x,y,width,height"
     )
     rec_opts.add_argument(
-        "--window-region", metavar="X,Y,W,H",
-        help="Window-relative region (requires --record): x,y,w,h offset from window"
+        "--window-region",
+        metavar="X,Y,W,H",
+        help="Window-relative region (requires --record): x,y,w,h offset from window",
     )
     rec_opts.add_argument(
-        "--no-clicks", action="store_true",
-        help="Don't show mouse clicks in recording"
+        "--no-clicks", action="store_true", help="Don't show mouse clicks in recording"
     )
     rec_opts.add_argument(
-        "--no-activate", action="store_true",
-        help="Don't activate window before recording"
+        "--no-activate", action="store_true", help="Don't activate window before recording"
     )
     rec_opts.add_argument(
-        "--settle-ms", type=int, default=DEFAULT_SETTLE_MS,
-        metavar="MS", help=f"Wait time after activation (default: {DEFAULT_SETTLE_MS})"
+        "--settle-ms",
+        type=int,
+        default=DEFAULT_SETTLE_MS,
+        metavar="MS",
+        help=f"Wait time after activation (default: {DEFAULT_SETTLE_MS})",
     )
 
     # Output options
     output_opts = parser.add_argument_group("output options")
+    output_opts.add_argument("--output", "-o", metavar="PATH", help="Output path for recording")
     output_opts.add_argument(
-        "--output", "-o", metavar="PATH",
-        help="Output path for recording"
+        "--format",
+        choices=["gif", "webp", "mp4", "mov"],
+        default="gif",
+        help="Output format (default: gif)",
     )
     output_opts.add_argument(
-        "--format", choices=["gif", "webp", "mp4", "mov"], default="gif",
-        help="Output format (default: gif)"
+        "--preset",
+        "-p",
+        choices=["discord", "github", "jetbrains", "raw", "custom"],
+        help="Platform optimization preset",
     )
     output_opts.add_argument(
-        "--preset", "-p", choices=["discord", "github", "jetbrains", "raw", "custom"],
-        help="Platform optimization preset"
+        "--keep-raw", action="store_true", help="Keep original .mov file after conversion"
     )
-    output_opts.add_argument(
-        "--keep-raw", action="store_true",
-        help="Keep original .mov file after conversion"
-    )
-    output_opts.add_argument(
-        "--json", "-j", action="store_true",
-        help="Output result as JSON"
-    )
+    output_opts.add_argument("--json", "-j", action="store_true", help="Output result as JSON")
 
     # Format settings
     fmt_opts = parser.add_argument_group("format settings (override preset)")
     fmt_opts.add_argument(
-        "--fps", type=int, metavar="N",
-        help=f"Target frame rate (default: preset or {DEFAULT_FPS})"
+        "--fps", type=int, metavar="N", help=f"Target frame rate (default: preset or {DEFAULT_FPS})"
+    )
+    fmt_opts.add_argument("--max-width", type=int, metavar="PX", help="Maximum width in pixels")
+    fmt_opts.add_argument("--max-height", type=int, metavar="PX", help="Maximum height in pixels")
+    fmt_opts.add_argument(
+        "--quality",
+        "-q",
+        type=int,
+        metavar="N",
+        help=f"Quality for lossy formats 0-100 (default: {DEFAULT_QUALITY})",
     )
     fmt_opts.add_argument(
-        "--max-width", type=int, metavar="PX",
-        help="Maximum width in pixels"
-    )
-    fmt_opts.add_argument(
-        "--max-height", type=int, metavar="PX",
-        help="Maximum height in pixels"
-    )
-    fmt_opts.add_argument(
-        "--quality", "-q", type=int, metavar="N",
-        help=f"Quality for lossy formats 0-100 (default: {DEFAULT_QUALITY})"
-    )
-    fmt_opts.add_argument(
-        "--max-size", type=float, metavar="MB",
-        help="Target maximum file size in MB"
+        "--max-size", type=float, metavar="MB", help="Target maximum file size in MB"
     )
 
     # Verification
     verify_opts = parser.add_argument_group("verification")
     verify_opts.add_argument(
-        "--verify", "-v", nargs="+",
+        "--verify",
+        "-v",
+        nargs="+",
         choices=["basic", "duration", "frames", "motion", "all", "none"],
         default=["basic", "duration"],
-        help="Verification strategies (default: basic duration)"
+        help="Verification strategies (default: basic duration)",
     )
 
     # Retry options
     retry_opts = parser.add_argument_group("retry options")
     retry_opts.add_argument(
-        "--retries", type=int, default=DEFAULT_MAX_RETRIES,
-        metavar="N", help=f"Maximum retry attempts (default: {DEFAULT_MAX_RETRIES})"
+        "--retries",
+        type=int,
+        default=DEFAULT_MAX_RETRIES,
+        metavar="N",
+        help=f"Maximum retry attempts (default: {DEFAULT_MAX_RETRIES})",
     )
     retry_opts.add_argument(
-        "--retry-delay", type=int, default=DEFAULT_RETRY_DELAY_MS,
-        metavar="MS", help=f"Delay between retries in ms (default: {DEFAULT_RETRY_DELAY_MS})"
+        "--retry-delay",
+        type=int,
+        default=DEFAULT_RETRY_DELAY_MS,
+        metavar="MS",
+        help=f"Delay between retries in ms (default: {DEFAULT_RETRY_DELAY_MS})",
     )
     retry_opts.add_argument(
-        "--retry-strategy", choices=["fixed", "exponential", "reactivate"],
-        default="fixed", help="Retry strategy (default: fixed)"
+        "--retry-strategy",
+        choices=["fixed", "exponential", "reactivate"],
+        default="fixed",
+        help="Retry strategy (default: fixed)",
     )
 
     return parser
@@ -290,21 +284,15 @@ def parse_region(region_str: str | None) -> WindowBounds | None:
 
     parts = region_str.split(",")
     if len(parts) != REGION_PARTS_COUNT:
-        raise argparse.ArgumentTypeError(
-            f"Region must be x,y,width,height: {region_str}"
-        )
+        raise argparse.ArgumentTypeError(f"Region must be x,y,width,height: {region_str}")
 
     try:
         x, y, w, h = (float(p.strip()) for p in parts)
     except ValueError as e:
-        raise argparse.ArgumentTypeError(
-            f"Invalid region values: {region_str}"
-        ) from e
+        raise argparse.ArgumentTypeError(f"Invalid region values: {region_str}") from e
 
     if w <= 0 or h <= 0:
-        raise argparse.ArgumentTypeError(
-            f"Region width and height must be positive: {region_str}"
-        )
+        raise argparse.ArgumentTypeError(f"Region width and height must be positive: {region_str}")
 
     return WindowBounds(x=x, y=y, width=w, height=h)
 
@@ -419,7 +407,7 @@ def _handle_preview_region(args, config: RecordingConfig) -> int:
             h = int(result.region.height)
             rel_region = f"{rel_x},{rel_y},{w},{h}"
             app = result.app_name
-            print(f"  screen-recorder --record \"{app}\" --window-region {rel_region} -d 5")
+            print(f'  screen-recorder --record "{app}" --window-region {rel_region} -d 5')
 
     return 0
 
@@ -495,8 +483,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     # Preview region requires region or record (for window bounds)
     has_region_target = any([args.region, args.window_region, args.record])
     if args.preview_region and not has_region_target:
-        print("Error: --preview-region requires --region, --window-region, or --record",
-              file=sys.stderr)
+        print(
+            "Error: --preview-region requires --region, --window-region, or --record",
+            file=sys.stderr,
+        )
         return 1
 
     # Validate: need an action

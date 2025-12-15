@@ -49,12 +49,8 @@ Retry strategies:
     )
 
     actions = parser.add_argument_group("actions")
-    actions.add_argument(
-        "--capture", "-c", metavar="APP", help="Capture screenshot of window"
-    )
-    actions.add_argument(
-        "--find", "-f", metavar="APP", help="Find window without capturing"
-    )
+    actions.add_argument("--capture", "-c", metavar="APP", help="Capture screenshot of window")
+    actions.add_argument("--find", "-f", metavar="APP", help="Find window without capturing")
 
     filters = parser.add_argument_group("window filters")
     filters.add_argument("--title", "-t", metavar="PATTERN", help="Regex for window title")
@@ -74,13 +70,12 @@ Retry strategies:
     capture_opts.add_argument(
         "--settle-ms", type=int, default=1000, metavar="MS", help="Wait time after activation"
     )
-    capture_opts.add_argument(
-        "--shadow", action="store_true", help="Include window shadow"
-    )
+    capture_opts.add_argument("--shadow", action="store_true", help="Include window shadow")
 
     verify_opts = parser.add_argument_group("verification")
     verify_opts.add_argument(
-        "--verify", "-v",
+        "--verify",
+        "-v",
         nargs="+",
         choices=["basic", "dimensions", "content", "text", "all", "none"],
         default=["basic", "content"],
@@ -102,7 +97,8 @@ Retry strategies:
 
     retry_opts = parser.add_argument_group("retry")
     retry_opts.add_argument(
-        "--retries", "-r",
+        "--retries",
+        "-r",
         type=int,
         default=5,
         metavar="N",

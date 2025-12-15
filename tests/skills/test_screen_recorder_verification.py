@@ -80,10 +80,12 @@ class TestVerifyDuration:
     @pytest.fixture
     def mock_video_info_response(self) -> bytes:
         """Create mock ffprobe output."""
-        return json.dumps({
-            "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        return json.dumps(
+            {
+                "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
     def test_exact_duration_match_passes(
         self, tmp_path: Path, mock_video_info_response: bytes
@@ -113,10 +115,12 @@ class TestVerifyDuration:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
-            "format": {"duration": "5.3", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
+                "format": {"duration": "5.3", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/ffprobe"),
@@ -133,10 +137,12 @@ class TestVerifyDuration:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
-            "format": {"duration": "7.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
+                "format": {"duration": "7.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/ffprobe"),
@@ -174,10 +180,12 @@ class TestVerifyDuration:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
-            "format": {"duration": "5.2", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "30/1"}],
+                "format": {"duration": "5.2", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/ffprobe"),
@@ -206,13 +214,19 @@ class TestVerifyFrames:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "150"
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "150",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/ffprobe"),
@@ -233,13 +247,19 @@ class TestVerifyFrames:
         # 5 seconds at 30 fps = 150 frames, 80% = 120 minimum
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "125"
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "125",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/ffprobe"),
@@ -258,13 +278,19 @@ class TestVerifyFrames:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "50"
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "50",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/ffprobe"),
@@ -282,13 +308,14 @@ class TestVerifyFrames:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "1"
-            }],
-            "format": {"duration": "0.03", "size": "1000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {"width": 1920, "height": 1080, "avg_frame_rate": "30/1", "nb_read_frames": "1"}
+                ],
+                "format": {"duration": "0.03", "size": "1000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/ffprobe"),
@@ -333,13 +360,19 @@ class TestVerifyMotion:
 
         mock_ffprobe_result = Mock()
         mock_ffprobe_result.returncode = 0
-        mock_ffprobe_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "150"
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_ffprobe_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "150",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         mock_ffmpeg_result = Mock()
         mock_ffmpeg_result.returncode = 0
@@ -361,6 +394,7 @@ class TestVerifyMotion:
             def create_frame(_video, output, _time_seconds=0):
                 output.write_bytes(b"fake image")
                 return output
+
             mock_extract.side_effect = create_frame
 
             result = verify_motion(video_path)
@@ -376,13 +410,19 @@ class TestVerifyMotion:
 
         mock_ffprobe_result = Mock()
         mock_ffprobe_result.returncode = 0
-        mock_ffprobe_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "150"
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_ffprobe_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "150",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/tool"),
@@ -391,9 +431,11 @@ class TestVerifyMotion:
             patch("screen_recorder.core.compute_image_hash", return_value="same_hash"),
             patch("screen_recorder.core.compute_hash_distance", return_value=2),  # Below threshold
         ):
+
             def create_frame(_video, output, _time_seconds=0):
                 output.write_bytes(b"fake image")
                 return output
+
             mock_extract.side_effect = create_frame
 
             result = verify_motion(video_path, hash_threshold=5)
@@ -409,13 +451,19 @@ class TestVerifyMotion:
         mock_result = Mock()
         mock_result.returncode = 0
         # Duration less than MIN_DURATION_FOR_MOTION_CHECK (0.5s)
-        mock_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "10"
-            }],
-            "format": {"duration": "0.3", "size": "10000", "format_name": "mov"}
-        }).encode()
+        mock_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "10",
+                    }
+                ],
+                "format": {"duration": "0.3", "size": "10000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/ffprobe"),
@@ -433,13 +481,19 @@ class TestVerifyMotion:
 
         mock_ffprobe_result = Mock()
         mock_ffprobe_result.returncode = 0
-        mock_ffprobe_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "150"
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_ffprobe_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "150",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         mock_ffmpeg_result = Mock()
         mock_ffmpeg_result.returncode = 1
@@ -467,13 +521,19 @@ class TestVerifyMotion:
 
         mock_ffprobe_result = Mock()
         mock_ffprobe_result.returncode = 0
-        mock_ffprobe_result.stdout = json.dumps({
-            "streams": [{
-                "width": 1920, "height": 1080,
-                "avg_frame_rate": "30/1", "nb_read_frames": "150"
-            }],
-            "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"}
-        }).encode()
+        mock_ffprobe_result.stdout = json.dumps(
+            {
+                "streams": [
+                    {
+                        "width": 1920,
+                        "height": 1080,
+                        "avg_frame_rate": "30/1",
+                        "nb_read_frames": "150",
+                    }
+                ],
+                "format": {"duration": "5.0", "size": "1000000", "format_name": "mov"},
+            }
+        ).encode()
 
         with (
             patch("shutil.which", return_value="/usr/bin/tool"),
@@ -482,9 +542,11 @@ class TestVerifyMotion:
             patch("screen_recorder.core.compute_image_hash", side_effect=["abc123", "def456"]),
             patch("screen_recorder.core.compute_hash_distance", return_value=15),
         ):
+
             def create_frame(_video, output, _time_seconds=0):
                 output.write_bytes(b"fake image")
                 return output
+
             mock_extract.side_effect = create_frame
 
             result = verify_motion(video_path)

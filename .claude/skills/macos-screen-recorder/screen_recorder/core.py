@@ -86,9 +86,7 @@ def require_ffmpeg() -> None:
     """
     # noinspection PyDeprecation
     if not shutil.which("ffmpeg"):
-        raise DependencyError(
-            "ffmpeg not found. Install with: brew install ffmpeg"
-        )
+        raise DependencyError("ffmpeg not found. Install with: brew install ffmpeg")
 
 
 def require_ffprobe() -> None:
@@ -99,9 +97,7 @@ def require_ffprobe() -> None:
     """
     # noinspection PyDeprecation
     if not shutil.which("ffprobe"):
-        raise DependencyError(
-            "ffprobe not found. Install with: brew install ffmpeg"
-        )
+        raise DependencyError("ffprobe not found. Install with: brew install ffmpeg")
 
 
 def get_spaces_plist() -> dict:
@@ -349,11 +345,14 @@ def get_video_info(video_path: Path) -> VideoInfo:
     result = subprocess.run(
         [
             "ffprobe",
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_format",
             "-show_streams",
-            "-select_streams", "v:0",
+            "-select_streams",
+            "v:0",
             "-count_frames",
             str(video_path),
         ],
@@ -427,10 +426,14 @@ def extract_frame(video_path: Path, output_path: Path, time_seconds: float = 0) 
         [
             "ffmpeg",
             "-y",  # Overwrite
-            "-ss", str(time_seconds),
-            "-i", str(video_path),
-            "-frames:v", "1",
-            "-q:v", "2",  # High quality
+            "-ss",
+            str(time_seconds),
+            "-i",
+            str(video_path),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",  # High quality
             str(output_path),
         ],
         capture_output=True,
