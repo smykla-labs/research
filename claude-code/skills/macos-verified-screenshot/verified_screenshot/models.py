@@ -29,6 +29,14 @@ class RetryStrategy(Enum):
     REACTIVATE = "reactivate"  # Re-activate window before retry
 
 
+class CaptureBackend(Enum):
+    """Backend for window capture."""
+
+    QUARTZ = "quartz"  # CGWindowListCreateImage (legacy, deprecated in macOS 15)
+    SCREENCAPTUREKIT = "screencapturekit"  # ScreenCaptureKit (macOS 12.3+, cross-Space)
+    AUTO = "auto"  # Auto-select best available backend
+
+
 # Default settings
 DEFAULT_MAX_RETRIES = 5
 DEFAULT_RETRY_DELAY_MS = 500
@@ -145,6 +153,7 @@ class CaptureConfig:
     activate_first: bool = True
     settle_ms: int = DEFAULT_SETTLE_MS
     no_shadow: bool = True
+    backend: CaptureBackend = CaptureBackend.AUTO
 
     # Verification
     verification_strategies: tuple[VerificationStrategy, ...] = (VerificationStrategy.BASIC,)
@@ -169,6 +178,7 @@ class CaptureConfig:
             "activate_first": self.activate_first,
             "settle_ms": self.settle_ms,
             "no_shadow": self.no_shadow,
+            "backend": self.backend.value,
             "verification_strategies": [s.value for s in self.verification_strategies],
             "expected_text": list(self.expected_text),
             "hash_threshold": self.hash_threshold,

@@ -19,6 +19,7 @@ from .core import (
     verify_text,
 )
 from .models import (
+    CaptureBackend,
     CaptureConfig,
     CaptureError,
     CaptureResult,
@@ -28,6 +29,7 @@ from .models import (
     VerificationStrategy,
     WindowTarget,
 )
+from .screencapturekit import capture_with_screencapturekit, is_screencapturekit_available
 
 if TYPE_CHECKING:
     pass
@@ -79,12 +81,31 @@ def activate_window(target: WindowTarget, wait_time: float = 0.5) -> None:
         time.sleep(wait_time)
 
 
-def capture_window_image(
+def resolve_backend(backend: CaptureBackend) -> CaptureBackend:
+    """Resolve AUTO backend to actual backend.
+
+    Args:
+        backend: Requested backend (may be AUTO).
+
+    Returns:
+        Resolved backend (SCREENCAPTUREKIT or QUARTZ).
+    """
+    if backend == CaptureBackend.AUTO:
+        if is_screencapturekit_available():
+            return CaptureBackend.SCREENCAPTUREKIT
+        return CaptureBackend.QUARTZ
+    return backend
+
+
+def capture_window_image_quartz(
     target: WindowTarget,
     output_path: Path,
     no_shadow: bool = True,
 ) -> Path:
-    """Capture a window image using CGWindowListCreateImage.
+    """Capture a window image using CGWindowListCreateImage (legacy).
+
+    This is the legacy capture method using Quartz/CoreGraphics.
+    It cannot capture windows on different Spaces without activation.
 
     Args:
         target: Window target information.
@@ -132,6 +153,34 @@ def capture_window_image(
         raise CaptureError(f"Failed to finalize image: {output_path}")
 
     return output_path
+
+
+def capture_window_image(
+    target: WindowTarget,
+    output_path: Path,
+    no_shadow: bool = True,
+    backend: CaptureBackend = CaptureBackend.AUTO,
+) -> Path:
+    """Capture a window image using the specified backend.
+
+    Args:
+        target: Window target information.
+        output_path: Path to save the screenshot.
+        no_shadow: Whether to exclude window shadow.
+        backend: Capture backend to use (AUTO, QUARTZ, or SCREENCAPTUREKIT).
+
+    Returns:
+        Path to the saved screenshot.
+
+    Raises:
+        CaptureError: If capture fails.
+    """
+    resolved_backend = resolve_backend(backend)
+
+    if resolved_backend == CaptureBackend.SCREENCAPTUREKIT:
+        return capture_with_screencapturekit(target, output_path, no_shadow)
+
+    return capture_window_image_quartz(target, output_path, no_shadow)
 
 
 def run_verifications(
@@ -244,10 +293,13 @@ def capture_verified(config: CaptureConfig) -> CaptureResult:
 
     This is the main entry point for the skill. It:
     1. Finds the target window based on filters
-    2. Optionally activates the window
-    3. Captures the screenshot
+    2. Optionally activates the window (skipped for ScreenCaptureKit backend)
+    3. Captures the screenshot using the selected backend
     4. Runs verification checks
     5. Retries on failure up to max_retries times
+
+    When using ScreenCaptureKit backend (macOS 12.3+), window activation is
+    skipped because SCK can capture windows across Spaces without switching.
 
     Args:
         config: Capture configuration.
@@ -265,16 +317,23 @@ def capture_verified(config: CaptureConfig) -> CaptureResult:
     # Generate output path
     output_path = generate_output_path(target, config.output_path)
 
+    # Resolve backend once for the entire capture session
+    backend = resolve_backend(config.backend)
+
+    # ScreenCaptureKit doesn't require activation - it captures across Spaces
+    skip_activation_for_backend = backend == CaptureBackend.SCREENCAPTUREKIT
+
     previous_hash: str | None = None
     last_result: CaptureResult | None = None
 
     for attempt in range(1, config.max_retries + 1):
         # Activate window if configured (and always re-activate on retry with REACTIVATE strategy)
+        # Skip activation for ScreenCaptureKit - it captures windows across Spaces without switching
         should_activate = config.activate_first or (
             attempt > 1 and config.retry_strategy == RetryStrategy.REACTIVATE
         )
 
-        if should_activate:
+        if should_activate and not skip_activation_for_backend:
             # Increase settle time on retries
             settle_time = config.settle_ms / 1000.0
             if attempt > 1:
@@ -288,9 +347,9 @@ def capture_verified(config: CaptureConfig) -> CaptureResult:
         # Use unique filename for each attempt to avoid caching issues
         attempt_path = output_path.with_stem(f"{output_path.stem}_attempt{attempt}")
 
-        # Capture screenshot
+        # Capture screenshot using selected backend
         try:
-            capture_window_image(target, attempt_path, config.no_shadow)
+            capture_window_image(target, attempt_path, config.no_shadow, backend)
         except CaptureError as e:
             if attempt == config.max_retries:
                 raise MaxRetriesError(f"Capture failed after {attempt} attempts: {e}") from e
