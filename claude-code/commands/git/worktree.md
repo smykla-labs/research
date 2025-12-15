@@ -1,12 +1,16 @@
 ---
 allowed-tools: Bash(bash -c:*), Bash(bash -n:*), Bash(pwd:*), Bash(git:*)
-argument-hint: <task-description|@file>
+argument-hint: <task-description|@file> [--no-pbcopy]
 description: Create git worktree with context transfer for feature branches
 ---
 
 Create a git worktree with context transfer via the worktree-manager agent.
 
 $ARGUMENTS
+
+## Arguments
+
+- `--no-pbcopy`: Skip copying the cd command to clipboard
 
 ## Constraints
 
@@ -25,14 +29,15 @@ $ARGUMENTS
 ## Workflow
 
 1. **Invoke worktree-manager** with the Task tool
-   - Include: task description (`$ARGUMENTS`)
+   - Include: task description (`$ARGUMENTS` minus flags)
    - Include: all context from above (directory, git status, remotes, current branch)
+   - Include: `--no-pbcopy` flag if present in arguments
    - If no task description provided: ask agent to request details via `STATUS: NEEDS_INPUT`
 
 2. **Parse status block** from output:
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with `ANSWERS: KEY=value, ...`
    - `STATUS: SCRIPT_READY` → Validate and execute (see step 3)
-   - `STATUS: COMPLETED` → Report worktree path, branch name, clipboard contents to user
+   - `STATUS: COMPLETED` → Report worktree path, branch name, and clipboard status to user
 
 3. **For SCRIPT_READY — validate then execute**:
    - Extract script from the `script:` code block
@@ -59,7 +64,8 @@ The agent may request input for:
 ## Notes
 
 - The agent generates a single consolidated script to minimize approvals
-- Symlinks are created for: `.claude/`, `.klaudiush/`, `tmp/`, `.envrc`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.gemini*`
-- Tracked files are handled via `git update-index --skip-worktree` — no manual intervention needed
-- Worktree-specific git excludes are configured automatically
-- Clipboard contains ready-to-execute `cd && mise trust` command
+- **Only untracked/ignored files are symlinked**: `.claude/`, `.klaudiush/`, `tmp/`, `.envrc`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.gemini*`
+- **Tracked files are NOT symlinked** — they already exist in worktree after `git worktree add`
+- Script checks `git ls-files` before each symlink to determine if file is tracked
+- Worktree-specific git excludes are configured automatically for symlinked files
+- Clipboard contains ready-to-execute `cd && mise trust && direnv allow` command (unless `--no-pbcopy`)
