@@ -11,23 +11,31 @@ Programmatic control of Chrome and Firefox browsers via CDP (Chrome DevTools Pro
 
 ### Prerequisites
 
-Start your browser with remote debugging enabled:
+Start your browser with remote debugging enabled.
+
+**IMPORTANT (macOS):** Use `open -a` instead of direct binary paths. This ensures screen recording permissions are attributed to Chrome/Firefox rather than your terminal app, avoiding the persistent "Currently Sharing" indicator.
 
 **Chrome:**
 
 ```bash
-# macOS
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
+# macOS - RECOMMENDED: Launch via LaunchServices (avoids screen sharing indicator)
+open -a "Google Chrome" --args --remote-debugging-port=9222
 
-# With separate profile (recommended)
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-debug"
+# With separate profile (required if Chrome is already running)
+open -a "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-debug"
+
+# Alternative: Direct binary (NOT recommended - causes screen sharing indicator)
+# /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
 ```
 
 **Firefox:**
 
 ```bash
-# macOS
-/Applications/Firefox.app/Contents/MacOS/firefox --marionette
+# macOS - RECOMMENDED: Launch via LaunchServices
+open -a Firefox --args --marionette
+
+# Alternative: Direct binary (NOT recommended)
+# /Applications/Firefox.app/Contents/MacOS/firefox --marionette
 ```
 
 ### Basic Commands
@@ -228,7 +236,17 @@ finally:
 
 ### Screen Sharing Indicator (macOS)
 
-If you see "Currently Sharing" in the macOS menu bar after using this skill, run `cleanup` or restart your terminal. The indicator appears when a browser with CDP/Marionette is launched as a child process of the terminal.
+If you see "Currently Sharing" in the macOS menu bar after using this skill:
+
+**Why it happens:** When launching Chrome/Firefox directly via the binary path from a terminal, macOS attributes screen recording permissions to the terminal app (Ghostty, iTerm, etc.) rather than the browser. The indicator persists even after the browser quits.
+
+**Fix:** Always use `open -a` to launch browsers (see Prerequisites). This uses macOS LaunchServices which properly attributes permissions to the browser.
+
+**If already stuck:**
+
+1. Restart your terminal app (Ghostty, iTerm, etc.)
+2. Or: System Settings → Privacy & Security → Screen Recording → Toggle off/on for terminal app
+3. Run `cleanup --force` to ensure no debug browsers are running
 
 ## How It Works
 

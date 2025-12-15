@@ -21,11 +21,11 @@ from browser_controller import (
     ScriptExecutionError,
     TabInfo,
     TabNotFoundError,
-    main,
     normalize_url,
     parse_selector,
     validate_url,
 )
+from browser_controller.cli import main
 from browser_controller.core import (
     detect_running_browsers,
     find_available_browser,

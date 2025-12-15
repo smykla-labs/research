@@ -16,7 +16,6 @@ from .actions import (
     screenshot,
     wait_for_element,
 )
-from .cli import main
 from .core import (
     detect_running_browsers,
     find_available_browser,
@@ -70,7 +69,6 @@ __all__ = [
     "find_available_browser",
     "get_browser_launch_command",
     "list_tabs",
-    "main",
     "navigate",
     "normalize_url",
     "parse_selector",
