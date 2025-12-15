@@ -29,7 +29,7 @@ dev = [
 package = false
 
 [tool.uv.workspace]
-members = [".claude/skills/*"]
+members = ["claude-code/skills/*"]
 
 [tool.ruff]
 target-version = "py311"
@@ -62,7 +62,7 @@ max-returns = 7   # CLI main functions with multiple subcommands need more retur
 
 [tool.ruff.lint.per-file-ignores]
 # Typer CLI files: B008 (function call in defaults) is false positive for typer.Option/Argument
-"**/skills/**/cli.py" = ["B008"]
+"claude-code/skills/**/cli.py" = ["B008"]
 # Allow print statements in skill packages (CLI output)
 "**/space_finder/*.py" = ["T201"]
 "**/screen_recorder/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (Quartz/ffmpeg)
