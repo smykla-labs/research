@@ -12,8 +12,15 @@ from ocr_finder.models import SearchOptions, TextNotFoundError
 TEXT_COLUMN_WIDTH = 40
 
 
-def main() -> int:
-    """Main entry point for ocr-finder CLI."""
+def main(argv: list[str] | None = None) -> int:
+    """Main entry point for ocr-finder CLI.
+
+    Args:
+        argv: Command-line arguments (default: sys.argv[1:]).
+
+    Returns:
+        Exit code (0 for success, non-zero for error).
+    """
     parser = argparse.ArgumentParser(
         prog="ocr-finder",
         description="Find text in images using EasyOCR",
@@ -61,7 +68,7 @@ def main() -> int:
         help="Match index for --click (default: 0)",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     try:
         if args.list:
