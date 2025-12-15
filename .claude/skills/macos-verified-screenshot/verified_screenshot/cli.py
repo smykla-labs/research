@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import dataclass
 from typing import Annotated
 
 import typer
@@ -22,10 +23,64 @@ app = typer.Typer(
     help="Capture macOS screenshots with verification and retry logic.",
 )
 
-# Common type aliases for options
-TitleOpt = Annotated[
-    str | None, typer.Option("--title", "-t", help="Regex for window title")
-]
+
+# =============================================================================
+# Option dataclasses for grouping related CLI options
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class WindowFilterOptions:
+    """Window filter options for finding target windows."""
+
+    title: str | None = None
+    pid: int | None = None
+    path_contains: str | None = None
+    path_excludes: str | None = None
+    args_contains: str | None = None
+
+
+@dataclass(frozen=True)
+class CaptureOptions:
+    """Capture options for screenshot settings."""
+
+    no_activate: bool = False
+    settle_ms: int = 1000
+    shadow: bool = False
+
+
+@dataclass(frozen=True)
+class OutputOptions:
+    """Output options for file path and format."""
+
+    output: str | None = None
+    json_output: bool = False
+
+
+@dataclass(frozen=True)
+class VerificationOptions:
+    """Verification options for screenshot validation."""
+
+    verify: list[str] | None = None
+    expected_text: list[str] | None = None
+    hash_threshold: int = 5
+
+
+@dataclass(frozen=True)
+class RetryOptions:
+    """Retry options for capture attempts."""
+
+    retries: int = 5
+    retry_delay: int = 500
+    retry_strategy: str = "fixed"
+
+
+# =============================================================================
+# Common type aliases for Typer options
+# =============================================================================
+
+# Window filter options
+TitleOpt = Annotated[str | None, typer.Option("--title", "-t", help="Regex for window title")]
 PidOpt = Annotated[int | None, typer.Option("--pid", help="Filter by process ID")]
 PathContainsOpt = Annotated[
     str | None, typer.Option("--path-contains", help="Exe path must contain STR")
@@ -36,15 +91,19 @@ PathExcludesOpt = Annotated[
 ArgsContainsOpt = Annotated[
     str | None, typer.Option("--args", "--args-contains", help="Command line contains STR")
 ]
+
+# Output options
 OutputOpt = Annotated[str | None, typer.Option("--output", "-o", help="Output path")]
 JsonOpt = Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")]
-NoActivateOpt = Annotated[
-    bool, typer.Option("--no-activate", help="Don't activate window first")
-]
+
+# Capture options
+NoActivateOpt = Annotated[bool, typer.Option("--no-activate", help="Don't activate window first")]
 SettleMsOpt = Annotated[
     int, typer.Option("--settle-ms", help="Wait time after activation (default: 1000)")
 ]
 ShadowOpt = Annotated[bool, typer.Option("--shadow", help="Include window shadow")]
+
+# Verification options
 VerifyOpt = Annotated[
     list[str] | None,
     typer.Option(
@@ -59,6 +118,8 @@ ExpectedTextOpt = Annotated[
 HashThresholdOpt = Annotated[
     int, typer.Option("--hash-threshold", help="Hamming distance threshold (default: 5)")
 ]
+
+# Retry options
 RetriesOpt = Annotated[
     int, typer.Option("--retries", "-r", help="Maximum retry attempts (default: 5)")
 ]
@@ -67,10 +128,85 @@ RetryDelayOpt = Annotated[
 ]
 RetryStrategyOpt = Annotated[
     str,
-    typer.Option(
-        "--retry-strategy", help="Retry strategy: fixed, exponential, reactivate"
-    ),
+    typer.Option("--retry-strategy", help="Retry strategy: fixed, exponential, reactivate"),
 ]
+
+
+# =============================================================================
+# Helper functions for building option objects
+# =============================================================================
+
+
+def _build_filter_options(
+    title: str | None,
+    pid: int | None,
+    path_contains: str | None,
+    path_excludes: str | None,
+    args_contains: str | None,
+) -> WindowFilterOptions:
+    """Build window filter options from CLI params."""
+    return WindowFilterOptions(
+        title=title,
+        pid=pid,
+        path_contains=path_contains,
+        path_excludes=path_excludes,
+        args_contains=args_contains,
+    )
+
+
+def _build_capture_options(
+    no_activate: bool,
+    settle_ms: int,
+    shadow: bool,
+) -> CaptureOptions:
+    """Build capture options from CLI params."""
+    return CaptureOptions(
+        no_activate=no_activate,
+        settle_ms=settle_ms,
+        shadow=shadow,
+    )
+
+
+def _build_output_options(
+    output: str | None,
+    json_output: bool,
+) -> OutputOptions:
+    """Build output options from CLI params."""
+    return OutputOptions(
+        output=output,
+        json_output=json_output,
+    )
+
+
+def _build_verification_options(
+    verify: list[str] | None,
+    expected_text: list[str] | None,
+    hash_threshold: int,
+) -> VerificationOptions:
+    """Build verification options from CLI params."""
+    return VerificationOptions(
+        verify=verify,
+        expected_text=expected_text,
+        hash_threshold=hash_threshold,
+    )
+
+
+def _build_retry_options(
+    retries: int,
+    retry_delay: int,
+    retry_strategy: str,
+) -> RetryOptions:
+    """Build retry options from CLI params."""
+    return RetryOptions(
+        retries=retries,
+        retry_delay=retry_delay,
+        retry_strategy=retry_strategy,
+    )
+
+
+# =============================================================================
+# Parsing functions
+# =============================================================================
 
 
 def parse_verification_strategies(
@@ -106,41 +242,30 @@ def parse_retry_strategy(strategy: str) -> RetryStrategy:
 
 def build_config(
     app_name: str,
-    *,
-    title: str | None = None,
-    pid: int | None = None,
-    path_contains: str | None = None,
-    path_excludes: str | None = None,
-    args_contains: str | None = None,
-    output: str | None = None,
-    no_activate: bool = False,
-    settle_ms: int = 1000,
-    shadow: bool = False,
-    verify: list[str] | None = None,
-    expected_text: list[str] | None = None,
-    hash_threshold: int = 5,
-    retries: int = 5,
-    retry_delay: int = 500,
-    retry_strategy: str = "fixed",
+    filter_opts: WindowFilterOptions,
+    capture_opts: CaptureOptions,
+    output_opts: OutputOptions,
+    verify_opts: VerificationOptions,
+    retry_opts: RetryOptions,
 ) -> CaptureConfig:
-    """Build CaptureConfig from parameters."""
+    """Build CaptureConfig from option objects."""
     return CaptureConfig(
         app_name=app_name,
-        title_pattern=title,
-        pid=pid,
-        path_contains=path_contains,
-        path_excludes=path_excludes,
-        args_contains=args_contains,
-        output_path=output,
-        activate_first=not no_activate,
-        settle_ms=settle_ms,
-        no_shadow=not shadow,
-        verification_strategies=parse_verification_strategies(verify),
-        expected_text=tuple(expected_text) if expected_text else (),
-        hash_threshold=hash_threshold,
-        max_retries=retries,
-        retry_delay_ms=retry_delay,
-        retry_strategy=parse_retry_strategy(retry_strategy),
+        title_pattern=filter_opts.title,
+        pid=filter_opts.pid,
+        path_contains=filter_opts.path_contains,
+        path_excludes=filter_opts.path_excludes,
+        args_contains=filter_opts.args_contains,
+        output_path=output_opts.output,
+        activate_first=not capture_opts.no_activate,
+        settle_ms=capture_opts.settle_ms,
+        no_shadow=not capture_opts.shadow,
+        verification_strategies=parse_verification_strategies(verify_opts.verify),
+        expected_text=tuple(verify_opts.expected_text) if verify_opts.expected_text else (),
+        hash_threshold=verify_opts.hash_threshold,
+        max_retries=retry_opts.retries,
+        retry_delay_ms=retry_opts.retry_delay,
+        retry_strategy=parse_retry_strategy(retry_opts.retry_strategy),
     )
 
 
@@ -199,13 +324,14 @@ def find_cmd(
 ) -> None:
     """Find window without capturing."""
     try:
+        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        capture_opts = CaptureOptions()
+        output_opts = _build_output_options(None, json_output)
+        verify_opts = VerificationOptions()
+        retry_opts = RetryOptions()
+
         config = build_config(
-            app_name,
-            title=title,
-            pid=pid,
-            path_contains=path_contains,
-            path_excludes=path_excludes,
-            args_contains=args_contains,
+            app_name, filter_opts, capture_opts, output_opts, verify_opts, retry_opts
         )
         result = _handle_find(config, json_output=json_output)
         if result != 0:
@@ -241,23 +367,14 @@ def capture_cmd(
 ) -> None:
     """Capture screenshot of window with verification."""
     try:
+        filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
+        capture_opts = _build_capture_options(no_activate, settle_ms, shadow)
+        output_opts = _build_output_options(output, json_output)
+        verify_opts = _build_verification_options(verify, expected_text, hash_threshold)
+        retry_opts = _build_retry_options(retries, retry_delay, retry_strategy)
+
         config = build_config(
-            app_name,
-            title=title,
-            pid=pid,
-            path_contains=path_contains,
-            path_excludes=path_excludes,
-            args_contains=args_contains,
-            output=output,
-            no_activate=no_activate,
-            settle_ms=settle_ms,
-            shadow=shadow,
-            verify=verify,
-            expected_text=expected_text,
-            hash_threshold=hash_threshold,
-            retries=retries,
-            retry_delay=retry_delay,
-            retry_strategy=retry_strategy,
+            app_name, filter_opts, capture_opts, output_opts, verify_opts, retry_opts
         )
         result = _handle_capture(config, json_output=json_output)
         if result != 0:

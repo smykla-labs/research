@@ -510,19 +510,42 @@ class TestBuildConfig:
 
     def test_build_basic_config(self) -> None:
         """Test building config from basic args."""
-        config = build_config("TestApp")
+        from verified_screenshot.cli import (
+            CaptureOptions,
+            OutputOptions,
+            RetryOptions,
+            VerificationOptions,
+            WindowFilterOptions,
+        )
+
+        config = build_config(
+            "TestApp",
+            WindowFilterOptions(),
+            CaptureOptions(),
+            OutputOptions(),
+            VerificationOptions(),
+            RetryOptions(),
+        )
         assert config.app_name == "TestApp"
         assert config.max_retries == 5  # default
 
     def test_build_full_config(self) -> None:
         """Test building config with all options."""
+        from verified_screenshot.cli import (
+            CaptureOptions,
+            OutputOptions,
+            RetryOptions,
+            VerificationOptions,
+            WindowFilterOptions,
+        )
+
         config = build_config(
             "App",
-            title=".*test.*",
-            output="out.png",
-            retries=3,
-            verify=["all"],
-            no_activate=True,
+            WindowFilterOptions(title=".*test.*"),
+            CaptureOptions(no_activate=True),
+            OutputOptions(output="out.png"),
+            VerificationOptions(verify=["all"]),
+            RetryOptions(retries=3),
         )
         assert config.app_name == "App"
         assert config.title_pattern == ".*test.*"
