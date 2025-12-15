@@ -473,12 +473,13 @@ Grant these permissions in System Settings > Privacy & Security:
 Required:
 - `pyobjc-framework-Quartz>=10.0` - macOS Quartz framework bindings
 - `pyobjc-framework-ScreenCaptureKit>=10.0` - ScreenCaptureKit bindings (macOS 12.3+)
+- `pyobjc-framework-AVFoundation>=10.0` - AVFoundation for SCK video recording
 - `psutil>=5.9` - Process information
 - `pillow>=10.0` - Image processing (frame extraction)
 - `imagehash>=4.3` - Perceptual hashing (motion detection)
 
 External tools:
-- `screencapture` - Built into macOS (video recording)
+- `screencapture` - Built into macOS (fallback video recording)
 - `ffmpeg` - Video conversion (`brew install ffmpeg`)
 - `ffprobe` - Video metadata (included with ffmpeg)
 
@@ -503,6 +504,13 @@ External tools:
 - [Discord File Upload Limits](https://support.discord.com/hc/en-us/articles/115000435108) - 10MB free, 50MB Basic, 500MB Nitro
 - [GitHub File Size Limits](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github) - 10MB warning, 100MB hard limit
 - [JetBrains Marketplace Media](https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html) - 1280x800 recommended
+
+### ScreenCaptureKit Video Recording
+
+- [Recording to disk with ScreenCaptureKit (Nonstrict)](https://nonstrict.eu/blog/2023/recording-to-disk-with-screencapturekit/)
+- [ScreenCaptureKit-Recording-example](https://github.com/nonstrict-hq/ScreenCaptureKit-Recording-example)
+- [PyObjC Issue 590 - SCK usage](https://github.com/ronaldoussoren/pyobjc/issues/590)
+- [PyObjC Issue 647 - macOS 15 issues](https://github.com/ronaldoussoren/pyobjc/issues/647)
 
 ## Sources (Research)
 
