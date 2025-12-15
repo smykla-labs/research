@@ -675,4 +675,4 @@ class TestCLI:
         assert result == 1
 
         captured = capsys.readouterr()
-        assert "Error" in captured.err or "error" in captured.err.lower()
+        assert "Chrome not found" in captured.err
