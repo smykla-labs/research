@@ -1,0 +1,12 @@
+[project]
+name = "browser-controller"
+version = "1.0.0"
+description = "Programmatic control of Chrome and Firefox browsers via CDP and Marionette protocols"
+requires-python = ">=3.11"
+dependencies = []  # Managed by workspace root
+
+[project.scripts]
+browser-controller = "browser_controller.cli:main"
+
+[tool.uv]
+package = true

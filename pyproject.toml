@@ -16,6 +16,9 @@ dependencies = [
     "atomacos>=3.2",
     # CLI framework
     "typer>=0.15.0",
+    # Browser automation
+    "websockets>=12.0",
+    "marionette-driver>=3.2",
 ]
 
 [dependency-groups]
@@ -71,6 +74,7 @@ max-returns = 7   # CLI main functions with multiple subcommands need more retur
 "**/window_controller/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (Quartz/psutil)
 "**/ocr_finder/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (EasyOCR is slow)
 "**/ui_inspector/*.py" = ["T201"]
+"**/browser_controller/*.py" = ["T201", "PLC0415", "S310", "S110", "SIM105", "PLR2004"]  # Allow print + lazy imports + urlopen + try-except-pass + magic values
 "tests/**/*.py" = [
     "S101",    # Allow assert in tests
     "PLR2004", # Allow magic values in tests
@@ -106,5 +110,5 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
-module = ["plistlib", "Quartz", "psutil", "PIL", "imagehash", "easyocr", "atomacos", "ScreenCaptureKit"]
+module = ["plistlib", "Quartz", "psutil", "PIL", "imagehash", "easyocr", "atomacos", "ScreenCaptureKit", "websockets", "marionette_driver", "marionette_driver.marionette", "marionette_driver.By"]
 ignore_missing_imports = true
