@@ -7,6 +7,20 @@ description: Record macOS screen with verification, retry logic, and format conv
 
 Record macOS screen with automatic verification, retry logic, and optimized format conversion. This skill captures screen recordings of specific windows or regions, converts them to platform-optimized formats (GIF, WebP, MP4), and verifies the recording captured what you intended.
 
+## Workspace Context
+
+This skill is part of a uv workspace. Run commands from either location:
+
+```bash
+# From workspace root (~/Projects/github.com/smykla-labs/research)
+uv run screen-recorder --help
+
+# From skill subdirectory (.claude/skills/macos-screen-recorder)
+uv run --package macos-screen-recorder screen-recorder --help
+```
+
+Both methods work identically—use whichever matches your current working directory.
+
 ## Quick Start
 
 ```bash
@@ -49,20 +63,22 @@ uv run screen-recorder --check-deps
 
 2. **Activation** (optional): Activates the target app via AppleScript, which switches to the window's Space. Configurable settle time for rendering.
 
-3. **Screen Recording**: Uses native macOS `screencapture -v -R x,y,w,h -V duration` for region-specific video capture to `.mov` format.
+3. **Space Detection**: Automatically detects if target window is on a different Space (macOS virtual desktop). If so, switches to that Space, re-finds window bounds (Space switch invalidates coordinates), records, then returns to original Space.
 
-4. **Format Conversion**: Converts to target format using ffmpeg:
+4. **Screen Recording**: Uses native macOS `screencapture -v -R x,y,w,h -V duration` for region-specific video capture to `.mov` format.
+
+5. **Format Conversion**: Converts to target format using ffmpeg:
    - **GIF**: Two-pass palette optimization with sierra2_4a dithering
    - **WebP**: Lossy animated WebP with configurable quality
    - **MP4**: H.264 with yuv420p pixel format for compatibility
 
-5. **Verification**: Runs configured verification strategies:
+6. **Verification**: Runs configured verification strategies:
    - **basic**: File exists, size > 0
    - **duration**: Duration matches requested (±0.5s)
    - **frames**: Minimum frame count based on duration × fps
    - **motion**: First/last frames differ (perceptual hash)
 
-6. **Retry Loop**: On failure, retries up to N times with configurable delay strategy.
+7. **Retry Loop**: On failure, retries up to N times with configurable delay strategy.
 
 ### Platform Presets
 
@@ -116,6 +132,37 @@ open recordings/goland_preview_*.png
 # Step 4: Record when satisfied
 uv run screen-recorder --record "GoLand" --window-region 0,890,2056,400 -d 5
 ```
+
+### Space-Aware Recording
+
+When recording windows on different macOS Spaces (virtual desktops), the recorder automatically:
+
+1. **Detects** if the target window is on a different Space
+2. **Switches** to that Space using Mission Control integration
+3. **Re-finds** the window (Space switches invalidate coordinates)
+4. **Records** the window with correct bounds
+5. **Returns** to the original Space after recording completes
+
+This happens transparently—no special flags required:
+
+```bash
+# Record Terminal on Space 2 while you're on Space 1
+uv run screen-recorder --record "Terminal" -d 5
+
+# Record fullscreen Safari (which is its own Space)
+uv run screen-recorder --record "Safari" -d 10
+```
+
+**Requirements:**
+
+- Accessibility permissions (System Settings > Privacy & Security > Accessibility)
+- Target window must be discoverable via `CGWindowListCopyWindowInfo`
+
+**Behavior:**
+
+- If Space switch fails, recording continues on current Space (may capture wrong window)
+- Original Space is always restored, even if recording fails
+- Use `--no-activate` to skip activation and Space switching entirely
 
 ### Verification Strategies
 
@@ -296,13 +343,14 @@ uv run screen-recorder --check-deps
 ## Testing
 
 ```bash
-cd ~/.claude/skills/macos-screen-recorder
-
-# Run tests
-uv run pytest tests/skills/test_screen_recorder.py -v
+# From workspace root
+uv run pytest tests/skills/test_screen_recorder*.py -v
 
 # Run with coverage
-uv run pytest tests/skills/test_screen_recorder.py -v --cov=screen_recorder
+uv run pytest tests/skills/test_screen_recorder*.py -v --cov=screen_recorder
+
+# Run specific test file
+uv run pytest tests/skills/test_screen_recorder_core.py -v
 ```
 
 ## Troubleshooting
@@ -373,7 +421,7 @@ JetBrains sandbox IDEs appear as "Main" and AppleScript cannot activate them:
 uv run screen-recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate -d 10
 ```
 
-Manually switch to the sandbox window's Space before recording.
+With `--no-activate`, you must manually switch to the sandbox window's Space before recording. Alternatively, if the sandbox IDE is on a different Space, the Space-aware recording will switch to it automatically (activation via AppleScript still won't work, but the correct Space will be selected).
 
 ### Permission errors
 
