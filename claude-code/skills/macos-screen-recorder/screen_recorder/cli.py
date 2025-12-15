@@ -85,6 +85,7 @@ class RecordingOptions:
     no_clicks: bool = False
     no_activate: bool = False
     settle_ms: int = DEFAULT_SETTLE_MS
+    backend: str | None = None
     full_screen: bool = False
 
 
@@ -170,6 +171,12 @@ SettleMsOpt = Annotated[
     int,
     typer.Option("--settle-ms", help=f"Wait time after activation (default: {DEFAULT_SETTLE_MS})"),
 ]
+BackendOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--backend", help="Capture backend: auto, quartz, screencapturekit (default: auto)"
+    ),
+]
 
 # Output options
 OutputOpt = Annotated[str | None, typer.Option("--output", "-o", help="Output path for recording")]
@@ -253,6 +260,20 @@ def parse_preset(preset_str: str | None) -> PlatformPreset | None:
         "custom": PlatformPreset.CUSTOM,
     }
     return mapping.get(preset_str)
+
+
+def parse_capture_backend(backend_str: str | None):
+    """Parse capture backend string to enum."""
+    from .models import CaptureBackend
+
+    if not backend_str:
+        return CaptureBackend.AUTO
+    mapping = {
+        "auto": CaptureBackend.AUTO,
+        "quartz": CaptureBackend.QUARTZ,
+        "screencapturekit": CaptureBackend.SCREENCAPTUREKIT,
+    }
+    return mapping.get(backend_str, CaptureBackend.AUTO)
 
 
 def parse_verification_strategies(strategies: list[str] | None) -> tuple[VerificationStrategy, ...]:
@@ -399,6 +420,7 @@ def build_config(
         duration_seconds=recording_opts.duration,
         max_duration_seconds=recording_opts.max_duration,
         show_clicks=not recording_opts.no_clicks,
+        capture_backend=parse_capture_backend(recording_opts.backend),
         output_path=output_opts.output,
         output_format=parse_output_format(output_opts.format_str),
         preset=parse_preset(output_opts.preset),
@@ -644,6 +666,7 @@ def record_cmd(  # noqa: PLR0913 - Typer CLI requires many options
     no_clicks: NoClicksOpt = False,
     no_activate: NoActivateOpt = False,
     settle_ms: SettleMsOpt = DEFAULT_SETTLE_MS,
+    backend: BackendOpt = None,
     output: OutputOpt = None,
     format_str: FormatOpt = "gif",
     preset: PresetOpt = None,
@@ -677,6 +700,7 @@ def record_cmd(  # noqa: PLR0913 - Typer CLI requires many options
             no_clicks=no_clicks,
             no_activate=no_activate,
             settle_ms=settle_ms,
+            backend=backend,
         )
         output_opts = _build_output_options(output, format_str, preset, keep_raw)
         format_opts = _build_format_options(fps, max_width, max_height, quality, max_size)

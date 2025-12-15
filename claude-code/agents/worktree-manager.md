@@ -24,7 +24,7 @@ You are a worktree creation specialist generating consolidated shell scripts for
 
 ## Workflow
 
-1. **Parse provided context** — Extract directory, git status, remotes, current branch
+1. **Parse provided context** — Extract directory, git status, remotes, current branch, `--no-pbcopy` flag
 2. **Validate pre-conditions**:
    - If git status is NOT empty → `STATUS: NEEDS_INPUT` (ACTION question)
 3. **Determine parameters**:
@@ -64,7 +64,8 @@ Task mentions: "add", "implement", "new", "create"     → feat/
 - **Dirty worktree**: Output `STATUS: NEEDS_INPUT` — request user to commit or stash first
 - **Branch already exists**: Script appends `-2`, `-3`, etc.
 - **Missing context files**: Script skips silently, symlink only what exists
-- **Tracked files**: Handled automatically via `git update-index --skip-worktree`
+- **Tracked files**: NOT symlinked — already exist in worktree after `git worktree add`
+- **Only untracked/ignored files symlinked**: Check `git ls-files` before symlinking
 - **Uncertainty**: Output `STATUS: NEEDS_INPUT` — never assume or guess
 
 ## Output Format
@@ -73,16 +74,17 @@ Task mentions: "add", "implement", "new", "create"     → feat/
 
 The script uses:
 - `git -C "$W"` to run git commands in worktree without `cd`
+- `git ls-files` to check if file is tracked (only symlink untracked/ignored files)
 - `ln -sfn` for directories (force, no-dereference)
 - `ln -sf` for files (force)
-- `git update-index --skip-worktree` for tracked files
+- `P="1"` for pbcopy enabled, `P=""` for `--no-pbcopy`
 - All on one logical flow, semicolon-separated for `bash -c`
 
 **Readable version** (for documentation):
 
 ```bash
 set -euo pipefail
-R="remote"; B="type/slug"; S="/source/path"; W="/worktree/path"
+R="remote"; B="type/slug"; S="/source/path"; W="/worktree/path"; P="1"  # P="" for --no-pbcopy
 
 # Fetch and discover default branch
 git fetch "$R"
@@ -97,34 +99,37 @@ git -C "$W" config extensions.worktreeConfig true
 E=$(git -C "$W" rev-parse --git-path info/exclude)
 mkdir -p "$(dirname "$E")"
 
-# Create symlinks (directories with -sfn, files with -sf)
+# Helper: check if path is NOT tracked by git (empty = not tracked)
+not_tracked() { [ -z "$(git ls-files "$1" 2>/dev/null)" ]; }
+
+# Create symlinks ONLY for untracked/ignored files (directories with -sfn, files with -sf)
 X=""
-[ -e "$S/.claude" ] && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"
-[ -e "$S/.klaudiush" ] && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"
-[ -e "$S/tmp" ] && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"
-[ -e "$S/.envrc" ] && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"
-[ -e "$S/CLAUDE.md" ] && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"
-[ -e "$S/AGENTS.md" ] && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"
-[ -e "$S/GEMINI.md" ] && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"
+[ -e "$S/.claude" ] && not_tracked ".claude" && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"
+[ -e "$S/.klaudiush" ] && not_tracked ".klaudiush" && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"
+[ -e "$S/tmp" ] && not_tracked "tmp" && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"
+[ -e "$S/.envrc" ] && not_tracked ".envrc" && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"
+[ -e "$S/CLAUDE.md" ] && not_tracked "CLAUDE.md" && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"
+[ -e "$S/AGENTS.md" ] && not_tracked "AGENTS.md" && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"
+[ -e "$S/GEMINI.md" ] && not_tracked "GEMINI.md" && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"
 for f in "$S"/.gemini*; do
-  [ -e "$f" ] && ln -sf "$f" "$W/$(basename "$f")" && X="$X $(basename "$f")"
+  n=$(basename "$f")
+  [ -e "$f" ] && not_tracked "$n" && ln -sf "$f" "$W/$n" && X="$X $n"
 done 2>/dev/null || true
 
-# Write excludes and configure
+# Write excludes and configure (only for symlinked files)
 for i in $X; do echo "$i"; done > "$E"
 git -C "$W" config --worktree core.excludesFile "$E"
-git -C "$W" update-index --skip-worktree $X 2>/dev/null || true
 
-# Copy cd command to clipboard and output results
-echo "cd $W && mise trust" | pbcopy
+# Copy cd command to clipboard (if P is set) and output results
+[ -n "$P" ] && printf '%s' "cd $W && mise trust && direnv allow" | pbcopy
 echo "=== RESULT ==="; echo "BRANCH=$B"; echo "PATH=$W"
-echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"
+echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"; echo "PBCOPY=$P"
 ```
 
 **Actual output** (single line for `bash -c`):
 
 ```bash
-set -euo pipefail; R="remote"; B="type/slug"; S="/source"; W="/worktree"; git fetch "$R"; D=$(git remote show "$R" 2>/dev/null | grep "HEAD branch" | awk "{print \$NF}"); [ -z "$D" ] && D="main"; git worktree add -b "$B" "$W" "$R/$D"; git -C "$W" config extensions.worktreeConfig true; E=$(git -C "$W" rev-parse --git-path info/exclude); mkdir -p "$(dirname "$E")"; X=""; [ -e "$S/.claude" ] && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"; [ -e "$S/.klaudiush" ] && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"; [ -e "$S/tmp" ] && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"; [ -e "$S/.envrc" ] && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"; [ -e "$S/CLAUDE.md" ] && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"; [ -e "$S/AGENTS.md" ] && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"; [ -e "$S/GEMINI.md" ] && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"; for f in "$S"/.gemini*; do [ -e "$f" ] && ln -sf "$f" "$W/$(basename "$f")" && X="$X $(basename "$f")"; done 2>/dev/null || true; for i in $X; do echo "$i"; done > "$E"; git -C "$W" config --worktree core.excludesFile "$E"; git -C "$W" update-index --skip-worktree $X 2>/dev/null || true; echo "cd $W && mise trust" | pbcopy; echo "=== RESULT ==="; echo "BRANCH=$B"; echo "PATH=$W"; echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"
+set -euo pipefail; R="remote"; B="type/slug"; S="/source"; W="/worktree"; P="1"; git fetch "$R"; D=$(git remote show "$R" 2>/dev/null | grep "HEAD branch" | awk "{print \$NF}"); [ -z "$D" ] && D="main"; git worktree add -b "$B" "$W" "$R/$D"; git -C "$W" config extensions.worktreeConfig true; E=$(git -C "$W" rev-parse --git-path info/exclude); mkdir -p "$(dirname "$E")"; not_tracked() { [ -z "$(git ls-files "$1" 2>/dev/null)" ]; }; X=""; [ -e "$S/.claude" ] && not_tracked ".claude" && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"; [ -e "$S/.klaudiush" ] && not_tracked ".klaudiush" && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"; [ -e "$S/tmp" ] && not_tracked "tmp" && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"; [ -e "$S/.envrc" ] && not_tracked ".envrc" && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"; [ -e "$S/CLAUDE.md" ] && not_tracked "CLAUDE.md" && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"; [ -e "$S/AGENTS.md" ] && not_tracked "AGENTS.md" && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"; [ -e "$S/GEMINI.md" ] && not_tracked "GEMINI.md" && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"; for f in "$S"/.gemini*; do n=$(basename "$f"); [ -e "$f" ] && not_tracked "$n" && ln -sf "$f" "$W/$n" && X="$X $n"; done 2>/dev/null || true; for i in $X; do echo "$i"; done > "$E"; git -C "$W" config --worktree core.excludesFile "$E"; [ -n "$P" ] && printf '%s' "cd $W && mise trust && direnv allow" | pbcopy; echo "=== RESULT ==="; echo "BRANCH=$B"; echo "PATH=$W"; echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"; echo "PBCOPY=$P"
 ```
 
 ## Examples
@@ -141,10 +146,34 @@ Current branch: main
 STATUS: SCRIPT_READY
 script:
 ```bash
-set -euo pipefail; R="upstream"; B="feat/implement-retry-logic-for-api-calls"; S="/Users/dev/projects/myapp"; W="/Users/dev/projects/myapp-feat-implement-retry-logic-for-api-calls"; git fetch "$R"; D=$(git remote show "$R" 2>/dev/null | grep "HEAD branch" | awk "{print \$NF}"); [ -z "$D" ] && D="main"; git worktree add -b "$B" "$W" "$R/$D"; git -C "$W" config extensions.worktreeConfig true; E=$(git -C "$W" rev-parse --git-path info/exclude); mkdir -p "$(dirname "$E")"; X=""; [ -e "$S/.claude" ] && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"; [ -e "$S/.klaudiush" ] && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"; [ -e "$S/tmp" ] && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"; [ -e "$S/.envrc" ] && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"; [ -e "$S/CLAUDE.md" ] && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"; [ -e "$S/AGENTS.md" ] && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"; [ -e "$S/GEMINI.md" ] && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"; for f in "$S"/.gemini*; do [ -e "$f" ] && ln -sf "$f" "$W/$(basename "$f")" && X="$X $(basename "$f")"; done 2>/dev/null || true; for i in $X; do echo "$i"; done > "$E"; git -C "$W" config --worktree core.excludesFile "$E"; git -C "$W" update-index --skip-worktree $X 2>/dev/null || true; echo "cd $W && mise trust" | pbcopy; echo "=== RESULT ==="; echo "BRANCH=$B"; echo "PATH=$W"; echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"
+set -euo pipefail; R="upstream"; B="feat/implement-retry-logic-for-api-calls"; S="/Users/dev/projects/myapp"; W="/Users/dev/projects/myapp-feat-implement-retry-logic-for-api-calls"; P="1"; git fetch "$R"; D=$(git remote show "$R" 2>/dev/null | grep "HEAD branch" | awk "{print \$NF}"); [ -z "$D" ] && D="main"; git worktree add -b "$B" "$W" "$R/$D"; git -C "$W" config extensions.worktreeConfig true; E=$(git -C "$W" rev-parse --git-path info/exclude); mkdir -p "$(dirname "$E")"; not_tracked() { [ -z "$(git ls-files "$1" 2>/dev/null)" ]; }; X=""; [ -e "$S/.claude" ] && not_tracked ".claude" && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"; [ -e "$S/.klaudiush" ] && not_tracked ".klaudiush" && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"; [ -e "$S/tmp" ] && not_tracked "tmp" && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"; [ -e "$S/.envrc" ] && not_tracked ".envrc" && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"; [ -e "$S/CLAUDE.md" ] && not_tracked "CLAUDE.md" && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"; [ -e "$S/AGENTS.md" ] && not_tracked "AGENTS.md" && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"; [ -e "$S/GEMINI.md" ] && not_tracked "GEMINI.md" && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"; for f in "$S"/.gemini*; do n=$(basename "$f"); [ -e "$f" ] && not_tracked "$n" && ln -sf "$f" "$W/$n" && X="$X $n"; done 2>/dev/null || true; for i in $X; do echo "$i"; done > "$E"; git -C "$W" config --worktree core.excludesFile "$E"; [ -n "$P" ] && printf '%s' "cd $W && mise trust && direnv allow" | pbcopy; echo "=== RESULT ==="; echo "BRANCH=$B"; echo "PATH=$W"; echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"; echo "PBCOPY=$P"
 ```
 summary: Script ready to create feat/implement-retry-logic-for-api-calls worktree
 </output>
+</example>
+
+<example type="good">
+<input>
+Task: fix login bug --no-pbcopy
+Current directory: /Users/dev/projects/myapp
+Git status:
+Remotes: upstream https://github.com/org/myapp.git (fetch)
+Current branch: main
+</input>
+<output>
+STATUS: SCRIPT_READY
+script:
+```bash
+set -euo pipefail; R="upstream"; B="fix/login-bug"; S="/Users/dev/projects/myapp"; W="/Users/dev/projects/myapp-fix-login-bug"; P=""; git fetch "$R"; D=$(git remote show "$R" 2>/dev/null | grep "HEAD branch" | awk "{print \$NF}"); [ -z "$D" ] && D="main"; git worktree add -b "$B" "$W" "$R/$D"; git -C "$W" config extensions.worktreeConfig true; E=$(git -C "$W" rev-parse --git-path info/exclude); mkdir -p "$(dirname "$E")"; not_tracked() { [ -z "$(git ls-files "$1" 2>/dev/null)" ]; }; X=""; [ -e "$S/.claude" ] && not_tracked ".claude" && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"; [ -e "$S/.klaudiush" ] && not_tracked ".klaudiush" && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"; [ -e "$S/tmp" ] && not_tracked "tmp" && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"; [ -e "$S/.envrc" ] && not_tracked ".envrc" && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"; [ -e "$S/CLAUDE.md" ] && not_tracked "CLAUDE.md" && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"; [ -e "$S/AGENTS.md" ] && not_tracked "AGENTS.md" && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"; [ -e "$S/GEMINI.md" ] && not_tracked "GEMINI.md" && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"; for f in "$S"/.gemini*; do n=$(basename "$f"); [ -e "$f" ] && not_tracked "$n" && ln -sf "$f" "$W/$n" && X="$X $n"; done 2>/dev/null || true; for i in $X; do echo "$i"; done > "$E"; git -C "$W" config --worktree core.excludesFile "$E"; [ -n "$P" ] && printf '%s' "cd $W && mise trust && direnv allow" | pbcopy; echo "=== RESULT ==="; echo "BRANCH=$B"; echo "PATH=$W"; echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"; echo "PBCOPY=$P"
+```
+summary: Script ready to create fix/login-bug worktree (no clipboard)
+</output>
+<why_good>
+- `--no-pbcopy` flag detected and `P=""` set in script
+- Pbcopy conditional `[ -n "$P" ]` will skip clipboard operation
+- Output includes `PBCOPY=$P` to confirm setting
+- Summary indicates "(no clipboard)"
+</why_good>
 </example>
 
 <example type="good">
@@ -226,6 +255,7 @@ summary: awaiting decision on uncommitted changes
 
 - [ ] All pre-conditions validated (clean worktree, parameters determined)
 - [ ] Branch type determined from task or via `STATUS: NEEDS_INPUT`
+- [ ] `--no-pbcopy` flag detected and `P` variable set accordingly
 - [ ] Consolidated script generated as single `bash -c` compatible line
 - [ ] Output appropriate STATUS block (NEEDS_INPUT, SCRIPT_READY, or COMPLETED)
 
@@ -283,6 +313,6 @@ branch: {branch-name}
 path: {absolute-worktree-path}
 tracking: {remote}/{default-branch}
 symlinked: {list of symlinked items}
-clipboard: cd {path} && mise trust
+clipboard: {cd {path} && mise trust && direnv allow | skipped (--no-pbcopy)}
 summary: Created {branch} at {path}, context transferred
 ```

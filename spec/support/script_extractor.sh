@@ -42,9 +42,21 @@ extract_script() {
       next
     }
 
+    # Worktree manager: "Readable version" section
+    !found && id == "worktree-readable" && line_lower ~ /readable version.*documentation/ {
+      found=1
+      next
+    }
+
+    # Worktree manager: "Actual output" section (single-line script)
+    !found && id == "worktree-single-line" && line_lower ~ /actual output.*single line/ {
+      found=1
+      next
+    }
+
     # Generic identifier match (case-sensitive for custom identifiers)
     # Skip for known identifiers that have specific patterns above
-    !found && id != "default" && id != "dry-run" && id != "no-worktrees" && $0 ~ id {
+    !found && id != "default" && id != "dry-run" && id != "no-worktrees" && id != "worktree-readable" && id != "worktree-single-line" && $0 ~ id {
       found=1
       next
     }

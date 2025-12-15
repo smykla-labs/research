@@ -13,7 +13,7 @@ $ARGUMENTS
 - **NEVER delete** the current branch — always skip and report in summary
 - **NEVER remove** the main worktree — only remove feature/task worktrees
 - **ALWAYS use** `bash -c '...'` format for atomic execution
-- **ALWAYS render** the summary output EXACTLY as specified in Summary Output section — no prose, no custom formatting
+- **ALWAYS output** the summary directly as text (NOT via bash/printf) — use ANSI escape codes for colors
 - **ZERO tolerance** for accidental data loss — validate before destructive operations
 
 ## Context
@@ -59,11 +59,11 @@ Pre-execution state (establishes baseline for validation):
    - Removes associated worktrees before branch deletion
    - Skips main and current branch
 
-3. **Render summary** from script output
+3. **Output summary directly** — parse script output and render as formatted text (NOT via bash)
 
 ## Summary Output
 
-**CRITICAL**: After running the cleanup script, render the summary using a SINGLE `printf` command. Do NOT write prose or use multiple echo commands.
+**CRITICAL**: After running the cleanup script, output the summary directly as text. Do NOT use bash/printf commands — output truncation can occur. Output the formatted text directly in your response.
 
 **Line prefixes** (from script output):
 
@@ -81,30 +81,59 @@ Pre-execution state (establishes baseline for validation):
 - `WOULD_KEEP:branch:reason` → would keep branch
 - `WOULD_KEEP_WT:worktree:branch:reason` → would keep worktree
 
-**Colors**: bold=`\033[1m`, green=`\033[32m`, yellow=`\033[33m`, cyan=`\033[36m`, dim=`\033[90m`, reset=`\033[0m`
+**Colors** (apply using markdown formatting that renders in terminal):
 
-**Required format** — single `printf` command:
+- **Bold**: Section headers and title
+- **Green**: Deleted items
+- **Yellow**: Skipped items
+- **Cyan**: Kept items
 
-```bash
-printf '\033[1m🧹 Cleanup Summary\033[0m\n\n\033[1mDeleted:\033[0m\n  \033[32m🗑️ fix/old-feature (merged)\033[0m\n  \033[32m🗂️ fix-old-feature-wt (worktree)\033[0m\n\n\033[1mSkipped:\033[0m\n  \033[33m⚠️ feat/current-work (current branch)\033[0m\n\n\033[1mKept:\033[0m\n  \033[36mℹ️ feat/in-progress (14 unmerged)\033[0m\n\n\033[90m───────────────────────────────\nDeleted: 2 branches, 1 worktree\nKept: 1 branch\033[0m\n'
+**Required format** — output directly as text:
+
+```
+**Cleanup Summary**
+
+Deleted:
+  🗑️ fix/old-feature (gone)              ← green
+  🗂️ fix-old-feature-wt (worktree)       ← green
+
+Skipped:
+  ⚠️ feat/current-work (current branch)  ← yellow
+
+Kept:
+  🗂️ wt-name (worktree) - branch (N unmerged)  ← cyan
+  ℹ️ feat/in-progress (14 unmerged)      ← cyan
 ```
 
 **Dry-run format** — use "Would delete/remove" and different header:
 
-```bash
-printf '\033[1m🔍 Dry Run Preview\033[0m\n\n\033[1mWould delete:\033[0m\n  \033[32m🗑️ fix/old-feature (merged)\033[0m\n  \033[32m🗂️ fix-old-feature-wt (worktree)\033[0m\n\n\033[1mWould skip:\033[0m\n  \033[33m⚠️ feat/current-work (current branch)\033[0m\n\n\033[1mWould keep:\033[0m\n  \033[36mℹ️ feat/in-progress (14 unmerged)\033[0m\n\n\033[90m───────────────────────────────\nWould delete: 2 branches, 1 worktree\nWould keep: 1 branch\033[0m\n'
+```
+**Dry Run Preview**
+
+Would delete:
+  🗑️ fix/old-feature (gone)              ← green
+  🗂️ fix-old-feature-wt (worktree)       ← green
+
+Would skip:
+  ⚠️ feat/current-work (current branch)  ← yellow
+
+Would keep:
+  🗂️ wt-name (worktree) - branch (N unmerged)  ← cyan
+  ℹ️ feat/in-progress (14 unmerged)      ← cyan
 ```
 
-**Empty state**:
+**Empty state** — output directly:
 
-```bash
-printf '\033[32m✅ Repository already clean — no branches to process\033[0m\n'
+```
+✅ Repository already clean — no branches to process  ← green
 ```
 
 **Rules**:
-- Use ONE `printf` command only — no multiple commands
+
+- Output text directly — NEVER use bash/printf for summary
+- Use markdown bold (`**text**`) for title and section headers
 - Only include sections with items (omit empty Deleted/Skipped/Kept)
-- Build the entire output string dynamically based on parsed script output
+- Build the output dynamically based on parsed script output
 
 ## Flags
 
@@ -144,4 +173,4 @@ printf '\033[32m✅ Repository already clean — no branches to process\033[0m\n
 - [ ] Gone and merged branches deleted, associated worktrees removed
 - [ ] With `--dry-run`: preview only, no actual changes made
 - [ ] With `--no-worktrees`: only gone branches deleted, no worktree removal, no merged detection
-- [ ] Summary rendered via single `printf` with ANSI colors — EXACTLY as specified in Summary Output section
+- [ ] Summary output directly as text with ANSI colors — NOT via bash/printf
