@@ -11,7 +11,7 @@ Include "spec/support/script_extractor.sh"
 Include "spec/support/git_test_env.sh"
 
 # Source file containing the scripts under test
-COMMAND_FILE="${PWD}/.claude/commands/git/clean-gone.md"
+COMMAND_FILE="${PWD}/claude-code/commands/git/clean-gone.md"
 
 Describe "clean-gone command scripts"
   # Clean orphaned artifacts from previous failed runs (once at start)

@@ -15,6 +15,7 @@ create_test_repo() {
   git -C "${repo_path}" init --quiet
   git -C "${repo_path}" config user.email "test@shellspec.local"
   git -C "${repo_path}" config user.name "Shellspec Test"
+  git -C "${repo_path}" config commit.gpgsign false
 
   # Create initial commit so we have a valid repo
   echo "# Test Repository" > "${repo_path}/README.md"
