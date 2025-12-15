@@ -141,6 +141,61 @@ def get_window_space_mapping(plist_data: dict) -> dict[int, int]:
     return window_to_space
 
 
+def get_current_space_index() -> int | None:
+    """Get the index (1-based) of the current Space.
+
+    Returns:
+        Current Space index, or None if cannot be determined.
+    """
+    plist_data = get_spaces_plist()
+    if not plist_data:
+        return None
+
+    config = plist_data.get("SpacesDisplayConfiguration", {})
+    mgmt_data = config.get("Management Data", {})
+    monitors = mgmt_data.get("Monitors", [])
+
+    for monitor in monitors:
+        current_space = monitor.get("Current Space", {})
+        current_space_id = current_space.get("ManagedSpaceID", 0)
+        monitor_spaces = monitor.get("Spaces", [])
+
+        for idx, space in enumerate(monitor_spaces, start=1):
+            if space.get("ManagedSpaceID", 0) == current_space_id:
+                return idx
+
+    return None
+
+
+def get_space_app_name(space_index: int) -> str | None:
+    """Get the app name for a Space (for fullscreen/tile Spaces).
+
+    Args:
+        space_index: 1-based Space index.
+
+    Returns:
+        App name if Space has a fullscreen/tile app, None otherwise.
+    """
+    plist_data = get_spaces_plist()
+    if not plist_data:
+        return None
+
+    config = plist_data.get("SpacesDisplayConfiguration", {})
+    mgmt_data = config.get("Management Data", {})
+    monitors = mgmt_data.get("Monitors", [])
+
+    for monitor in monitors:
+        monitor_spaces = monitor.get("Spaces", [])
+        if space_index <= len(monitor_spaces):
+            space = monitor_spaces[space_index - 1]
+            tile_mgr = space.get("TileLayoutManager", {})
+            tile_spaces = tile_mgr.get("TileSpaces", [])
+            if tile_spaces:
+                return tile_spaces[0].get("appName")
+
+    return None
+
+
 def get_process_info(pid: int) -> tuple[str | None, list[str]]:
     """Get process executable path and command line."""
     psutil = _get_psutil()

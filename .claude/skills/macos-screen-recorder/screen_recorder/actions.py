@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 import subprocess
 import time
@@ -11,6 +12,8 @@ from typing import TYPE_CHECKING
 
 from .core import (
     find_target_window,
+    get_current_space_index,
+    get_space_app_name,
     get_video_info,
     require_ffmpeg,
     verify_basic,
@@ -99,6 +102,115 @@ def activate_window(target: WindowTarget, wait_time: float = 0.5) -> None:
 
     if wait_time > 0:
         time.sleep(wait_time)
+
+
+def activate_app_by_name(app_name: str, wait_time: float = 0.5) -> None:
+    """Activate an application by name (switches to its Space).
+
+    Args:
+        app_name: Application name to activate.
+        wait_time: Seconds to wait after activation.
+
+    Raises:
+        CaptureError: If activation fails.
+    """
+    try:
+        sanitized = sanitize_app_name(app_name)
+    except ValueError as e:
+        raise CaptureError(f"Cannot activate: {e}") from e
+
+    result = subprocess.run(
+        ["osascript", "-e", f'tell application "{sanitized}" to activate'],
+        capture_output=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        stderr = result.stderr.decode("utf-8", errors="replace")
+        raise CaptureError(f"Failed to activate {app_name}: {stderr}")
+
+    if wait_time > 0:
+        time.sleep(wait_time)
+
+
+@dataclass
+class _SpaceContext:
+    """Context for Space switching during recording."""
+
+    original_space_index: int | None
+    original_app_name: str | None
+    target_space_index: int | None
+    switched: bool
+
+
+def _detect_space_switch_needed(
+    target: WindowTarget | None,
+) -> _SpaceContext:
+    """Detect if we need to switch Spaces for recording.
+
+    Args:
+        target: Target window information.
+
+    Returns:
+        SpaceContext with current and target Space info.
+    """
+    current_space = get_current_space_index()
+    current_app = get_space_app_name(current_space) if current_space else None
+
+    if target is None or target.space_index is None:
+        return _SpaceContext(
+            original_space_index=current_space,
+            original_app_name=current_app,
+            target_space_index=None,
+            switched=False,
+        )
+
+    return _SpaceContext(
+        original_space_index=current_space,
+        original_app_name=current_app,
+        target_space_index=target.space_index,
+        switched=False,
+    )
+
+
+def _switch_to_target_space(
+    target: WindowTarget,
+    space_ctx: _SpaceContext,
+    settle_time: float = 1.0,
+) -> None:
+    """Switch to the target window's Space.
+
+    Args:
+        target: Target window with app name.
+        space_ctx: Space context to update.
+        settle_time: Seconds to wait after switching.
+    """
+    if target.app_name:
+        activate_app_by_name(target.app_name, settle_time)
+        space_ctx.switched = True
+
+
+def _return_to_original_space(
+    space_ctx: _SpaceContext,
+    settle_time: float = 0.5,
+) -> None:
+    """Return to the original Space after recording.
+
+    Args:
+        space_ctx: Space context with original Space info.
+        settle_time: Seconds to wait after switching.
+    """
+    if not space_ctx.switched:
+        return
+
+    # Best effort - don't fail recording if return fails
+    if space_ctx.original_app_name:
+        with contextlib.suppress(CaptureError):
+            activate_app_by_name(space_ctx.original_app_name, settle_time)
+    else:
+        # For normal desktop (no fullscreen app), activate Finder
+        with contextlib.suppress(CaptureError):
+            activate_app_by_name("Finder", settle_time)
 
 
 def record_screen_region(
@@ -722,11 +834,14 @@ def record_verified(config: RecordingConfig) -> RecordingResult:
 
     This is the main entry point for the skill. It:
     1. Finds the target window (if specified)
-    2. Optionally activates the window
-    3. Records the screen region
-    4. Converts to target format
-    5. Runs verification checks
-    6. Retries on failure up to max_retries times
+    2. Switches to target Space if window is on different Space
+    3. Refreshes window bounds after Space switch
+    4. Optionally activates the window
+    5. Records the screen region
+    6. Converts to target format
+    7. Runs verification checks
+    8. Retries on failure up to max_retries times
+    9. Returns to original Space after recording
 
     Args:
         config: Recording configuration.
@@ -749,35 +864,59 @@ def record_verified(config: RecordingConfig) -> RecordingResult:
     # Find target window if filtering configured
     target, region = _find_target_if_needed(config)
 
-    # Generate output paths and create context
-    raw_path, final_path = generate_output_path(config, target)
-    ctx = _RecordingContext(
-        config=config,
-        target=target,
-        region=region,
-        raw_path=raw_path,
-        final_path=final_path,
-        settings=get_effective_settings(config),
+    # Detect if we need to switch Spaces
+    space_ctx = _detect_space_switch_needed(target)
+    needs_space_switch = (
+        target is not None
+        and space_ctx.target_space_index is not None
+        and space_ctx.original_space_index != space_ctx.target_space_index
     )
-    last_result: RecordingResult | None = None
 
-    for attempt in range(1, config.max_retries + 1):
-        result = _execute_single_attempt(ctx, attempt)
-        if result is None:
-            continue  # Recording failed, retry
+    try:
+        # Switch to target Space if needed
+        if needs_space_switch and target:
+            _switch_to_target_space(target, space_ctx, settle_time=1.0)
 
-        last_result = result
-        if result.verified:
-            return _handle_successful_attempt(ctx, result)
+            # CRITICAL: Refresh window bounds after Space switch
+            # Window coordinates may differ between Spaces
+            target, region = _find_target_if_needed(config)
 
-        _cleanup_failed_attempt(result.raw_path, result.final_path)
+        # Generate output paths and create context
+        raw_path, final_path = generate_output_path(config, target)
+        ctx = _RecordingContext(
+            config=config,
+            target=target,
+            region=region,
+            raw_path=raw_path,
+            final_path=final_path,
+            settings=get_effective_settings(config),
+        )
+        last_result: RecordingResult | None = None
 
-    # All retries exhausted
-    failed_strategies = [v.strategy.value for v in last_result.verifications if not v.passed]
-    raise MaxRetriesError(
-        f"Verification failed after {config.max_retries} attempts. "
-        f"Failed checks: {', '.join(failed_strategies)}"
-    )
+        for attempt in range(1, config.max_retries + 1):
+            result = _execute_single_attempt(ctx, attempt)
+            if result is None:
+                continue  # Recording failed, retry
+
+            last_result = result
+            if result.verified:
+                return _handle_successful_attempt(ctx, result)
+
+            _cleanup_failed_attempt(result.raw_path, result.final_path)
+
+        # All retries exhausted
+        failed_strategies = [
+            v.strategy.value for v in last_result.verifications if not v.passed
+        ]
+        raise MaxRetriesError(
+            f"Verification failed after {config.max_retries} attempts. "
+            f"Failed checks: {', '.join(failed_strategies)}"
+        )
+
+    finally:
+        # Always return to original Space after recording
+        if space_ctx.switched:
+            _return_to_original_space(space_ctx, settle_time=0.5)
 
 
 def _find_target_if_needed(

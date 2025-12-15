@@ -96,6 +96,8 @@ class TestRecordVerifiedSuccess:
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),
+            patch("screen_recorder.actions.get_current_space_index", return_value=1),
+            patch("screen_recorder.actions.get_space_app_name", return_value=None),
             patch("subprocess.run", side_effect=subprocess_side_effect),
             patch("shutil.which", return_value="/usr/bin/tool"),
             patch("time.sleep"),
@@ -140,6 +142,8 @@ class TestRecordVerifiedSuccess:
         )
 
         with (
+            patch("screen_recorder.actions.get_current_space_index", return_value=1),
+            patch("screen_recorder.actions.get_space_app_name", return_value=None),
             patch("subprocess.run", side_effect=subprocess_side_effect),
             patch("shutil.which", return_value="/usr/bin/tool"),
             patch("time.sleep"),
@@ -201,6 +205,8 @@ class TestRecordVerifiedRetry:
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),
+            patch("screen_recorder.actions.get_current_space_index", return_value=1),
+            patch("screen_recorder.actions.get_space_app_name", return_value=None),
             patch("subprocess.run", side_effect=subprocess_side_effect),
             patch("shutil.which", return_value="/usr/bin/tool"),
             patch("time.sleep"),
@@ -255,6 +261,8 @@ class TestRecordVerifiedErrors:
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),
+            patch("screen_recorder.actions.get_current_space_index", return_value=1),
+            patch("screen_recorder.actions.get_space_app_name", return_value=None),
             patch("subprocess.run", side_effect=subprocess_side_effect),
             patch("shutil.which", return_value="/usr/bin/tool"),
             patch("time.sleep"),
@@ -339,6 +347,8 @@ class TestRecordVerifiedOptions:
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),
+            patch("screen_recorder.actions.get_current_space_index", return_value=1),
+            patch("screen_recorder.actions.get_space_app_name", return_value=None),
             patch("subprocess.run", side_effect=subprocess_side_effect),
             patch("shutil.which", return_value="/usr/bin/tool"),
             patch("time.sleep"),
@@ -383,6 +393,8 @@ class TestRecordVerifiedOptions:
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),
+            patch("screen_recorder.actions.get_current_space_index", return_value=1),
+            patch("screen_recorder.actions.get_space_app_name", return_value=None),
             patch("subprocess.run", side_effect=subprocess_side_effect),
             patch("shutil.which", return_value="/usr/bin/tool"),
             patch("time.sleep"),
@@ -435,6 +447,8 @@ class TestRecordSimple:
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),
+            patch("screen_recorder.actions.get_current_space_index", return_value=1),
+            patch("screen_recorder.actions.get_space_app_name", return_value=None),
             patch("subprocess.run", side_effect=subprocess_side_effect),
             patch("shutil.which", return_value="/usr/bin/tool"),
             patch("time.sleep"),
@@ -475,6 +489,8 @@ class TestRecordSimple:
 
         with (
             patch("screen_recorder.actions.find_target_window", return_value=mock_window_target),
+            patch("screen_recorder.actions.get_current_space_index", return_value=1),
+            patch("screen_recorder.actions.get_space_app_name", return_value=None),
             patch("subprocess.run", side_effect=subprocess_side_effect),
             patch("shutil.which", return_value="/usr/bin/tool"),
             patch("time.sleep"),
