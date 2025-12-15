@@ -1,7 +1,7 @@
 """macOS Window Controller - Find, activate, and screenshot windows across Spaces."""
 
 from .actions import activate_window, sanitize_app_name, take_screenshot
-from .cli import build_filter, create_parser, main
+from .cli import main
 from .core import (
     filter_windows,
     find_window,
@@ -32,8 +32,6 @@ __all__ = [
     "WindowInfo",
     "WindowNotFoundError",
     "activate_window",
-    "build_filter",
-    "create_parser",
     "filter_windows",
     "find_window",
     "find_windows",

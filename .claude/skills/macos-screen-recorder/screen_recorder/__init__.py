@@ -14,7 +14,7 @@ from .actions import (
     record_verified,
     sanitize_app_name,
 )
-from .cli import create_parser, main
+from .cli import main
 from .core import (
     check_dependencies,
     compute_hash_distance,
@@ -99,7 +99,6 @@ __all__ = [
     "convert_to_mp4",
     "convert_to_webp",
     "convert_video",
-    "create_parser",
     "extract_frame",
     "find_target_window",
     "get_current_space_index",

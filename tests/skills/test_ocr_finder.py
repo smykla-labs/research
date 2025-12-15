@@ -437,8 +437,8 @@ class TestGetClickTarget:
             mock_reader.readtext.return_value = results_with_dupe
             mock_get_reader.return_value = mock_reader
 
-            x1, y1 = get_click_target(temp_image, "Hello", index=0)
-            x2, y2 = get_click_target(temp_image, "Hello", index=1)
+            x1, _y1 = get_click_target(temp_image, "Hello", index=0)
+            x2, _y2 = get_click_target(temp_image, "Hello", index=1)
 
             assert x1 != x2  # Different positions
 
@@ -493,63 +493,53 @@ class TestListAllText:
 
 
 # =============================================================================
-# CLI Tests
+# CLI Tests (Typer subcommand interface)
 # =============================================================================
 
 
 class TestCLIParser:
-    """Tests for CLI argument parser."""
+    """Tests for CLI subcommand parsing."""
 
-    def test_list_action(self) -> None:
-        """Test --list flag."""
-        result = main(["--list", "--image", "test.png"])
-        # Will fail because file doesn't exist, but parsing succeeds
-        assert result == 1  # FileNotFoundError
+    def test_list_subcommand(self) -> None:
+        """Test list subcommand with nonexistent file."""
+        result = main(["list", "--image", "test.png"])
+        # Typer validates exists=True and returns exit code 2
+        assert result == 2
 
-    def test_find_action(self) -> None:
-        """Test --find flag."""
-        result = main(["--find", "text", "--image", "test.png"])
-        assert result == 1  # FileNotFoundError
+    def test_find_subcommand(self) -> None:
+        """Test find subcommand with nonexistent file."""
+        result = main(["find", "text", "--image", "test.png"])
+        assert result == 2  # Typer validation error
 
-    def test_click_action(self) -> None:
-        """Test --click flag."""
-        result = main(["--click", "text", "--image", "test.png"])
-        assert result == 1  # FileNotFoundError
+    def test_click_subcommand(self) -> None:
+        """Test click subcommand with nonexistent file."""
+        result = main(["click", "text", "--image", "test.png"])
+        assert result == 2  # Typer validation error
 
-    def test_mutually_exclusive_actions(self, capsys) -> None:
-        """Test that actions are mutually exclusive."""
-        with pytest.raises(SystemExit) as exc_info:
-            main(["--find", "a", "--list", "--image", "test.png"])
-        exit_code: int = exc_info.value.code  # type: ignore[assignment]
-        assert exit_code == 2  # argparse error code
+    def test_image_required_for_list(self) -> None:
+        """Test --image is required for list subcommand."""
+        result = main(["list"])
+        assert result == 2  # Typer error code for missing required option
 
-    def test_image_required(self, capsys) -> None:
-        """Test --image is required."""
-        with pytest.raises(SystemExit) as exc_info:
-            main(["--list"])
-        exit_code: int = exc_info.value.code  # type: ignore[assignment]
-        assert exit_code == 2  # argparse error code
-
-    def test_short_flags(self, capsys) -> None:
-        """Test short flags parsing."""
-        # -f and -l, -i for image
-        result = main(["-l", "-i", "test.png"])
-        assert result == 1  # FileNotFoundError, but parsing works
+    def test_short_image_flag(self) -> None:
+        """Test -i short flag for --image."""
+        result = main(["list", "-i", "test.png"])
+        assert result == 2  # Typer validation error (file doesn't exist)
 
 
 class TestHandleList:
-    """Tests for _handle_list function."""
+    """Tests for list subcommand."""
 
     def test_handle_list_json_output(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --list with --json output."""
+        """Test list with --json output."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--list", "--image", str(temp_image), "--json"])
+            result = main(["list", "--image", str(temp_image), "--json"])
 
             assert result == 0
             captured = capsys.readouterr()
@@ -559,13 +549,13 @@ class TestHandleList:
     def test_handle_list_table_output(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --list with table output."""
+        """Test list with table output."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--list", "--image", str(temp_image), "--min-confidence", "0"])
+            result = main(["list", "--image", str(temp_image), "--min-confidence", "0"])
 
             assert result == 0
             captured = capsys.readouterr()
@@ -573,13 +563,13 @@ class TestHandleList:
             assert "Confidence" in captured.out
 
     def test_handle_list_empty(self, temp_image: Path, capsys) -> None:
-        """Test --list with no text found."""
+        """Test list with no text found."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = []
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--list", "--image", str(temp_image)])
+            result = main(["list", "--image", str(temp_image)])
 
             assert result == 0
             captured = capsys.readouterr()
@@ -587,18 +577,18 @@ class TestHandleList:
 
 
 class TestHandleFind:
-    """Tests for _handle_find function."""
+    """Tests for find subcommand."""
 
     def test_handle_find_with_matches(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --find with matches."""
+        """Test find with matches."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--find", "Hello", "--image", str(temp_image)])
+            result = main(["find", "Hello", "--image", str(temp_image)])
 
             assert result == 0
             captured = capsys.readouterr()
@@ -607,13 +597,13 @@ class TestHandleFind:
     def test_handle_find_no_matches(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --find with no matches."""
+        """Test find with no matches."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--find", "nonexistent", "--image", str(temp_image)])
+            result = main(["find", "nonexistent", "--image", str(temp_image)])
 
             assert result == 1
             captured = capsys.readouterr()
@@ -622,13 +612,13 @@ class TestHandleFind:
     def test_handle_find_json_output(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --find with --json output."""
+        """Test find with --json output."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--find", "Hello", "--image", str(temp_image), "--json"])
+            result = main(["find", "Hello", "--image", str(temp_image), "--json"])
 
             assert result == 0
             captured = capsys.readouterr()
@@ -637,18 +627,18 @@ class TestHandleFind:
 
 
 class TestHandleClick:
-    """Tests for _handle_click function."""
+    """Tests for click subcommand."""
 
     def test_handle_click_returns_coords(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --click returns coordinates."""
+        """Test click returns coordinates."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--click", "Hello", "--image", str(temp_image)])
+            result = main(["click", "Hello", "--image", str(temp_image)])
 
             assert result == 0
             captured = capsys.readouterr()
@@ -657,13 +647,13 @@ class TestHandleClick:
     def test_handle_click_json_output(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --click with --json output."""
+        """Test click with --json output."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--click", "Hello", "--image", str(temp_image), "--json"])
+            result = main(["click", "Hello", "--image", str(temp_image), "--json"])
 
             assert result == 0
             captured = capsys.readouterr()
@@ -673,13 +663,13 @@ class TestHandleClick:
     def test_handle_click_not_found(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --click with text not found."""
+        """Test click with text not found."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--click", "nonexistent", "--image", str(temp_image)])
+            result = main(["click", "nonexistent", "--image", str(temp_image)])
 
             assert result == 1
             captured = capsys.readouterr()
@@ -688,13 +678,13 @@ class TestHandleClick:
     def test_handle_click_with_index(
         self, temp_image: Path, mock_easyocr_results: list, capsys
     ) -> None:
-        """Test --click with --index."""
+        """Test click with --index."""
         with patch("ocr_finder.core.get_reader") as mock_get_reader:
             mock_reader = MagicMock()
             mock_reader.readtext.return_value = mock_easyocr_results
             mock_get_reader.return_value = mock_reader
 
-            result = main(["--click", "Hello", "--image", str(temp_image), "--index", "0"])
+            result = main(["click", "Hello", "--image", str(temp_image), "--index", "0"])
 
             assert result == 0
 
@@ -710,11 +700,11 @@ class TestCLIOptions:
             mock_get_reader.return_value = mock_reader
 
             # Without exact: "ell" matches "Hello"
-            result = main(["--find", "ell", "--image", str(temp_image)])
+            result = main(["find", "ell", "--image", str(temp_image)])
             assert result == 0
 
             # With exact: "ell" does not match "Hello"
-            result = main(["--find", "ell", "--image", str(temp_image), "--exact"])
+            result = main(["find", "ell", "--image", str(temp_image), "--exact"])
             assert result == 1
 
     def test_case_sensitive_flag(
@@ -727,11 +717,11 @@ class TestCLIOptions:
             mock_get_reader.return_value = mock_reader
 
             # Without case-sensitive: "hello" matches "Hello"
-            result = main(["--find", "hello", "--image", str(temp_image)])
+            result = main(["find", "hello", "--image", str(temp_image)])
             assert result == 0
 
             # With case-sensitive: "hello" does not match "Hello"
-            result = main(["--find", "hello", "--image", str(temp_image), "--case-sensitive"])
+            result = main(["find", "hello", "--image", str(temp_image), "--case-sensitive"])
             assert result == 1
 
     def test_min_confidence_flag(
@@ -744,11 +734,11 @@ class TestCLIOptions:
             mock_get_reader.return_value = mock_reader
 
             # Default min-confidence filters out "Low Conf" (0.30)
-            result = main(["--find", "Low", "--image", str(temp_image)])
+            result = main(["find", "Low", "--image", str(temp_image)])
             assert result == 1  # Not found
 
             # Lower threshold includes it
-            result = main(["--find", "Low", "--image", str(temp_image), "--min-confidence", "0.2"])
+            result = main(["find", "Low", "--image", str(temp_image), "--min-confidence", "0.2"])
             assert result == 0
 
 
@@ -756,15 +746,8 @@ class TestCLIErrorHandling:
     """Tests for CLI error handling."""
 
     def test_file_not_found_error(self, capsys) -> None:
-        """Test FileNotFoundError handling."""
-        result = main(["--list", "--image", "/nonexistent/path/image.png"])
-        assert result == 1
+        """Test file not found handling (Typer validation)."""
+        result = main(["list", "--image", "/nonexistent/path/image.png"])
+        assert result == 2  # Typer validation error for exists=True
         captured = capsys.readouterr()
-        assert "Error" in captured.err
-
-    def test_version_flag(self, capsys) -> None:
-        """Test --version flag."""
-        with pytest.raises(SystemExit) as exc_info:
-            main(["--version"])
-        exit_code: int = exc_info.value.code  # type: ignore[assignment]
-        assert exit_code == 0
+        assert "not exist" in captured.err

@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import typer
 from screen_recorder import (
     DEFAULT_DURATION_SECONDS,
     DEFAULT_FPS,
@@ -25,8 +26,12 @@ from screen_recorder import (
     WindowTarget,
 )
 from screen_recorder.cli import (
+    FormatOptions,
+    OutputOptions,
+    RecordingOptions,
+    RetryOptions,
+    WindowFilterOptions,
     build_config,
-    create_parser,
     main,
     parse_output_format,
     parse_preset,
@@ -419,77 +424,68 @@ class TestPresetConfigs:
 
 
 # =============================================================================
-# CLI Parser Tests
+# CLI Subcommand Tests
 # =============================================================================
 
 
-class TestCLIParser:
-    """Tests for CLI argument parser."""
+class TestCLISubcommands:
+    """Tests for CLI subcommands (Typer-based)."""
 
-    def test_parser_creation(self) -> None:
-        """Test parser is created successfully."""
-        parser = create_parser()
-        assert parser is not None
+    def test_main_no_args_shows_error(self, capsys) -> None:
+        """Test that no args shows error and returns 2."""
+        result = main([])
+        # Typer returns 2 when missing required command
+        assert result == 2
+        captured = capsys.readouterr()
+        assert "Missing command" in captured.err
 
-    def test_record_flag(self) -> None:
-        """Test --record flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--record", "TestApp"])
-        assert args.record == "TestApp"
+    def test_check_deps_command(self, capsys) -> None:
+        """Test check-deps subcommand."""
+        with patch("screen_recorder.cli.check_dependencies") as mock_check:
+            mock_check.return_value = {
+                "screencapture": True,
+                "ffmpeg": True,
+                "ffprobe": True,
+            }
+            result = main(["check-deps"])
 
-    def test_record_short_flag(self) -> None:
-        """Test -r short flag."""
-        parser = create_parser()
-        args = parser.parse_args(["-r", "TestApp"])
-        assert args.record == "TestApp"
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "screencapture" in captured.out
 
-    def test_find_flag(self) -> None:
-        """Test --find flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--find", "TestApp"])
-        assert args.find == "TestApp"
+    def test_check_deps_missing(self, capsys) -> None:
+        """Test check-deps with missing dependency."""
+        with patch("screen_recorder.cli.check_dependencies") as mock_check:
+            mock_check.return_value = {
+                "screencapture": True,
+                "ffmpeg": False,
+                "ffprobe": False,
+            }
+            result = main(["check-deps"])
 
-    def test_duration_flag(self) -> None:
-        """Test --duration flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--record", "App", "--duration", "10"])
-        assert args.duration == 10.0
+        assert result == 1
 
-    def test_duration_short_flag(self) -> None:
-        """Test -d short flag."""
-        parser = create_parser()
-        args = parser.parse_args(["-r", "App", "-d", "5"])
-        assert args.duration == 5.0
+    def test_find_command(self, capsys, sample_target: WindowTarget) -> None:
+        """Test find subcommand."""
+        with patch("screen_recorder.cli.find_target_window") as mock_find:
+            mock_find.return_value = sample_target
+            result = main(["find", "TestApp"])
 
-    def test_preset_flag(self) -> None:
-        """Test --preset flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--record", "App", "--preset", "discord"])
-        assert args.preset == "discord"
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "TestApp" in captured.out
 
-    def test_format_flag(self) -> None:
-        """Test --format flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--record", "App", "--format", "webp"])
-        assert args.format == "webp"
+    def test_find_command_json(self, capsys, sample_target: WindowTarget) -> None:
+        """Test find subcommand with --json output."""
+        with patch("screen_recorder.cli.find_target_window") as mock_find:
+            mock_find.return_value = sample_target
+            result = main(["find", "TestApp", "--json"])
 
-    def test_json_flag(self) -> None:
-        """Test --json flag."""
-        parser = create_parser()
-        args = parser.parse_args(["--record", "App", "--json"])
-        assert args.json is True
-
-    def test_verify_flag(self) -> None:
-        """Test --verify flag with multiple values."""
-        parser = create_parser()
-        args = parser.parse_args(["--record", "App", "--verify", "basic", "duration"])
-        assert args.verify == ["basic", "duration"]
-
-    def test_full_screen_flag(self) -> None:
-        """Test --full-screen flag."""
-        parser = create_parser()
-        args = parser.parse_args(["--full-screen", "-d", "3"])
-        assert args.full_screen is True
+        assert result == 0
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert data["app_name"] == "TestApp"
+        assert data["window_id"] == 12345
 
 
 # =============================================================================
@@ -532,6 +528,12 @@ class TestCLIParseFunctions:
         strategies = parse_verification_strategies(["none"])
         assert strategies == ()
 
+    def test_parse_verification_strategies_default(self) -> None:
+        """Test default verification strategies when None is passed."""
+        strategies = parse_verification_strategies(None)
+        assert VerificationStrategy.BASIC in strategies
+        assert VerificationStrategy.DURATION in strategies
+
     def test_parse_retry_strategy(self) -> None:
         """Test retry strategy parsing."""
         assert parse_retry_strategy("fixed") == RetryStrategy.FIXED
@@ -546,104 +548,70 @@ class TestCLIParseFunctions:
 
 
 class TestCLIBuildConfig:
-    """Tests for CLI config building."""
+    """Tests for CLI config building with option dataclasses."""
 
     def test_build_config_basic(self) -> None:
         """Test building config from basic args."""
-        parser = create_parser()
-        args = parser.parse_args(["--record", "TestApp", "-d", "5"])
-        config = build_config(args)
+        filter_opts = WindowFilterOptions(app_name="TestApp")
+        recording_opts = RecordingOptions(duration=5.0)
+        output_opts = OutputOptions()
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
+
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.app_name == "TestApp"
         assert config.duration_seconds == 5.0
 
     def test_build_config_with_preset(self) -> None:
         """Test building config with preset."""
-        parser = create_parser()
-        args = parser.parse_args(["--record", "App", "--preset", "github"])
-        config = build_config(args)
+        filter_opts = WindowFilterOptions(app_name="App")
+        recording_opts = RecordingOptions()
+        output_opts = OutputOptions(preset="github")
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
+
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.preset == PlatformPreset.GITHUB
 
     def test_build_config_with_filters(self) -> None:
         """Test building config with window filters."""
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--record",
-                "App",
-                "--title",
-                "Test.*",
-                "--args",
-                "sandbox",
-            ]
-        )
-        config = build_config(args)
+        filter_opts = WindowFilterOptions(app_name="App", title="Test.*", args_contains="sandbox")
+        recording_opts = RecordingOptions()
+        output_opts = OutputOptions()
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
+
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.title_pattern == "Test.*"
         assert config.args_contains == "sandbox"
 
+    def test_build_config_with_format(self) -> None:
+        """Test building config with format."""
+        filter_opts = WindowFilterOptions(app_name="App")
+        recording_opts = RecordingOptions()
+        output_opts = OutputOptions(format_str="webp")
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
 
-# =============================================================================
-# CLI Main Function Tests
-# =============================================================================
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
+        assert config.output_format == OutputFormat.WEBP
 
-class TestCLIMain:
-    """Tests for CLI main function."""
+    def test_build_config_full_screen(self) -> None:
+        """Test building config for full screen."""
+        filter_opts = WindowFilterOptions()
+        recording_opts = RecordingOptions(duration=3.0, full_screen=True)
+        output_opts = OutputOptions()
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
 
-    def test_main_no_args_shows_help(self, capsys) -> None:
-        """Test that no args shows help and returns 1."""
-        result = main([])
-        assert result == 1
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
-    def test_main_check_deps(self, capsys) -> None:
-        """Test --check-deps action."""
-        with patch("screen_recorder.cli.check_dependencies") as mock_check:
-            mock_check.return_value = {
-                "screencapture": True,
-                "ffmpeg": True,
-                "ffprobe": True,
-            }
-            result = main(["--check-deps"])
-
-        assert result == 0
-        captured = capsys.readouterr()
-        assert "screencapture" in captured.out
-
-    def test_main_check_deps_missing(self, capsys) -> None:
-        """Test --check-deps with missing dependency."""
-        with patch("screen_recorder.cli.check_dependencies") as mock_check:
-            mock_check.return_value = {
-                "screencapture": True,
-                "ffmpeg": False,
-                "ffprobe": False,
-            }
-            result = main(["--check-deps"])
-
-        assert result == 1
-
-    def test_main_find_window(self, capsys, sample_target: WindowTarget) -> None:
-        """Test --find action."""
-        with patch("screen_recorder.cli.find_target_window") as mock_find:
-            mock_find.return_value = sample_target
-            result = main(["--find", "TestApp"])
-
-        assert result == 0
-        captured = capsys.readouterr()
-        assert "TestApp" in captured.out
-
-    def test_main_find_window_json(self, capsys, sample_target: WindowTarget) -> None:
-        """Test --find with --json output."""
-        with patch("screen_recorder.cli.find_target_window") as mock_find:
-            mock_find.return_value = sample_target
-            result = main(["--find", "TestApp", "--json"])
-
-        assert result == 0
-        captured = capsys.readouterr()
-        data = json.loads(captured.out)
-        assert data["app_name"] == "TestApp"
-        assert data["window_id"] == 12345
+        assert config.full_screen is True
+        assert config.duration_seconds == 3.0
 
 
 # =============================================================================
@@ -712,37 +680,27 @@ class TestParseRegion:
 
     def test_parse_region_invalid_format_too_few(self) -> None:
         """Test parsing region with too few parts raises error."""
-        import argparse
-
-        with pytest.raises(argparse.ArgumentTypeError, match="x,y,width,height"):
+        with pytest.raises(typer.BadParameter, match="x,y,width,height"):
             parse_region("100,200,800")
 
     def test_parse_region_invalid_format_too_many(self) -> None:
         """Test parsing region with too many parts raises error."""
-        import argparse
-
-        with pytest.raises(argparse.ArgumentTypeError, match="x,y,width,height"):
+        with pytest.raises(typer.BadParameter, match="x,y,width,height"):
             parse_region("100,200,800,600,extra")
 
     def test_parse_region_invalid_values(self) -> None:
         """Test parsing region with non-numeric values raises error."""
-        import argparse
-
-        with pytest.raises(argparse.ArgumentTypeError, match="Invalid region"):
+        with pytest.raises(typer.BadParameter, match="Invalid region"):
             parse_region("abc,200,800,600")
 
     def test_parse_region_zero_width(self) -> None:
         """Test parsing region with zero width raises error."""
-        import argparse
-
-        with pytest.raises(argparse.ArgumentTypeError, match="must be positive"):
+        with pytest.raises(typer.BadParameter, match="must be positive"):
             parse_region("100,200,0,600")
 
     def test_parse_region_negative_height(self) -> None:
         """Test parsing region with negative height raises error."""
-        import argparse
-
-        with pytest.raises(argparse.ArgumentTypeError, match="must be positive"):
+        with pytest.raises(typer.BadParameter, match="must be positive"):
             parse_region("100,200,800,-100")
 
     def test_parse_region_as_region_format(self) -> None:
@@ -752,45 +710,18 @@ class TestParseRegion:
         assert bounds.as_region == "100,200,800,600"
 
 
-class TestCLIRegionFlags:
-    """Tests for CLI region flags."""
-
-    def test_region_flag_parsing(self) -> None:
-        """Test --region flag is parsed correctly."""
-        parser = create_parser()
-        args = parser.parse_args(["--full-screen", "--region", "100,200,800,600"])
-        assert args.region == "100,200,800,600"
-
-    def test_region_short_flag(self) -> None:
-        """Test -R short flag for region."""
-        parser = create_parser()
-        args = parser.parse_args(["--full-screen", "-R", "100,200,800,600"])
-        assert args.region == "100,200,800,600"
-
-    def test_window_region_flag_parsing(self) -> None:
-        """Test --window-region flag is parsed correctly."""
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--record",
-                "TestApp",
-                "--window-region",
-                "0,400,800,300",
-            ]
-        )
-        assert args.window_region == "0,400,800,300"
+class TestCLIRegionOptions:
+    """Tests for CLI region options."""
 
     def test_build_config_with_region(self) -> None:
         """Test building config with --region."""
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--full-screen",
-                "--region",
-                "100,200,800,600",
-            ]
-        )
-        config = build_config(args)
+        filter_opts = WindowFilterOptions()
+        recording_opts = RecordingOptions(region="100,200,800,600", full_screen=True)
+        output_opts = OutputOptions()
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
+
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.region is not None
         assert config.region.x == 100.0
@@ -800,16 +731,13 @@ class TestCLIRegionFlags:
 
     def test_build_config_with_window_region(self) -> None:
         """Test building config with --window-region."""
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--record",
-                "TestApp",
-                "--window-region",
-                "0,400,800,300",
-            ]
-        )
-        config = build_config(args)
+        filter_opts = WindowFilterOptions(app_name="TestApp")
+        recording_opts = RecordingOptions(window_region="0,400,800,300")
+        output_opts = OutputOptions()
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
+
+        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
         assert config.window_relative_region is not None
         assert config.window_relative_region.x == 0.0
@@ -817,21 +745,16 @@ class TestCLIRegionFlags:
         assert config.window_relative_region.width == 800.0
         assert config.window_relative_region.height == 300.0
 
-    def test_window_region_requires_record(self) -> None:
-        """Test --window-region requires --record flag."""
-        import argparse
+    def test_window_region_requires_app_name(self) -> None:
+        """Test --window-region requires app_name."""
+        filter_opts = WindowFilterOptions()  # No app_name
+        recording_opts = RecordingOptions(window_region="0,400,800,300", full_screen=True)
+        output_opts = OutputOptions()
+        format_opts = FormatOptions()
+        retry_opts = RetryOptions()
 
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--full-screen",
-                "--window-region",
-                "0,400,800,300",
-            ]
-        )
-
-        with pytest.raises(argparse.ArgumentTypeError, match="requires --record"):
-            build_config(args)
+        with pytest.raises(typer.BadParameter, match="requires an app name"):
+            build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
 
 
 class TestRecordingConfigWindowRelativeRegion:

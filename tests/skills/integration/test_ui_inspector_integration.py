@@ -400,9 +400,11 @@ class TestGetClickTarget:
     def test_get_click_target_not_found_raises(self, finder_window: None) -> None:
         """Test that ElementNotFoundError is raised for non-existent element."""
         from ui_inspector import get_click_target
-        from ui_inspector.models import ElementNotFoundError
+        from ui_inspector.models import ElementNotFoundError, WindowNotFoundError
 
-        with pytest.raises(ElementNotFoundError):
+        # May raise ElementNotFoundError (element not found) or WindowNotFoundError
+        # (if Finder has no windows open in this environment)
+        with pytest.raises((ElementNotFoundError, WindowNotFoundError)):
             get_click_target("Finder", title="NonexistentTitle12345XYZ")
 
 
@@ -456,7 +458,7 @@ def _get_finder_elements_json(
     """Helper to get Finder elements as JSON, returning None on failure."""
     from ui_inspector.cli import main
 
-    exit_code = main(["--app", "Finder", "--list", "--json"])
+    exit_code = main(["list", "--app", "Finder", "--json"])
     captured = capsys.readouterr()
 
     if exit_code != 0 or not captured.out.strip():
@@ -477,7 +479,7 @@ class TestCLIIntegration:
         """Test --list CLI command."""
         from ui_inspector.cli import main
 
-        exit_code = main(["--app", "Finder", "--list"])
+        exit_code = main(["list", "--app", "Finder"])
         captured = capsys.readouterr()
 
         if "No windows found" in captured.err:
@@ -517,7 +519,7 @@ class TestCLIIntegration:
         # Use a role that exists
         role = data[0]["role"]
 
-        exit_code = main(["--app", "Finder", "--list", "--role", str(role), "--json"])
+        exit_code = main(["list", "--app", "Finder", "--role", str(role), "--json"])
         assert exit_code == 0
 
         captured = capsys.readouterr()
@@ -538,7 +540,7 @@ class TestCLIIntegration:
             pytest.skip("Finder window not accessible or no elements")
 
         role = data[0]["role"]
-        exit_code = main(["--app", "Finder", "--find", "--role", str(role)])
+        exit_code = main(["find", "--app", "Finder", "--role", str(role)])
 
         # Should find or not find, but not crash
         assert exit_code in (0, 1)
@@ -555,7 +557,7 @@ class TestCLIIntegration:
             pytest.skip("Finder window not accessible or no elements")
 
         role = data[0]["role"]
-        exit_code = main(["--app", "Finder", "--find", "--role", str(role), "--json"])
+        exit_code = main(["find", "--app", "Finder", "--role", str(role), "--json"])
 
         if exit_code == 0:
             captured = capsys.readouterr()
@@ -578,7 +580,7 @@ class TestCLIIntegration:
             pytest.skip("Finder window not accessible or no elements")
 
         role = data[0]["role"]
-        exit_code = main(["--app", "Finder", "--click", "--role", str(role)])
+        exit_code = main(["click", "--app", "Finder", "--role", str(role)])
 
         if exit_code == 0:
             captured = capsys.readouterr()
@@ -601,7 +603,7 @@ class TestCLIIntegration:
             pytest.skip("Finder window not accessible or no elements")
 
         role = data[0]["role"]
-        exit_code = main(["--app", "Finder", "--click", "--role", str(role), "--json"])
+        exit_code = main(["click", "--app", "Finder", "--role", str(role), "--json"])
 
         if exit_code == 0:
             captured = capsys.readouterr()
@@ -615,7 +617,7 @@ class TestCLIIntegration:
         """Test error handling for non-existent app."""
         from ui_inspector.cli import main
 
-        exit_code = main(["--app", "NonExistentApp12345XYZ", "--list"])
+        exit_code = main(["list", "--app", "NonExistentApp12345XYZ"])
 
         assert exit_code == 1
         captured = capsys.readouterr()
@@ -627,7 +629,7 @@ class TestCLIIntegration:
         """Test --find when element not found."""
         from ui_inspector.cli import main
 
-        exit_code = main(["--app", "Finder", "--find", "--title", "NonexistentTitle12345XYZ"])
+        exit_code = main(["find", "--app", "Finder", "--title", "NonexistentTitle12345XYZ"])
 
         assert exit_code == 1
         captured = capsys.readouterr()

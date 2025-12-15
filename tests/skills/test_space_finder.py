@@ -15,7 +15,6 @@ from space_finder import (
     PlistReadError,
     SpaceInfo,
     activate_app,
-    create_parser,
     find_space_by_app,
     get_current_space,
     get_spaces_plist,
@@ -524,7 +523,7 @@ class TestGoToSpace:
         ]
 
         with patch("space_finder.actions.activate_app") as mock_activate:
-            target, original, success = go_to_space(spaces, "GoLand")
+            target, _original, success = go_to_space(spaces, "GoLand")
 
         assert success is True
         assert target.app_name == "GoLand"
@@ -681,65 +680,111 @@ class TestHandlers:
 
 
 # =============================================================================
-# Argument Parser Tests
+# CLI Command Tests (via main())
 # =============================================================================
 
 
-class TestCreateParser:
-    """Tests for create_parser function."""
+class TestCLICommands:
+    """Tests for CLI commands via main()."""
 
-    def test_parser_list_flag(self) -> None:
-        """Test --list flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--list"])
-        assert args.list is True
+    def test_list_command(
+        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test list command."""
+        plist_bytes = plistlib.dumps(sample_plist_data)
+        with patch("space_finder.core.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
+            result = main(["list"])
 
-    def test_parser_current_flag(self) -> None:
-        """Test --current flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--current"])
-        assert args.current is True
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "GoLand" in captured.out
 
-    def test_parser_go_flag(self) -> None:
-        """Test --go flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--go", "GoLand"])
-        assert args.go == "GoLand"
+    def test_current_command(
+        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test current command."""
+        plist_bytes = plistlib.dumps(sample_plist_data)
+        with patch("space_finder.core.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
+            result = main(["current"])
 
-    def test_parser_positional_app(self) -> None:
-        """Test positional app argument."""
-        parser = create_parser()
-        args = parser.parse_args(["GoLand"])
-        assert args.app_query == "GoLand"
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Desktop" in captured.out
 
-    def test_parser_app_with_spaces(self) -> None:
-        """Test app name with spaces."""
-        parser = create_parser()
-        args = parser.parse_args(["IntelliJ IDEA"])
-        assert args.app_query == "IntelliJ IDEA"
+    def test_go_command(
+        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test go command with app argument."""
+        plist_bytes = plistlib.dumps(sample_plist_data)
+        with (
+            patch("space_finder.core.subprocess.run") as mock_run,
+            patch("space_finder.actions.activate_app"),
+            patch("space_finder.actions.time.sleep"),
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
+            result = main(["go", "GoLand"])
 
-    def test_parser_json_flag(self) -> None:
-        """Test --json flag parsing."""
-        parser = create_parser()
-        args = parser.parse_args(["--list", "--json"])
-        assert args.json is True
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Switched to: GoLand" in captured.out
 
-    def test_parser_short_flags(self) -> None:
-        """Test short flag variants (-l, -c, -g, -j)."""
-        parser = create_parser()
+    def test_find_command(
+        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test find command with app argument."""
+        plist_bytes = plistlib.dumps(sample_plist_data)
+        with patch("space_finder.core.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
+            result = main(["find", "GoLand"])
 
-        args = parser.parse_args(["-l"])
-        assert args.list is True
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Found: Space 2" in captured.out
 
-        args = parser.parse_args(["-c"])
-        assert args.current is True
+    def test_find_command_app_with_spaces(
+        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test find command with app name containing spaces."""
+        plist_bytes = plistlib.dumps(sample_plist_data)
+        with patch("space_finder.core.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
+            # App not in sample data, but tests that spaces in name work
+            result = main(["find", "IntelliJ IDEA"])
 
-        args = parser.parse_args(["-g", "GoLand"])
-        assert args.go == "GoLand"
+        assert result == 1  # Not found
+        captured = capsys.readouterr()
+        assert "No space found" in captured.out
 
-        args = parser.parse_args(["-l", "-j"])
-        assert args.list is True
-        assert args.json is True
+    def test_list_json_flag(
+        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test list command with --json flag."""
+        plist_bytes = plistlib.dumps(sample_plist_data)
+        with patch("space_finder.core.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
+            result = main(["list", "--json"])
+
+        assert result == 0
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert isinstance(data, list)
+        assert data[1]["app_name"] == "GoLand"
+
+    def test_short_json_flag(
+        self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test short flag variant (-j)."""
+        plist_bytes = plistlib.dumps(sample_plist_data)
+        with patch("space_finder.core.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
+            result = main(["list", "-j"])
+
+        assert result == 0
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert isinstance(data, list)
 
 
 # =============================================================================
@@ -751,19 +796,19 @@ class TestMain:
     """Tests for main function."""
 
     def test_main_no_args(self, capsys: pytest.CaptureFixture[str]) -> None:
-        """Test main with no arguments shows help."""
+        """Test main with no arguments shows error."""
         result = main([])
-        assert result == 1
+        assert result == 2  # Typer returns 2 for missing command
         captured = capsys.readouterr()
-        assert "usage:" in captured.out.lower()
+        assert "Missing command" in captured.err
 
     def test_main_list(self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]) -> None:
-        """Test main with --list."""
+        """Test main with list command."""
         plist_bytes = plistlib.dumps(sample_plist_data)
 
         with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
-            result = main(["--list"])
+            result = main(["list"])
 
         assert result == 0
         captured = capsys.readouterr()
@@ -773,7 +818,7 @@ class TestMain:
         """Test main with plist read error."""
         with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stderr=b"Error")
-            result = main(["--list"])
+            result = main(["list"])
 
         assert result == 1
         captured = capsys.readouterr()
@@ -782,12 +827,12 @@ class TestMain:
     def test_main_list_json(
         self, sample_plist_data: dict, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Test main with --list --json."""
+        """Test main with list --json command."""
         plist_bytes = plistlib.dumps(sample_plist_data)
 
         with patch("space_finder.core.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout=plist_bytes)
-            result = main(["--list", "--json"])
+            result = main(["list", "--json"])
 
         assert result == 0
         captured = capsys.readouterr()

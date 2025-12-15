@@ -13,8 +13,6 @@ from window_controller import (
     WindowFilter,
     WindowInfo,
     WindowNotFoundError,
-    build_filter,
-    create_parser,
     filter_windows,
     get_process_info,
     get_spaces_plist,
@@ -430,161 +428,196 @@ class TestProcessInfo:
 
 
 # =============================================================================
-# CLI Parser Tests
+# CLI Tests (Typer subcommand style)
 # =============================================================================
 
 
-class TestCLIParser:
-    """Tests for CLI argument parser."""
+class TestCLI:
+    """Tests for CLI commands."""
 
-    def test_list_action(self) -> None:
-        """Test --list argument."""
-        parser = create_parser()
-        args = parser.parse_args(["--list"])
-        assert args.list is True
-
-    def test_find_action(self) -> None:
-        """Test --find argument."""
-        parser = create_parser()
-        args = parser.parse_args(["--find", "GoLand"])
-        assert args.find == "GoLand"
-
-    def test_find_action_empty(self) -> None:
-        """Test --find with no app name."""
-        parser = create_parser()
-        args = parser.parse_args(["--find"])
-        assert args.find == ""
-
-    def test_activate_action(self) -> None:
-        """Test --activate argument."""
-        parser = create_parser()
-        args = parser.parse_args(["--activate", "GoLand"])
-        assert args.activate == "GoLand"
-
-    def test_screenshot_action(self) -> None:
-        """Test --screenshot argument."""
-        parser = create_parser()
-        args = parser.parse_args(["--screenshot", "GoLand", "--output", "test.png"])
-        assert args.screenshot == "GoLand"
-        assert args.output == "test.png"
-
-    def test_filter_options(self) -> None:
-        """Test filter options."""
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--find",
-                "Main",
-                "--title",
-                "project.*",
-                "--pid",
-                "12345",
-                "--path-contains",
-                ".gradle",
-                "--args-contains",
-                "sandbox",
-            ]
-        )
-        assert args.find == "Main"
-        assert args.title == "project.*"
-        assert args.pid == 12345
-        assert args.path_contains == ".gradle"
-        assert args.args_contains == "sandbox"
-
-    def test_screenshot_options(self) -> None:
-        """Test screenshot-specific options."""
-        parser = create_parser()
-        args = parser.parse_args(
-            [
-                "--screenshot",
-                "GoLand",
-                "--no-activate",
-                "--settle-ms",
-                "2000",
-            ]
-        )
-        assert args.screenshot == "GoLand"
-        assert args.no_activate is True
-        assert args.settle_ms == 2000
-
-    def test_json_output(self) -> None:
-        """Test --json flag."""
-        parser = create_parser()
-        args = parser.parse_args(["--find", "GoLand", "--json"])
-        assert args.json is True
-
-
-class TestBuildFilter:
-    """Tests for build_filter function."""
-
-    def test_build_filter_from_find(self) -> None:
-        """Test building filter from --find args."""
-        parser = create_parser()
-        args = parser.parse_args(["--find", "GoLand", "--title", "research"])
-        f = build_filter(args)
-        assert f.app_name == "GoLand"
-        assert f.title_pattern == "research"
-
-    def test_build_filter_from_activate(self) -> None:
-        """Test building filter from --activate args."""
-        parser = create_parser()
-        args = parser.parse_args(["--activate", "Chrome"])
-        f = build_filter(args)
-        assert f.app_name == "Chrome"
-
-    def test_build_filter_empty_find(self) -> None:
-        """Test building filter with empty --find."""
-        parser = create_parser()
-        args = parser.parse_args(["--find", "--title", "test"])
-        f = build_filter(args)
-        assert f.app_name is None
-        assert f.title_pattern == "test"
-
-
-# =============================================================================
-# Main Function Tests
-# =============================================================================
-
-
-class TestMain:
-    """Tests for main entry point."""
-
-    def test_no_action_shows_help(self) -> None:
-        """Test no action returns 1."""
+    def test_no_command_shows_help(self) -> None:
+        """Test no command returns non-zero."""
         result = main([])
-        assert result == 1
+        assert result != 0
 
     @patch("window_controller.cli.get_all_windows")
-    def test_list_action(self, mock_get_windows: MagicMock) -> None:
-        """Test --list action."""
+    def test_list_command(self, mock_get_windows: MagicMock) -> None:
+        """Test list subcommand."""
         mock_get_windows.return_value = []
-        result = main(["--list"])
+        result = main(["list"])
         assert result == 0
-        # get_all_windows may be called multiple times (once in main, once in list_all_windows)
         assert mock_get_windows.called
 
+    @patch("window_controller.cli.get_all_windows")
+    def test_list_command_with_json(
+        self,
+        mock_get_windows: MagicMock,
+        sample_window_goland: WindowInfo,
+        capsys,
+    ) -> None:
+        """Test list subcommand with --json."""
+        mock_get_windows.return_value = [sample_window_goland]
+        result = main(["list", "--json"])
+        assert result == 0
+
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert isinstance(data, list)
+        assert len(data) == 1
+        assert data[0]["app_name"] == "GoLand"
+
     @patch("window_controller.cli.find_windows")
-    def test_find_no_results(self, mock_find: MagicMock) -> None:
-        """Test --find with no results."""
+    def test_find_command_no_results(self, mock_find: MagicMock) -> None:
+        """Test find subcommand with no results."""
         mock_find.return_value = []
-        result = main(["--find", "NonExistent"])
+        result = main(["find", "NonExistent"])
         assert result == 1
 
     @patch("window_controller.cli.find_windows")
-    def test_find_with_json(
+    def test_find_command_with_app(
         self,
         mock_find: MagicMock,
         sample_window_goland: WindowInfo,
         capsys,
     ) -> None:
-        """Test --find with --json output."""
+        """Test find subcommand with app name."""
         mock_find.return_value = [sample_window_goland]
-        result = main(["--find", "GoLand", "--json"])
+        result = main(["find", "GoLand"])
+        assert result == 0
+
+        captured = capsys.readouterr()
+        assert "GoLand" in captured.out
+
+    @patch("window_controller.cli.find_windows")
+    def test_find_command_with_json(
+        self,
+        mock_find: MagicMock,
+        sample_window_goland: WindowInfo,
+        capsys,
+    ) -> None:
+        """Test find subcommand with --json output."""
+        mock_find.return_value = [sample_window_goland]
+        result = main(["find", "GoLand", "--json"])
         assert result == 0
 
         captured = capsys.readouterr()
         data = json.loads(captured.out)
         assert data["app_name"] == "GoLand"
+
+    @patch("window_controller.cli.find_windows")
+    def test_find_command_with_filters(
+        self,
+        mock_find: MagicMock,
+        sample_window_goland: WindowInfo,
+    ) -> None:
+        """Test find subcommand with filter options."""
+        mock_find.return_value = [sample_window_goland]
+        result = main(
+            [
+                "find",
+                "GoLand",
+                "--title",
+                "research.*",
+                "--path-contains",
+                "Applications",
+            ]
+        )
+        assert result == 0
+
+        # Verify filter was built correctly
+        call_args = mock_find.call_args[0][0]
+        assert call_args.app_name == "GoLand"
+        assert call_args.title_pattern == "research.*"
+        assert call_args.path_contains == "Applications"
+
+    @patch("window_controller.cli.activate_window")
+    def test_activate_command(
+        self,
+        mock_activate: MagicMock,
+        sample_window_goland: WindowInfo,
+        capsys,
+    ) -> None:
+        """Test activate subcommand."""
+        mock_activate.return_value = sample_window_goland
+        result = main(["activate", "GoLand"])
+        assert result == 0
+
+        captured = capsys.readouterr()
+        assert "Activated: GoLand" in captured.out
+
+    @patch("window_controller.cli.activate_window")
+    def test_activate_command_with_json(
+        self,
+        mock_activate: MagicMock,
+        sample_window_goland: WindowInfo,
+        capsys,
+    ) -> None:
+        """Test activate subcommand with --json."""
+        mock_activate.return_value = sample_window_goland
+        result = main(["activate", "GoLand", "--json"])
+        assert result == 0
+
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert "activated" in data
+        assert data["activated"]["app_name"] == "GoLand"
+
+    @patch("window_controller.cli.take_screenshot")
+    def test_screenshot_command(
+        self,
+        mock_screenshot: MagicMock,
+        capsys,
+    ) -> None:
+        """Test screenshot subcommand."""
+        mock_screenshot.return_value = "/tmp/screenshot.png"
+        result = main(["screenshot", "GoLand"])
+        assert result == 0
+
+        captured = capsys.readouterr()
+        assert "Screenshot saved:" in captured.out
+
+    @patch("window_controller.cli.take_screenshot")
+    def test_screenshot_command_with_options(
+        self,
+        mock_screenshot: MagicMock,
+    ) -> None:
+        """Test screenshot subcommand with options."""
+        mock_screenshot.return_value = "/tmp/test.png"
+        result = main(
+            [
+                "screenshot",
+                "GoLand",
+                "--output",
+                "/tmp/test.png",
+                "--no-activate",
+                "--settle-ms",
+                "2000",
+            ]
+        )
+        assert result == 0
+
+        # Verify arguments passed correctly
+        mock_screenshot.assert_called_once()
+        call_args = mock_screenshot.call_args
+        assert call_args[0][1] == "/tmp/test.png"  # output path
+        assert call_args[0][2] is False  # activate (inverted from --no-activate)
+        assert call_args[0][3] == 2000  # settle_ms
+
+    @patch("window_controller.cli.take_screenshot")
+    def test_screenshot_command_with_json(
+        self,
+        mock_screenshot: MagicMock,
+        capsys,
+    ) -> None:
+        """Test screenshot subcommand with --json."""
+        mock_screenshot.return_value = "/tmp/screenshot.png"
+        result = main(["screenshot", "GoLand", "--json"])
+        assert result == 0
+
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert "screenshot" in data
+        assert data["screenshot"] == "/tmp/screenshot.png"
 
 
 # =============================================================================

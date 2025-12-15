@@ -42,6 +42,55 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 
 - `tmp/` - Temporary files and working directories (gitignored)
 
+## Running CLI Skills
+
+Skills in `.claude/skills/` are workspace members but not installed as entry point scripts. Use one of these methods to run them:
+
+### Method 1: PYTHONPATH (Recommended)
+
+From project root, set PYTHONPATH to the skill directory:
+
+```bash
+# General pattern
+PYTHONPATH=.claude/skills/<skill-name> python -m <module>.cli [command] [args]
+
+# Examples
+PYTHONPATH=.claude/skills/macos-ui-inspector python -m ui_inspector.cli --help
+PYTHONPATH=.claude/skills/macos-ui-inspector python -m ui_inspector.cli list --app Finder
+PYTHONPATH=.claude/skills/macos-ocr-finder python -m ocr_finder.cli --help
+PYTHONPATH=.claude/skills/macos-space-finder python -m space_finder.cli --help
+```
+
+### Method 2: Change Directory
+
+Use semicolon to chain cd with python command in single bash invocation:
+
+```bash
+# General pattern
+cd .claude/skills/<skill-name>; python -m <module>.cli [command] [args]
+
+# Examples
+cd .claude/skills/macos-ui-inspector; python -m ui_inspector.cli --help
+cd .claude/skills/macos-ui-inspector; python -m ui_inspector.cli list --app Finder
+```
+
+**Note:** Do NOT use `&&` for chaining cd commands across separate Bash tool calls - each call runs in a fresh shell. Use `;` within a single Bash call.
+
+### Skill to Module Mapping
+
+| Skill Directory          | Python Module       | CLI Entry Point             |
+|:-------------------------|:--------------------|:----------------------------|
+| macos-ui-inspector       | ui_inspector        | ui_inspector.cli            |
+| macos-ocr-finder         | ocr_finder          | ocr_finder.cli              |
+| macos-space-finder       | space_finder        | space_finder.cli            |
+| macos-window-controller  | window_controller   | window_controller.cli       |
+| macos-verified-screenshot| verified_screenshot | verified_screenshot.cli     |
+| macos-screen-recorder    | screen_recorder     | screen_recorder.cli         |
+
+### Why Not Installed as Scripts?
+
+The workspace root has `tool.uv.package = false`, so workspace members are not installed as editable packages or entry point scripts. This is intentional - the repository is a research/knowledge base, not a production package.
+
 ## Agent Workflow System
 
 This repository contains a two-agent workflow system for structured development:
