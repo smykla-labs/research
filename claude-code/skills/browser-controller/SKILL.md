@@ -174,6 +174,54 @@ browser-controller close TAB_ID
 | `--tab`, `-t` | Target tab ID (uses first tab if not specified) |
 | `--json`, `-j` | Output as JSON |
 
+## Resource Cleanup
+
+**IMPORTANT:** Always clean up browser resources after use unless the user explicitly requests otherwise.
+
+### Browser Processes
+
+When launching a browser with remote debugging for testing/automation:
+
+1. **Always quit the browser when done** - Don't leave debug-enabled browsers running
+2. **Check for orphaned processes** after testing sessions:
+
+   ```bash
+   # Find Chrome debug instances
+   ps aux | grep -E "remote-debugging-port|chrome-debug" | grep -v grep
+
+   # Find Firefox marionette instances
+   ps aux | grep -E "marionette" | grep -v grep
+   ```
+
+3. **Kill orphaned processes:**
+
+   ```bash
+   # Quit Chrome gracefully
+   osascript -e 'quit app "Google Chrome"'
+
+   # Or kill by pattern
+   pkill -f "user-data-dir.*chrome-debug"
+   pkill -f "puppeteer_dev_chrome_profile"
+   ```
+
+### Connection Cleanup
+
+The CLI automatically closes connections after each command. For Python API usage, always call `close_connection()`:
+
+```python
+from browser_controller import connect, navigate, close_connection
+
+conn = connect()
+try:
+    navigate(conn, "https://example.com")
+finally:
+    close_connection(conn)
+```
+
+### Screen Sharing Indicator (macOS)
+
+If you see "Currently Sharing" in the macOS menu bar after using this skill, a browser process launched from the terminal is still running. Quit the browser or kill the process to dismiss the indicator.
+
 ## How It Works
 
 ### Chrome (CDP)
