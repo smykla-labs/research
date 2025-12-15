@@ -1,11 +1,14 @@
 """macOS Screen Recorder - Record screen with verification and format conversion."""
 
 from .actions import (
+    PreviewResult,
     activate_window,
+    capture_region_screenshot,
     convert_to_gif,
     convert_to_mp4,
     convert_to_webp,
     convert_video,
+    preview_region,
     record_screen_region,
     record_simple,
     record_verified,
@@ -72,6 +75,7 @@ __all__ = [
     "MaxRetriesError",
     "OutputFormat",
     "PlatformPreset",
+    "PreviewResult",
     "RecordingConfig",
     "RecordingError",
     "RecordingResult",
@@ -85,6 +89,7 @@ __all__ = [
     "WindowNotFoundError",
     "WindowTarget",
     "activate_window",
+    "capture_region_screenshot",
     "check_dependencies",
     "compute_hash_distance",
     "compute_image_hash",
@@ -97,6 +102,7 @@ __all__ = [
     "find_target_window",
     "get_video_info",
     "main",
+    "preview_region",
     "record_screen_region",
     "record_simple",
     "record_verified",

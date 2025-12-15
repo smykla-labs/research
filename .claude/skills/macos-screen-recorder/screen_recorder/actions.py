@@ -153,6 +153,48 @@ def record_screen_region(
     return output_path
 
 
+def capture_region_screenshot(
+    output_path: Path,
+    region: WindowBounds | None = None,
+) -> Path:
+    """Capture a screenshot of a screen region.
+
+    Args:
+        output_path: Path to save the screenshot (png format).
+        region: Optional window bounds for region capture.
+
+    Returns:
+        Path to the captured screenshot.
+
+    Raises:
+        CaptureError: If screenshot fails.
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Build screencapture command for still image
+    cmd = ["screencapture", "-x"]  # -x disables sound
+
+    if region:
+        cmd.extend(["-R", region.as_region])
+
+    cmd.append(str(output_path))
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        stderr = result.stderr.decode("utf-8", errors="replace")
+        raise CaptureError(f"Screenshot failed: {stderr}")
+
+    if not output_path.exists():
+        raise CaptureError(f"Screenshot file not created: {output_path}")
+
+    return output_path
+
+
 def _build_scale_filter(max_width: int | None, max_height: int | None) -> str:
     """Build ffmpeg scale filter string."""
     if max_width and max_height:
@@ -862,6 +904,86 @@ def _handle_successful_attempt(
     paths = _AttemptPaths(raw=actual_raw, final=actual_final, attempt_num=result.attempt)
     return _build_recording_result(
         ctx, paths, result.video_info, result.verifications, True
+    )
+
+
+@dataclass(frozen=True)
+class PreviewResult:
+    """Result of a region preview screenshot."""
+
+    screenshot_path: Path
+    region: WindowBounds
+    window_id: int | None = None
+    app_name: str | None = None
+    window_title: str | None = None
+    window_bounds: WindowBounds | None = None
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "screenshot_path": str(self.screenshot_path),
+            "region": self.region.to_dict(),
+            "window_id": self.window_id,
+            "app_name": self.app_name,
+            "window_title": self.window_title,
+            "window_bounds": self.window_bounds.to_dict() if self.window_bounds else None,
+        }
+
+
+def preview_region(config: RecordingConfig) -> PreviewResult:
+    """Take a screenshot of the configured region for coordinate verification.
+
+    This helps users iteratively refine region coordinates before recording.
+    Uses the same window discovery and region calculation as recording.
+
+    Args:
+        config: Recording configuration with region settings.
+
+    Returns:
+        PreviewResult with screenshot path and region details.
+
+    Raises:
+        WindowNotFoundError: If target window not found.
+        CaptureError: If screenshot fails.
+        ValueError: If no region specified.
+    """
+    # Find target window and calculate region
+    target, region = _find_target_if_needed(config)
+
+    if region is None:
+        raise ValueError(
+            "No region specified. Use --region or --window-region, "
+            "or --record to capture a window's bounds."
+        )
+
+    # Optionally activate window first
+    if target and config.activate_first:
+        settle_time = config.settle_ms / 1000.0
+        activate_window(target, settle_time)
+
+    # Generate output path for preview
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    if config.output_path:
+        output_path = Path(config.output_path)
+        if output_path.suffix.lower() != ".png":
+            output_path = output_path.with_suffix(".png")
+    else:
+        safe_name = (
+            re.sub(r"[^\w\-]", "_", target.app_name.lower())
+            if target else "preview"
+        )
+        output_path = Path("recordings") / f"{safe_name}_preview_{timestamp}.png"
+
+    # Take screenshot
+    capture_region_screenshot(output_path, region)
+
+    return PreviewResult(
+        screenshot_path=output_path,
+        region=region,
+        window_id=target.window_id if target else None,
+        app_name=target.app_name if target else None,
+        window_title=target.window_title if target else None,
+        window_bounds=target.bounds if target else None,
     )
 
 

@@ -7,7 +7,7 @@ import json
 import sys
 from typing import TYPE_CHECKING
 
-from .actions import record_verified
+from .actions import preview_region, record_verified
 from .core import check_dependencies, find_target_window
 from .models import (
     DEFAULT_DURATION_SECONDS,
@@ -86,6 +86,10 @@ Verification strategies:
     actions.add_argument(
         "--check-deps", action="store_true",
         help="Check availability of required tools"
+    )
+    actions.add_argument(
+        "--preview-region", action="store_true",
+        help="Take screenshot of region for coordinate verification"
     )
 
     # Window filters
@@ -390,6 +394,36 @@ def _handle_find(args, config: RecordingConfig) -> int:
     return 0
 
 
+def _handle_preview_region(args, config: RecordingConfig) -> int:
+    """Handle --preview-region action."""
+    result = preview_region(config)
+
+    if args.json:
+        print(json.dumps(result.to_dict(), indent=2))
+    else:
+        print(f"Preview saved: {result.screenshot_path}")
+        print(f"  Region: {result.region.as_region}")
+
+        if result.app_name:
+            print(f"  Window: {result.app_name} - {result.window_title}")
+            print(f"  Window bounds: {result.window_bounds.as_region}")
+
+        print("\nUse these coordinates with:")
+        print(f"  screen-recorder -R {result.region.as_region} -d 5")
+
+        if result.app_name and result.window_bounds:
+            print("\nOr use window-relative coordinates:")
+            rel_x = int(result.region.x - result.window_bounds.x)
+            rel_y = int(result.region.y - result.window_bounds.y)
+            w = int(result.region.width)
+            h = int(result.region.height)
+            rel_region = f"{rel_x},{rel_y},{w},{h}"
+            app = result.app_name
+            print(f"  screen-recorder --record \"{app}\" --window-region {rel_region} -d 5")
+
+    return 0
+
+
 def _handle_record(args, config: RecordingConfig) -> int:
     """Handle --record or --full-screen action."""
     result = record_verified(config)
@@ -428,6 +462,20 @@ def _handle_record(args, config: RecordingConfig) -> int:
     return 0 if result.verified else 1
 
 
+def _dispatch_action(args, config: RecordingConfig) -> int:
+    """Dispatch to the appropriate action handler."""
+    if args.preview_region:
+        return _handle_preview_region(args, config)
+
+    if args.find:
+        return _handle_find(args, config)
+
+    if args.record or args.full_screen:
+        return _handle_record(args, config)
+
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Main entry point.
 
@@ -444,23 +492,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.check_deps:
         return _handle_check_deps(args)
 
+    # Preview region requires region or record (for window bounds)
+    has_region_target = any([args.region, args.window_region, args.record])
+    if args.preview_region and not has_region_target:
+        print("Error: --preview-region requires --region, --window-region, or --record",
+              file=sys.stderr)
+        return 1
+
     # Validate: need an action
-    if not any([args.record, args.find, args.full_screen]):
+    if not any([args.record, args.find, args.full_screen, args.preview_region]):
         parser.print_help()
         return 1
 
     try:
         config = build_config(args)
-
-        if args.find:
-            return _handle_find(args, config)
-
-        if args.record or args.full_screen:
-            return _handle_record(args, config)
-
-    except RecordingError as e:
+        return _dispatch_action(args, config)
+    except (RecordingError, ValueError) as e:
         output = {"error": str(e)} if args.json else f"Error: {e}"
         print(json.dumps(output) if args.json else output, file=sys.stderr)
         return 1
-
-    return 0

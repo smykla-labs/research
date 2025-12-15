@@ -34,6 +34,9 @@ uv run screen-recorder -R 100,200,800,600 -d 5
 # Record window-relative region (terminal area at bottom of IDE)
 uv run screen-recorder --record "GoLand" --window-region 0,800,1600,400 -d 5
 
+# Preview region before recording (iterative coordinate refinement)
+uv run screen-recorder --record "GoLand" --window-region 0,800,1600,400 --preview-region
+
 # Check if ffmpeg is installed
 uv run screen-recorder --check-deps
 ```
@@ -95,6 +98,25 @@ uv run screen-recorder --find "GoLand" --json | jq '.bounds'
 # {"x": 50, "y": 25, "width": 2056, "height": 1290}
 ```
 
+**Iterative Coordinate Refinement** (`--preview-region`):
+
+When capturing specific UI elements, use `--preview-region` to test coordinates:
+
+```bash
+# Step 1: Find window bounds
+uv run screen-recorder --find "GoLand" --json
+
+# Step 2: Preview estimated region
+uv run screen-recorder --record "GoLand" --window-region 0,890,2056,400 --preview-region
+# Preview saved: recordings/goland_preview_20241215_120000.png
+
+# Step 3: View preview, adjust coordinates
+open recordings/goland_preview_*.png
+
+# Step 4: Record when satisfied
+uv run screen-recorder --record "GoLand" --window-region 0,890,2056,400 -d 5
+```
+
 ### Verification Strategies
 
 | Strategy   | Purpose           | Details                        |
@@ -110,12 +132,13 @@ uv run screen-recorder --find "GoLand" --json | jq '.bounds'
 
 ### Actions
 
-| Flag            | Short | Description                    |
-|-----------------|-------|--------------------------------|
-| `--record`      | `-r`  | Record window of specified app |
-| `--find`        | `-f`  | Find window without recording  |
-| `--full-screen` | `-F`  | Record entire screen           |
-| `--check-deps`  |       | Check ffmpeg availability      |
+| Flag              | Short | Description                          |
+|-------------------|-------|--------------------------------------|
+| `--record`        | `-r`  | Record window of specified app       |
+| `--find`          | `-f`  | Find window without recording        |
+| `--full-screen`   | `-F`  | Record entire screen                 |
+| `--preview-region`|       | Screenshot region for coord testing  |
+| `--check-deps`    |       | Check ffmpeg availability            |
 
 ### Window Filters
 
