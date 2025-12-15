@@ -63,7 +63,7 @@ max-returns = 7  # CLI main functions with multiple subcommands need more return
 "**/screen_recorder/*.py" = ["T201"]
 "**/verified_screenshot/*.py" = ["T201"]
 "**/window_controller/*.py" = ["T201"]
-"**/ocr_finder/*.py" = ["T201"]
+"**/ocr_finder/*.py" = ["T201", "PLC0415"]  # Allow print + lazy imports (EasyOCR is slow)
 "**/ui_inspector/*.py" = ["T201"]
 "tests/**/*.py" = [
     "S101",    # Allow assert in tests
