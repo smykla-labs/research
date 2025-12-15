@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
+
+import typer
 
 from .actions import go_to_space
 from .core import find_space_by_app, get_current_space, get_spaces_plist, parse_spaces
@@ -13,6 +14,14 @@ from .models import ActivationError, PlistReadError, SpaceInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+app = typer.Typer(
+    name="space-finder",
+    help="Find and switch to macOS Spaces by application name.",
+)
+
+# Common type aliases
+JsonOutput = Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")]
 
 
 def list_spaces(spaces: Sequence[SpaceInfo]) -> None:
@@ -40,60 +49,14 @@ def print_space_details(space: SpaceInfo) -> None:
     print()
 
 
-def create_parser() -> argparse.ArgumentParser:
-    """Create and configure the argument parser."""
-    parser = argparse.ArgumentParser(
-        description="Find and switch to macOS Spaces by application name.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --list              List all spaces
-  %(prog)s --current           Show current space's app name
-  %(prog)s "GoLand"            Find space containing GoLand
-  %(prog)s --go "GoLand"       Switch to GoLand space, then return
-        """,
-    )
-
-    parser.add_argument(
-        "--list",
-        "-l",
-        action="store_true",
-        help="List all spaces with their details",
-    )
-
-    parser.add_argument(
-        "--current",
-        "-c",
-        action="store_true",
-        help="Print the current space's application name",
-    )
-
-    parser.add_argument(
-        "--go",
-        "-g",
-        metavar="APP",
-        help="Switch to the space containing APP, then return to original",
-    )
-
-    parser.add_argument(
-        "--json",
-        "-j",
-        action="store_true",
-        help="Output as JSON",
-    )
-
-    parser.add_argument(
-        "app_query",
-        nargs="?",
-        metavar="APP",
-        help="Find space containing this application (partial match)",
-    )
-
-    return parser
+def _load_spaces() -> list[SpaceInfo]:
+    """Load and parse spaces data from plist."""
+    plist_data = get_spaces_plist()
+    return parse_spaces(plist_data)
 
 
 def _handle_list(spaces: Sequence[SpaceInfo], *, json_output: bool = False) -> int:
-    """Handle --list command."""
+    """Handle list command."""
     if json_output:
         print(json.dumps([s.to_dict() for s in spaces], indent=2))
     else:
@@ -102,7 +65,7 @@ def _handle_list(spaces: Sequence[SpaceInfo], *, json_output: bool = False) -> i
 
 
 def _handle_current(spaces: Sequence[SpaceInfo], *, json_output: bool = False) -> int:
-    """Handle --current command."""
+    """Handle current command."""
     current = get_current_space(spaces)
     if json_output:
         if current:
@@ -117,7 +80,7 @@ def _handle_current(spaces: Sequence[SpaceInfo], *, json_output: bool = False) -
 
 
 def _handle_go(spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool = False) -> int:
-    """Handle --go command."""
+    """Handle go command."""
     try:
         target, original, success = go_to_space(spaces, app_query)
     except (ActivationError, ValueError) as e:
@@ -153,7 +116,7 @@ def _handle_go(spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool
 
 
 def _handle_find(spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bool = False) -> int:
-    """Handle find (positional argument) command."""
+    """Handle find command."""
     matches = find_space_by_app(spaces, app_query)
 
     if not matches:
@@ -173,45 +136,89 @@ def _handle_find(spaces: Sequence[SpaceInfo], app_query: str, *, json_output: bo
     return 0
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """
-    Main entry point.
-
-    Args:
-        argv: Command line arguments (defaults to sys.argv[1:]).
-
-    Returns:
-        Exit code (0 for success, non-zero for errors).
-    """
-    parser = create_parser()
-    args = parser.parse_args(argv)
-
-    # Validate arguments
-    if not any([args.list, args.current, args.go, args.app_query]):
-        parser.print_help()
-        return 1
-
-    # Load spaces data
+@app.command("list")
+def list_cmd(
+    json_output: JsonOutput = False,
+) -> None:
+    """List all spaces with their details."""
     try:
-        plist_data = get_spaces_plist()
-        spaces = parse_spaces(plist_data)
+        spaces = _load_spaces()
     except PlistReadError as e:
         print(f"Error: {e}", file=sys.stderr)
-        return 1
+        raise typer.Exit(1) from e
 
-    # Dispatch to handlers
-    json_output = args.json
+    result = _handle_list(spaces, json_output=json_output)
+    if result != 0:
+        raise typer.Exit(result)
 
-    if args.list:
-        return _handle_list(spaces, json_output=json_output)
 
-    if args.current:
-        return _handle_current(spaces, json_output=json_output)
+@app.command("current")
+def current_cmd(
+    json_output: JsonOutput = False,
+) -> None:
+    """Print the current space's application name."""
+    try:
+        spaces = _load_spaces()
+    except PlistReadError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
 
-    if args.go:
-        return _handle_go(spaces, args.go, json_output=json_output)
+    result = _handle_current(spaces, json_output=json_output)
+    if result != 0:
+        raise typer.Exit(result)
 
-    if args.app_query:
-        return _handle_find(spaces, args.app_query, json_output=json_output)
 
-    return 0
+@app.command("go")
+def go_cmd(
+    app_name: Annotated[str, typer.Argument(help="Application to switch to")],
+    json_output: JsonOutput = False,
+) -> None:
+    """Switch to the space containing APP, then return to original."""
+    try:
+        spaces = _load_spaces()
+    except PlistReadError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+
+    result = _handle_go(spaces, app_name, json_output=json_output)
+    if result != 0:
+        raise typer.Exit(result)
+
+
+@app.command("find")
+def find_cmd(
+    app_name: Annotated[str, typer.Argument(help="Application to search for (partial match)")],
+    json_output: JsonOutput = False,
+) -> None:
+    """Find space containing an application."""
+    try:
+        spaces = _load_spaces()
+    except PlistReadError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+
+    result = _handle_find(spaces, app_name, json_output=json_output)
+    if result != 0:
+        raise typer.Exit(result)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Main entry point for space-finder CLI.
+
+    Args:
+        argv: Command-line arguments (default: sys.argv[1:]).
+
+    Returns:
+        Exit code (0 for success, non-zero for error).
+    """
+    if argv is not None:
+        sys.argv = ["space-finder", *list(argv)]
+    try:
+        app(prog_name="space-finder")
+        return 0
+    except SystemExit as e:
+        return e.code if isinstance(e.code, int) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

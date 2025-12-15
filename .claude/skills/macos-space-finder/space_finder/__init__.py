@@ -7,7 +7,7 @@ from .actions import (
     sanitize_app_name,
     switch_to_space,
 )
-from .cli import create_parser, list_spaces, main, print_space_details
+from .cli import list_spaces, main, print_space_details
 from .core import find_space_by_app, get_current_space, get_spaces_plist, parse_spaces
 from .models import (
     DEFAULT_RETURN_DELAY,
@@ -36,7 +36,6 @@ __all__ = [
     "SpaceInfo",
     "SpacesError",
     "activate_app",
-    "create_parser",
     "find_space_by_app",
     "get_current_space",
     "get_spaces_plist",
