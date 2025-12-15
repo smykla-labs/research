@@ -13,6 +13,8 @@ dependencies = [
     # UI detection skills
     "easyocr>=1.7",
     "atomacos>=3.2",
+    # CLI framework
+    "typer>=0.15.0",
 ]
 
 [dependency-groups]
