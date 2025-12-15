@@ -39,6 +39,8 @@ from ..models import (
 )
 
 DEFAULT_CDP_PORT = 9222
+CDP_RESPONSE_TIMEOUT = 10
+CDP_MAX_ITERATIONS = 1000
 
 
 def _create_js_wrapper(
@@ -221,17 +223,17 @@ class CDPBackend:
 
         await conn.ws.send(json.dumps(message))
 
-        RESPONSE_TIMEOUT = 10
         iteration_count = 0
-        MAX_ITERATIONS = 1000
 
-        while iteration_count < MAX_ITERATIONS:
+        while iteration_count < CDP_MAX_ITERATIONS:
             try:
-                response_text = await asyncio.wait_for(conn.ws.recv(), timeout=RESPONSE_TIMEOUT)
+                response_text = await asyncio.wait_for(
+                    conn.ws.recv(), timeout=CDP_RESPONSE_TIMEOUT
+                )
             except TimeoutError as e:
                 raise BrowserConnectionError(
                     f"Timed out waiting for response to command '{method}' (id={msg_id}) "
-                    f"after {RESPONSE_TIMEOUT} seconds"
+                    f"after {CDP_RESPONSE_TIMEOUT} seconds"
                 ) from e
 
             response = json.loads(response_text)
@@ -244,7 +246,7 @@ class CDPBackend:
             iteration_count += 1
 
         raise BrowserConnectionError(
-            f"Exceeded maximum iterations ({MAX_ITERATIONS}) waiting for response to "
+            f"Exceeded maximum iterations ({CDP_MAX_ITERATIONS}) waiting for response to "
             f"command '{method}' (id={msg_id})"
         )
 
