@@ -5,6 +5,7 @@ from .actions import (
     capture_simple,
     capture_verified,
     capture_window_image,
+    resolve_backend,
     sanitize_app_name,
 )
 from .cli import main
@@ -24,6 +25,7 @@ from .models import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_RETRY_DELAY_MS,
     DEFAULT_SETTLE_MS,
+    CaptureBackend,
     CaptureConfig,
     CaptureError,
     CaptureResult,
@@ -35,12 +37,14 @@ from .models import (
     WindowNotFoundError,
     WindowTarget,
 )
+from .screencapturekit import is_screencapturekit_available
 
 __all__ = [
     "DEFAULT_HASH_THRESHOLD",
     "DEFAULT_MAX_RETRIES",
     "DEFAULT_RETRY_DELAY_MS",
     "DEFAULT_SETTLE_MS",
+    "CaptureBackend",
     "CaptureConfig",
     "CaptureError",
     "CaptureResult",
@@ -60,7 +64,9 @@ __all__ = [
     "find_target_window",
     "get_image_dimensions",
     "is_image_blank",
+    "is_screencapturekit_available",
     "main",
+    "resolve_backend",
     "sanitize_app_name",
     "verify_basic",
     "verify_content",

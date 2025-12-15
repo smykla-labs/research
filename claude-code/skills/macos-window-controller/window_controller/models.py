@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from enum import Enum
 from pathlib import Path
 
 # Spaces plist path
 SPACES_PLIST_PATH = Path.home() / "Library/Preferences/com.apple.spaces.plist"
+
+
+class CaptureBackend(Enum):
+    """Backend for window capture."""
+
+    QUARTZ = "quartz"  # CGWindowListCreateImage (legacy, deprecated in macOS 15)
+    SCREENCAPTUREKIT = "screencapturekit"  # ScreenCaptureKit (macOS 12.3+, cross-Space)
+    AUTO = "auto"  # Auto-select best available backend
 
 
 class WindowError(Exception):

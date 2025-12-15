@@ -12,6 +12,7 @@ import typer
 from .actions import capture_verified
 from .core import find_target_window
 from .models import (
+    CaptureBackend,
     CaptureConfig,
     RetryStrategy,
     ScreenshotError,
@@ -48,6 +49,7 @@ class CaptureOptions:
     no_activate: bool = False
     settle_ms: int = 1000
     shadow: bool = False
+    backend: str = "auto"
 
 
 @dataclass(frozen=True)
@@ -103,6 +105,10 @@ SettleMsOpt = Annotated[
     int, typer.Option("--settle-ms", help="Wait time after activation (default: 1000)")
 ]
 ShadowOpt = Annotated[bool, typer.Option("--shadow", help="Include window shadow")]
+BackendOpt = Annotated[
+    str,
+    typer.Option("--backend", "-b", help="Capture backend: auto, quartz, screencapturekit"),
+]
 
 # Verification options
 VerifyOpt = Annotated[
@@ -142,12 +148,14 @@ def _build_capture_options(
     no_activate: bool,
     settle_ms: int,
     shadow: bool,
+    backend: str,
 ) -> CaptureOptions:
     """Build capture options from CLI params."""
     return CaptureOptions(
         no_activate=no_activate,
         settle_ms=settle_ms,
         shadow=shadow,
+        backend=backend,
     )
 
 
@@ -224,6 +232,17 @@ def parse_retry_strategy(strategy: str) -> RetryStrategy:
     return mapping.get(strategy, RetryStrategy.FIXED)
 
 
+def parse_backend(backend: str) -> CaptureBackend:
+    """Parse backend string to enum value."""
+    mapping = {
+        "auto": CaptureBackend.AUTO,
+        "quartz": CaptureBackend.QUARTZ,
+        "screencapturekit": CaptureBackend.SCREENCAPTUREKIT,
+        "sck": CaptureBackend.SCREENCAPTUREKIT,  # alias
+    }
+    return mapping.get(backend.lower(), CaptureBackend.AUTO)
+
+
 def build_config(
     filter_opts: WindowFilterOptions,
     capture_opts: CaptureOptions,
@@ -243,6 +262,7 @@ def build_config(
         activate_first=not capture_opts.no_activate,
         settle_ms=capture_opts.settle_ms,
         no_shadow=not capture_opts.shadow,
+        backend=parse_backend(capture_opts.backend),
         verification_strategies=parse_verification_strategies(verify_opts.verify),
         expected_text=tuple(verify_opts.expected_text) if verify_opts.expected_text else (),
         hash_threshold=verify_opts.hash_threshold,
@@ -344,6 +364,7 @@ def capture_cmd(  # noqa: PLR0913
     no_activate: NoActivateOpt = False,
     settle_ms: SettleMsOpt = 1000,
     shadow: ShadowOpt = False,
+    backend: BackendOpt = "auto",
     verify: VerifyOpt = None,
     expected_text: ExpectedTextOpt = None,
     hash_threshold: HashThresholdOpt = 5,
@@ -361,7 +382,7 @@ def capture_cmd(  # noqa: PLR0913
             path_excludes=path_excludes,
             args_contains=args_contains,
         )
-        capture_opts = _build_capture_options(no_activate, settle_ms, shadow)
+        capture_opts = _build_capture_options(no_activate, settle_ms, shadow, backend)
         output_opts = _build_output_options(output, json_output)
         verify_opts = _build_verification_options(verify, expected_text, hash_threshold)
         retry_opts = _build_retry_options(retries, retry_delay, retry_strategy)

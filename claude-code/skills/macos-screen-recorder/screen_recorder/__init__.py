@@ -40,6 +40,7 @@ from .models import (
     DEFAULT_RETRY_DELAY_MS,
     DEFAULT_SETTLE_MS,
     PRESET_CONFIGS,
+    CaptureBackend,
     CaptureError,
     ConversionError,
     DependencyError,
@@ -60,6 +61,11 @@ from .models import (
     WindowNotFoundError,
     WindowTarget,
 )
+from .screencapturekit import (
+    capture_region_screenshot_sck,
+    is_screencapturekit_available,
+    is_video_streaming_supported,
+)
 
 __all__ = [
     "DEFAULT_DURATION_SECONDS",
@@ -70,6 +76,7 @@ __all__ = [
     "DEFAULT_RETRY_DELAY_MS",
     "DEFAULT_SETTLE_MS",
     "PRESET_CONFIGS",
+    "CaptureBackend",
     "CaptureError",
     "ConversionError",
     "DependencyError",
@@ -92,6 +99,7 @@ __all__ = [
     "WindowTarget",
     "activate_window",
     "capture_region_screenshot",
+    "capture_region_screenshot_sck",
     "check_dependencies",
     "compute_hash_distance",
     "compute_image_hash",
@@ -104,6 +112,8 @@ __all__ = [
     "get_current_space_index",
     "get_space_app_name",
     "get_video_info",
+    "is_screencapturekit_available",
+    "is_video_streaming_supported",
     "main",
     "preview_region",
     "record_screen_region",

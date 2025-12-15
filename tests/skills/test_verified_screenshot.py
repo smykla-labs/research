@@ -454,6 +454,20 @@ class TestCLICommands:
             ])
         assert result == 0
 
+    def test_backend_option(self, sample_capture_result: CaptureResult) -> None:
+        """Test --backend option."""
+        with patch("verified_screenshot.cli.capture_verified") as mock_capture:
+            mock_capture.return_value = sample_capture_result
+            result = main(["capture", "App", "--backend", "screencapturekit"])
+        assert result == 0
+
+    def test_backend_short_option(self, sample_capture_result: CaptureResult) -> None:
+        """Test -b short option for backend."""
+        with patch("verified_screenshot.cli.capture_verified") as mock_capture:
+            mock_capture.return_value = sample_capture_result
+            result = main(["capture", "App", "-b", "quartz"])
+        assert result == 0
+
 
 class TestParseVerificationStrategies:
     """Tests for parse_verification_strategies function."""
@@ -503,6 +517,54 @@ class TestParseRetryStrategy:
     def test_unknown_defaults_to_fixed(self) -> None:
         """Test unknown strategy defaults to fixed."""
         assert parse_retry_strategy("unknown") == RetryStrategy.FIXED
+
+
+class TestParseBackend:
+    """Tests for parse_backend function."""
+
+    def test_auto(self) -> None:
+        """Test parsing auto backend."""
+        from verified_screenshot import CaptureBackend
+        from verified_screenshot.cli import parse_backend
+
+        assert parse_backend("auto") == CaptureBackend.AUTO
+
+    def test_quartz(self) -> None:
+        """Test parsing quartz backend."""
+        from verified_screenshot import CaptureBackend
+        from verified_screenshot.cli import parse_backend
+
+        assert parse_backend("quartz") == CaptureBackend.QUARTZ
+
+    def test_screencapturekit(self) -> None:
+        """Test parsing screencapturekit backend."""
+        from verified_screenshot import CaptureBackend
+        from verified_screenshot.cli import parse_backend
+
+        assert parse_backend("screencapturekit") == CaptureBackend.SCREENCAPTUREKIT
+
+    def test_sck_alias(self) -> None:
+        """Test sck alias for screencapturekit."""
+        from verified_screenshot import CaptureBackend
+        from verified_screenshot.cli import parse_backend
+
+        assert parse_backend("sck") == CaptureBackend.SCREENCAPTUREKIT
+
+    def test_case_insensitive(self) -> None:
+        """Test backend parsing is case-insensitive."""
+        from verified_screenshot import CaptureBackend
+        from verified_screenshot.cli import parse_backend
+
+        assert parse_backend("AUTO") == CaptureBackend.AUTO
+        assert parse_backend("QUARTZ") == CaptureBackend.QUARTZ
+        assert parse_backend("ScreenCaptureKit") == CaptureBackend.SCREENCAPTUREKIT
+
+    def test_unknown_defaults_to_auto(self) -> None:
+        """Test unknown backend defaults to auto."""
+        from verified_screenshot import CaptureBackend
+        from verified_screenshot.cli import parse_backend
+
+        assert parse_backend("unknown") == CaptureBackend.AUTO
 
 
 class TestBuildConfig:

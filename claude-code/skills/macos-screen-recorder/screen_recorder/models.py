@@ -48,6 +48,18 @@ class RetryStrategy(Enum):
     REACTIVATE = "reactivate"  # Re-activate window before retry
 
 
+class CaptureBackend(Enum):
+    """Backend for screen capture.
+
+    Note: Video recording currently only supports QUARTZ backend (screencapture -v).
+    ScreenCaptureKit streaming for video is not yet implemented.
+    """
+
+    QUARTZ = "quartz"  # screencapture CLI (requires activation for video)
+    SCREENCAPTUREKIT = "screencapturekit"  # ScreenCaptureKit (screenshots only for now)
+    AUTO = "auto"  # Auto-select best available backend
+
+
 # Platform preset configurations
 PRESET_CONFIGS: dict[PlatformPreset, dict] = {
     PlatformPreset.DISCORD: {

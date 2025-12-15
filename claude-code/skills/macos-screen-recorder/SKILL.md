@@ -67,6 +67,25 @@ uv run screen-recorder --check-deps
 
 4. **Screen Recording**: Uses native macOS `screencapture -v -R x,y,w,h -V duration` for region-specific video capture to `.mov` format.
 
+### Capture Backends
+
+| Feature | Backend | Cross-Space | Notes |
+|---------|---------|-------------|-------|
+| Video recording | `screencapture -v` | Requires activation | Built-in macOS tool |
+| Region preview | ScreenCaptureKit | Yes | macOS 12.3+ |
+
+**Video Recording:**
+- Uses macOS built-in `screencapture -v` command
+- Requires window activation to record windows on other Spaces
+- Space-aware recording automatically switches Spaces when needed
+
+**Region Preview (`--preview-region`):**
+- Uses ScreenCaptureKit on macOS 12.3+ for screenshot preview
+- Can capture regions across Spaces without switching
+- Falls back to Quartz on older macOS versions
+
+**Note**: ScreenCaptureKit video streaming (SCStream + AVAssetWriter) is not yet implemented. Future versions may add non-activating video recording.
+
 5. **Format Conversion**: Converts to target format using ffmpeg:
    - **GIF**: Two-pass palette optimization with sierra2_4a dithering
    - **WebP**: Lossy animated WebP with configurable quality
@@ -434,12 +453,13 @@ Grant these permissions in System Settings > Privacy & Security:
 
 Required:
 - `pyobjc-framework-Quartz>=10.0` - macOS Quartz framework bindings
+- `pyobjc-framework-ScreenCaptureKit>=10.0` - ScreenCaptureKit bindings (macOS 12.3+)
 - `psutil>=5.9` - Process information
 - `pillow>=10.0` - Image processing (frame extraction)
 - `imagehash>=4.3` - Perceptual hashing (motion detection)
 
 External tools:
-- `screencapture` - Built into macOS
+- `screencapture` - Built into macOS (video recording)
 - `ffmpeg` - Video conversion (`brew install ffmpeg`)
 - `ffprobe` - Video metadata (included with ffmpeg)
 
