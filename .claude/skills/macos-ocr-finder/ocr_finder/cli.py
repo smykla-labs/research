@@ -35,9 +35,7 @@ def _truncate(text: str, width: int) -> str:
     return text[: width - 3] + "..."
 
 
-def _build_options(
-    exact: bool, case_sensitive: bool, min_confidence: float
-) -> SearchOptions:
+def _build_options(exact: bool, case_sensitive: bool, min_confidence: float) -> SearchOptions:
     """Build SearchOptions from CLI flags."""
     return SearchOptions(
         exact=exact,

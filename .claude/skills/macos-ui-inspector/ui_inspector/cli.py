@@ -28,12 +28,8 @@ def _truncate(text: str | None, width: int) -> str:
 
 @app.command("list")
 def list_cmd(
-    app_name: str = typer.Option(
-        ..., "--app", "-a", help="Application name or bundle ID"
-    ),
-    role: str | None = typer.Option(
-        None, "--role", help="Filter by element role (e.g., AXButton)"
-    ),
+    app_name: str = typer.Option(..., "--app", "-a", help="Application name or bundle ID"),
+    role: str | None = typer.Option(None, "--role", help="Filter by element role (e.g., AXButton)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """List all UI elements."""
@@ -74,9 +70,7 @@ def list_cmd(
 
 @app.command("find")
 def find_cmd(
-    app_name: str = typer.Option(
-        ..., "--app", "-a", help="Application name or bundle ID"
-    ),
+    app_name: str = typer.Option(..., "--app", "-a", help="Application name or bundle ID"),
     role: str | None = typer.Option(None, "--role", help="Filter by element role"),
     title: str | None = typer.Option(None, "--title", help="Filter by element title"),
     identifier: str | None = typer.Option(
@@ -123,9 +117,7 @@ def find_cmd(
 
 @app.command("click")
 def click_cmd(
-    app_name: str = typer.Option(
-        ..., "--app", "-a", help="Application name or bundle ID"
-    ),
+    app_name: str = typer.Option(..., "--app", "-a", help="Application name or bundle ID"),
     role: str | None = typer.Option(None, "--role", help="Filter by element role"),
     title: str | None = typer.Option(None, "--title", help="Filter by element title"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),

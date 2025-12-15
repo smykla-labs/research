@@ -20,9 +20,7 @@ app = typer.Typer(
 # Common type aliases for options
 AppArg = Annotated[str | None, typer.Argument(help="Application name")]
 AppArgRequired = Annotated[str, typer.Argument(help="Application name")]
-TitleOpt = Annotated[
-    str | None, typer.Option("--title", "-t", help="Regex for window title")
-]
+TitleOpt = Annotated[str | None, typer.Option("--title", "-t", help="Regex for window title")]
 PidOpt = Annotated[int | None, typer.Option("--pid", help="Filter by process ID")]
 PathContainsOpt = Annotated[
     str | None, typer.Option("--path-contains", help="Exe path must contain STR")
@@ -33,9 +31,7 @@ PathExcludesOpt = Annotated[
 ArgsContainsOpt = Annotated[
     str | None, typer.Option("--args-contains", help="Command line must contain STR")
 ]
-AllWindowsOpt = Annotated[
-    bool, typer.Option("--all-windows", help="Include non-main windows")
-]
+AllWindowsOpt = Annotated[bool, typer.Option("--all-windows", help="Include non-main windows")]
 JsonOpt = Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")]
 
 
