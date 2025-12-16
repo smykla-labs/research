@@ -1,0 +1,9 @@
+[project]
+name = "web-automation-investigation"
+version = "0.1.0"
+description = "Complete guide for investigating and implementing web browser automation"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false
