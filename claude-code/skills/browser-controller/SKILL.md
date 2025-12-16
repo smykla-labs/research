@@ -160,11 +160,15 @@ browser-controller run "window.scrollTo(0, document.body.scrollHeight)"
 
 ### screenshot
 
-Take a screenshot:
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+Take a screenshot (saves to `claude-code/artifacts/browser-controller/` by default):
 
 ```bash
-browser-controller screenshot -o screenshot.png
-browser-controller screenshot -o fullpage.png --full-page  # Chrome only
+browser-controller screenshot --json
+# Returns: {"screenshot": "/path/to/artifacts/.../251216120000-screenshot.png", ...}
+
+browser-controller screenshot --full-page  # Chrome only, full page capture
 ```
 
 ### activate

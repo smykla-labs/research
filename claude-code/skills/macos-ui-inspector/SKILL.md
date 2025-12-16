@@ -214,8 +214,10 @@ Combine with `ocr-finder` for comprehensive UI detection:
 claude-code-skills macos-ui-inspector -a "Safari" --click --role AXButton --title "Download"
 
 # OCR for text in graphics or non-accessible elements
-claude-code-skills macos-verified-screenshot -a "Safari" -o /tmp/safari.png
-claude-code-skills macos-ocr-finder --click "Special Label" -i /tmp/safari.png
+# Capture returns path in JSON, use that for ocr-finder
+claude-code-skills macos-verified-screenshot capture "Safari" --json
+# Use the returned "path" field for subsequent OCR
+claude-code-skills macos-ocr-finder --click "Special Label" -i <path-from-json>
 ```
 
 ## Permissions Required

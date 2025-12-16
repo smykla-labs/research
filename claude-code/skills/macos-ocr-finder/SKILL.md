@@ -154,8 +154,10 @@ Combine with `verified-screenshot` for end-to-end automation:
 
 ```bash
 # Capture window → Find text → Get click coords
-claude-code-skills macos-verified-screenshot --app "Safari" --output /tmp/safari.png
-claude-code-skills macos-ocr-finder --click "Downloads" -i /tmp/safari.png --json
+# Screenshot returns path in JSON - use that for ocr-finder
+claude-code-skills macos-verified-screenshot capture "Safari" --json
+# Use the returned "path" field for subsequent OCR
+claude-code-skills macos-ocr-finder --click "Downloads" -i <path-from-json> --json
 ```
 
 ## How It Works

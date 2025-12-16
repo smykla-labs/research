@@ -68,9 +68,11 @@ claude-code-skills macos-verified-screenshot capture "GoLand" --verify all
 claude-code-skills macos-screen-recorder record "GoLand" -d 5 --preset github
 ```
 
-### Default Output Directory
+### Artifact Output (CRITICAL)
 
-Skills that produce artifacts (screenshots, recordings) save to `claude-code/artifacts/` by default when no output path is specified.
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+Skills that produce artifacts (screenshots, recordings) save to `claude-code/artifacts/<skill-name>/` by default with timestamped filenames. Always use the returned path from JSON output for subsequent operations.
 
 ### Available Skills
 
