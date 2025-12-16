@@ -10,6 +10,7 @@ $ARGUMENTS
 
 ## Constraints
 
+- **NEVER output preamble** — execute script immediately without announcing intent
 - **NEVER delete** the current branch — always skip and report in summary
 - **NEVER remove** the main worktree — only remove feature/task worktrees
 - **ALWAYS use** `bash -c '...'` format for atomic execution

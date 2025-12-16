@@ -1,16 +1,21 @@
 ---
-allowed-tools: Bash(bash -c:*), Bash(pwd:*), Bash(git:*)
-argument-hint: <task-description|@file> [--no-pbcopy]
+allowed-tools: Bash(bash -c:*), Bash(pwd:*), Bash(git:*), Bash(ls:*)
+argument-hint: <task-description|@file> [--quick] [--no-pbcopy] [--ide [name]]
 description: Create git worktree with context transfer for feature branches
 ---
 
-Create a git worktree with context transfer via the worktree-manager agent.
+Create a git worktree with context transfer via worktree-manager agents.
 
 $ARGUMENTS
 
 ## Arguments
 
+- `--quick`: Use lightweight agent (no questions, sensible defaults, faster)
 - `--no-pbcopy`: Skip copying the cd command to clipboard
+- `--ide [name]`: Open worktree in JetBrains IDE
+  - Without value: Auto-detect IDE from project config files (go.mod → goland, pyproject.toml → pycharm, etc.)
+  - With value: Use specified IDE (e.g., `--ide webstorm`)
+  - Modifies clipboard command to: `<ide> <path>; cd <path> && mise trust && direnv allow`
 
 ## Constraints
 
@@ -25,29 +30,61 @@ $ARGUMENTS
 - Git status: !`git status --porcelain`
 - Available remotes: !`git remote -v`
 - Current branch: !`git branch --show-current`
+- Project config files (for IDE detection): !`ls go.mod Cargo.toml pyproject.toml setup.py pom.xml build.gradle build.gradle.kts Gemfile composer.json CMakeLists.txt tsconfig.json package.json requirements.txt 2>/dev/null | tr '\n' ' ' || echo "none"`
 
 ## Workflow
 
-1. **Invoke worktree-manager** with the Task tool
-   - Include: task description (`$ARGUMENTS` minus flags)
-   - Include: all context from above (directory, git status, remotes, current branch)
-   - Include: `--no-pbcopy` flag if present in arguments
-   - If no task description provided: ask agent to request details via `STATUS: NEEDS_INPUT`
+### Step 0: Select Agent Mode
 
-2. **Parse status block** from output:
-   - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with `ANSWERS: KEY=value, ...`
-   - `STATUS: SCRIPT_READY` → Execute script (see step 3)
-   - `STATUS: COMPLETED` → Report worktree path, branch name, and clipboard status to user
+**Use `worktree-manager-light` (fast mode) when:**
+- `--quick` flag is present, OR
+- Task description has 4+ words AND does NOT contain ambiguous phrases
 
-3. **For SCRIPT_READY — execute script**:
-   - Extract script from the `script:` code block (content inside ```bash ... ```)
-   - **CRITICAL**: Execute with `bash -c '{script}'` — script wrapped in single quotes after `-c`
-   - **NEVER run the script directly** — ALWAYS use `bash -c '...'` wrapper
-   - If execution fails: Resume agent with `SCRIPT_ERROR: {error message}` for correction
+**Use `worktree-manager` (full mode) when:**
+- Task is short (< 4 words)
+- Contains ambiguous phrases: "work on", "make changes", "do something", "changes to"
+- No task description provided
 
-4. **If script execution succeeds**: Resume agent with `SCRIPT_OUTPUT: success` to get final formatted output
+**Ambiguous phrase detection** (case-insensitive):
+```
+ambiguous = ["work on", "make changes", "do something", "changes to", "update something"]
+use_light = --quick OR (word_count >= 4 AND no ambiguous phrase)
+```
 
-5. **Repeat** until final `STATUS: COMPLETED`
+### Step 1: Invoke Selected Agent
+
+**For LIGHT mode (`worktree-manager-light`):**
+- Include: task description, directory, remotes, project config files
+- Include: `--no-pbcopy` and `--ide` flags if present
+- Agent will output `STATUS: SCRIPT_READY` immediately (no questions)
+
+**For FULL mode (`worktree-manager`):**
+- Include: task description (`$ARGUMENTS` minus flags)
+- Include: all context from above (directory, git status, remotes, current branch, project config files)
+- Include: `--no-pbcopy` flag if present in arguments
+- Include: `--ide` flag if present (with or without IDE name)
+- If no task description provided: ask agent to request details via `STATUS: NEEDS_INPUT`
+
+### Step 2: Parse status block from output
+
+- `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with `ANSWERS: KEY=value, ...`
+- `STATUS: SCRIPT_READY` → Execute script (see step 3)
+- `STATUS: COMPLETED` → Report worktree path, branch name, and clipboard status to user
+
+**Note**: Light agent will NEVER output `NEEDS_INPUT` — it always proceeds with defaults.
+
+### Step 3: For SCRIPT_READY — execute script
+
+- Extract script from the `script:` code block (content inside ```bash ... ```)
+- **CRITICAL**: Execute with `bash -c '{script}'` — script wrapped in single quotes after `-c`
+- **NEVER run the script directly** — ALWAYS use `bash -c '...'` wrapper
+- If execution fails: Resume agent with `SCRIPT_ERROR: {error message}` for correction
+
+### Step 4: If script execution succeeds
+
+Resume agent with `SCRIPT_OUTPUT: success` to get final formatted output
+
+### Step 5: Repeat until final `STATUS: COMPLETED`
 
 **CRITICAL**: For `NEEDS_INPUT`, you MUST use `AskUserQuestion` tool. Do NOT print questions as text.
 
@@ -60,6 +97,7 @@ The agent may request input for:
 - **ACTION**: Uncommitted changes handling [commit|stash|abort]
 - **REMOTE**: Which remote if multiple exist
 - **BRANCH**: Default branch if auto-detection fails
+- **IDE**: Which JetBrains IDE when auto-detection fails or multiple Tier 1 config files found [goland|pycharm|webstorm|idea|rubymine|phpstorm|clion|rustrover]
 
 ## Notes
 
@@ -69,3 +107,15 @@ The agent may request input for:
 - Script checks `git ls-files` before each symlink to determine if file is tracked
 - Worktree-specific git excludes are configured automatically for symlinked files
 - Clipboard contains ready-to-execute `cd && mise trust && direnv allow` command (unless `--no-pbcopy`)
+- With `--ide`: clipboard command starts with `<ide> <path>;` to open worktree in JetBrains IDE first
+- IDE auto-detection uses confidence tiers: Tier 1 config files (go.mod, Cargo.toml, etc.) always win over Tier 2 (package.json alone)
+
+## Light Agent Behavior
+
+When using `--quick` or auto-detected fast mode:
+- **No questions asked** — uses sensible defaults
+- **Branch prefix**: Defaults to `chore/` when type is unclear
+- **Dirty worktree**: Ignored (proceeds anyway)
+- **Remote**: Auto-selects `upstream` else `origin`
+- **Default branch**: Detects or defaults to `main`
+- **IDE detection**: Tier 1 only, skips if ambiguous (no questions)

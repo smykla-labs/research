@@ -54,9 +54,15 @@ extract_script() {
       next
     }
 
+    # Worktree manager light: "Script Template" section
+    !found && id == "worktree-light" && line_lower ~ /## script template/ {
+      found=1
+      next
+    }
+
     # Generic identifier match (case-sensitive for custom identifiers)
     # Skip for known identifiers that have specific patterns above
-    !found && id != "default" && id != "dry-run" && id != "no-worktrees" && id != "worktree-readable" && id != "worktree-single-line" && $0 ~ id {
+    !found && id != "default" && id != "dry-run" && id != "no-worktrees" && id != "worktree-readable" && id != "worktree-single-line" && id != "worktree-light" && $0 ~ id {
       found=1
       next
     }
