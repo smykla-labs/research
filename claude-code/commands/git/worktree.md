@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(bash -c:*), Bash(bash -n:*), Bash(pwd:*), Bash(git:*)
+allowed-tools: Bash(bash -c:*), Bash(pwd:*), Bash(git:*)
 argument-hint: <task-description|@file> [--no-pbcopy]
 description: Create git worktree with context transfer for feature branches
 ---
@@ -36,14 +36,14 @@ $ARGUMENTS
 
 2. **Parse status block** from output:
    - `STATUS: NEEDS_INPUT` → Parse questions, use `AskUserQuestion` tool, resume with `ANSWERS: KEY=value, ...`
-   - `STATUS: SCRIPT_READY` → Validate and execute (see step 3)
+   - `STATUS: SCRIPT_READY` → Execute script (see step 3)
    - `STATUS: COMPLETED` → Report worktree path, branch name, and clipboard status to user
 
-3. **For SCRIPT_READY — validate then execute**:
-   - Extract script from the `script:` code block
-   - **Syntax check**: Run `bash -n -c '{script}'` to validate syntax (no execution)
-   - If syntax check fails: Resume agent with `SCRIPT_ERROR: {error message}` for correction
-   - If syntax check passes: Execute with `bash -c '{script}'`
+3. **For SCRIPT_READY — execute script**:
+   - Extract script from the `script:` code block (content inside ```bash ... ```)
+   - **CRITICAL**: Execute with `bash -c '{script}'` — script wrapped in single quotes after `-c`
+   - **NEVER run the script directly** — ALWAYS use `bash -c '...'` wrapper
+   - If execution fails: Resume agent with `SCRIPT_ERROR: {error message}` for correction
 
 4. **If script execution succeeds**: Resume agent with `SCRIPT_OUTPUT: success` to get final formatted output
 
