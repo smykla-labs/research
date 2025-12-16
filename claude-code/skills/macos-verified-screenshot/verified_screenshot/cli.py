@@ -336,8 +336,11 @@ def find_cmd(  # noqa: PLR0913
             args_contains=args_contains,
         )
         config = build_config(
-            filter_opts, CaptureOptions(), OutputOptions(json_output=json_output),
-            VerificationOptions(), RetryOptions()
+            filter_opts,
+            CaptureOptions(),
+            OutputOptions(json_output=json_output),
+            VerificationOptions(),
+            RetryOptions(),
         )
         result = _handle_find(config, json_output=json_output)
         if result != 0:
@@ -387,7 +390,13 @@ def capture_cmd(  # noqa: PLR0913
         verify_opts = _build_verification_options(verify, expected_text, hash_threshold)
         retry_opts = _build_retry_options(retries, retry_delay, retry_strategy)
 
-        config = build_config(filter_opts, capture_opts, output_opts, verify_opts, retry_opts)
+        config = build_config(
+            filter_opts,
+            capture_opts,
+            output_opts,
+            verify_opts,
+            retry_opts,
+        )
         result = _handle_capture(config, json_output=json_output)
         if result != 0:
             raise typer.Exit(result)
