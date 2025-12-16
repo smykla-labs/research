@@ -105,16 +105,16 @@ Verify the skill works by running:
 
 ```bash
 # Should list all your Spaces
-claude-code-skills macos-space-finder --list
+claude-code-skills macos-space-finder list
 
 # Should show current app (e.g., "Ghostty" or "Desktop")
-claude-code-skills macos-space-finder --current
+claude-code-skills macos-space-finder current
 
 # If you have GoLand in full-screen, this should work:
-claude-code-skills macos-space-finder --go GoLand
+claude-code-skills macos-space-finder go GoLand
 ```
 
-Expected `--list` output:
+Expected `list` output:
 ```
 Idx  Current  Type   App Name             Window Title
 --------------------------------------------------------------------------------

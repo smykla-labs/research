@@ -149,10 +149,10 @@ Two region modes for capturing specific screen areas:
   - Adds offset: (50+0, 25+800) = captures at (50, 825)
   - Records 1600×400 area (captures terminal panel at bottom)
 
-Use `--find` to discover window bounds before recording:
+Use `find` to discover window bounds before recording:
 
 ```bash
-claude-code-skills macos-screen-recorder --find "GoLand" --json | jq '.bounds'
+claude-code-skills macos-screen-recorder find "GoLand" --json | jq '.bounds'
 # {"x": 50, "y": 25, "width": 2056, "height": 1290}
 ```
 
@@ -162,17 +162,17 @@ When capturing specific UI elements, use `--preview-region` to test coordinates:
 
 ```bash
 # Step 1: Find window bounds
-claude-code-skills macos-screen-recorder --find "GoLand" --json
+claude-code-skills macos-screen-recorder find "GoLand" --json
 
 # Step 2: Preview estimated region
-claude-code-skills macos-screen-recorder --record "GoLand" --window-region 0,890,2056,400 --preview-region
+claude-code-skills macos-screen-recorder record "GoLand" --window-region 0,890,2056,400 --preview-region
 # Preview saved: recordings/goland_preview_20241215_120000.png
 
 # Step 3: View preview, adjust coordinates
 open recordings/goland_preview_*.png
 
 # Step 4: Record when satisfied
-claude-code-skills macos-screen-recorder --record "GoLand" --window-region 0,890,2056,400 -d 5
+claude-code-skills macos-screen-recorder record "GoLand" --window-region 0,890,2056,400 -d 5
 ```
 
 ### Space-Aware Recording
@@ -189,10 +189,10 @@ This happens transparently—no special flags required:
 
 ```bash
 # Record Terminal on Space 2 while you're on Space 1
-claude-code-skills macos-screen-recorder --record "Terminal" -d 5
+claude-code-skills macos-screen-recorder record "Terminal" -d 5
 
 # Record fullscreen Safari (which is its own Space)
-claude-code-skills macos-screen-recorder --record "Safari" -d 10
+claude-code-skills macos-screen-recorder record "Safari" -d 10
 ```
 
 **Requirements:**
@@ -337,7 +337,7 @@ else:
 ### JSON Output
 
 ```bash
-claude-code-skills macos-screen-recorder --record "GoLand" -d 5 --preset github --json
+claude-code-skills macos-screen-recorder record "GoLand" -d 5 --preset github --json
 ```
 
 ```json
@@ -410,14 +410,14 @@ brew install ffmpeg
 Verify installation:
 
 ```bash
-claude-code-skills macos-screen-recorder --check-deps
+claude-code-skills macos-screen-recorder check-deps
 ```
 
 ### "No window found matching filter"
 
 1. Check if the app is running: `ps aux | grep -i appname`
-2. Use `--find` to see what windows are available
-3. For sandbox IDEs, use `--record "Main" --args "sandbox"`
+2. Use `find` to see what windows are available
+3. For sandbox IDEs, use `record "Main" --args "sandbox"`
 4. Try without filters first
 
 ### Recording is wrong size or window
@@ -439,7 +439,7 @@ claude-code-skills macos-screen-recorder --check-deps
 
 ```bash
 # Discord free limit is 10MB
-claude-code-skills macos-screen-recorder --record "App" -d 5 --preset discord
+claude-code-skills macos-screen-recorder record "App" -d 5 --preset discord
 ```
 
 If still too large:

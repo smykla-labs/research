@@ -60,14 +60,14 @@ claude-code-skills macos-window-controller --find "GoLand" --path-excludes "~/Ap
 
 ```bash
 # Filter by process command line
-claude-code-skills macos-window-controller --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
+claude-code-skills macos-window-controller find "Main" --args-contains "idea.plugin.in.sandbox.mode"
 ```
 
 ### By PID
 
 ```bash
 # Find window by specific process ID
-claude-code-skills macos-window-controller --find --pid 12345
+claude-code-skills macos-window-controller find --pid 12345
 ```
 
 ## JetBrains Sandbox IDEs
@@ -78,13 +78,13 @@ JetBrains sandbox IDEs (launched via `./gradlew runIde`) have a key difference:
 
 ```bash
 # Find sandbox IDE (reliable method)
-claude-code-skills macos-window-controller --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
+claude-code-skills macos-window-controller find "Main" --args-contains "idea.plugin.in.sandbox.mode"
 
 # Find by Gradle cache path
-claude-code-skills macos-window-controller --find "Main" --path-contains ".gradle/caches"
+claude-code-skills macos-window-controller find "Main" --path-contains ".gradle/caches"
 
 # Find by project name in title
-claude-code-skills macos-window-controller --find "Main" --title "my-project"
+claude-code-skills macos-window-controller find "Main" --title "my-project"
 ```
 
 ## How It Works
@@ -158,10 +158,10 @@ The screenshot command automatically uses ScreenCaptureKit when available (macOS
 
 ## JSON Output
 
-For automation and scripting, use `--json` with `--find`:
+For automation and scripting, use `--json` with `find`:
 
 ```bash
-claude-code-skills macos-window-controller --find "GoLand" --json
+claude-code-skills macos-window-controller find "GoLand" --json
 ```
 
 Output:
@@ -197,16 +197,16 @@ Verify the skill works by running:
 
 ```bash
 # Should list all windows with titles
-claude-code-skills macos-window-controller --list
+claude-code-skills macos-window-controller list
 
 # Should show info for a running app
-claude-code-skills macos-window-controller --find "Finder"
+claude-code-skills macos-window-controller find "Finder"
 
 # If you have an app in full-screen, this should switch and return:
-claude-code-skills macos-window-controller --activate "GoLand"
+claude-code-skills macos-window-controller activate "GoLand"
 ```
 
-Expected `--list` output:
+Expected `list` output:
 
 ```
 App                  Title                                    Space  PID

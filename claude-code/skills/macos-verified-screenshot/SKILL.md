@@ -194,7 +194,7 @@ else:
 ### JSON Output
 
 ```bash
-claude-code-skills macos-verified-screenshot --capture "GoLand" --verify all --json
+claude-code-skills macos-verified-screenshot capture "GoLand" --verify all --json
 ```
 
 ```json
@@ -271,13 +271,13 @@ By default, activation switches to the target window's Space. Two options:
 
 **Option 1: Use ScreenCaptureKit (recommended for macOS 12.3+)**
 ```bash
-claude-code-skills macos-verified-screenshot --capture "App" --backend screencapturekit
+claude-code-skills macos-verified-screenshot capture "App" --backend screencapturekit
 ```
 Captures windows on ANY Space without switching. Works with covered windows too.
 
 **Option 2: Disable activation**
 ```bash
-claude-code-skills macos-verified-screenshot --capture "App" --no-activate
+claude-code-skills macos-verified-screenshot capture "App" --no-activate
 ```
 **Tradeoff**: Uses Quartz backend which cannot capture windows on other Spaces (produces transparent/stale image). Only use if window is on current Space.
 
@@ -287,7 +287,7 @@ JetBrains sandbox IDEs appear as "Main" (Java process name), and AppleScript can
 
 ```bash
 # Must use --no-activate for sandbox IDEs
-claude-code-skills macos-verified-screenshot --capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+claude-code-skills macos-verified-screenshot capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 ```
 
 If the sandbox window needs to be active, manually switch to its Space before capturing.
