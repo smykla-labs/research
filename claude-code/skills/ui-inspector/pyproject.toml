@@ -1,12 +1,12 @@
 [project]
-name = "macos-space-finder"
+name = "ui-inspector"
 version = "1.0.0"
-description = "Find and navigate macOS Spaces by application name"
+description = "Inspect live macOS UI elements via Accessibility API (atomacos)"
 requires-python = ">=3.11"
 dependencies = []  # Managed by workspace root
 
 [project.scripts]
-space-finder = "space_finder.cli:main"
+ui-inspector = "ui_inspector.cli:main"
 
 [tool.uv]
 package = true

@@ -10,7 +10,7 @@ from typing import Annotated
 import typer
 
 # Skill name for artifact tracking
-SKILL_NAME = "macos-verified-screenshot"
+SKILL_NAME = "verified-screenshot"
 
 try:
     from _shared.artifacts import get_default_artifact_path

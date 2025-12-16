@@ -1,5 +1,5 @@
 ---
-name: macos-ocr-finder
+name: ocr-finder
 description: Find text in images using EasyOCR, returning click coordinates. Works on any image (screenshots, UI captures, etc.) without requiring accessibility permissions. Useful for UI automation, finding buttons/labels in screenshots, and extracting text positions.
 ---
 
@@ -11,16 +11,16 @@ Find text in images using EasyOCR. Returns text locations with bounding boxes an
 
 ```bash
 # List all text found in an image
-claude-code-skills macos-ocr-finder list --image screenshot.png
+claude-code-skills ocr-finder list --image screenshot.png
 
 # Find specific text (substring match, case-insensitive)
-claude-code-skills macos-ocr-finder find "Accept" --image dialog.png
+claude-code-skills ocr-finder find "Accept" --image dialog.png
 
 # Get click coordinates for text
-claude-code-skills macos-ocr-finder click "Submit" --image form.png
+claude-code-skills ocr-finder click "Submit" --image form.png
 
 # JSON output for automation
-claude-code-skills macos-ocr-finder list --image screenshot.png --json
+claude-code-skills ocr-finder list --image screenshot.png --json
 ```
 
 ## Commands
@@ -31,13 +31,13 @@ Detect and list all text regions in an image.
 
 ```bash
 # Basic listing
-claude-code-skills macos-ocr-finder -l -i screenshot.png
+claude-code-skills ocr-finder -l -i screenshot.png
 
 # With low confidence threshold (detect more text)
-claude-code-skills macos-ocr-finder -l -i screenshot.png --min-confidence 0.3
+claude-code-skills ocr-finder -l -i screenshot.png --min-confidence 0.3
 
 # JSON output
-claude-code-skills macos-ocr-finder -l -i screenshot.png --json
+claude-code-skills ocr-finder -l -i screenshot.png --json
 ```
 
 Example output:
@@ -57,16 +57,16 @@ Search for specific text in an image.
 
 ```bash
 # Substring match (default)
-claude-code-skills macos-ocr-finder -f "Accept" -i dialog.png
+claude-code-skills ocr-finder -f "Accept" -i dialog.png
 
 # Exact match only
-claude-code-skills macos-ocr-finder -f "OK" -i dialog.png --exact
+claude-code-skills ocr-finder -f "OK" -i dialog.png --exact
 
 # Case-sensitive match
-claude-code-skills macos-ocr-finder -f "Submit" -i form.png --case-sensitive
+claude-code-skills ocr-finder -f "Submit" -i form.png --case-sensitive
 
 # Low confidence threshold
-claude-code-skills macos-ocr-finder -f "faded text" -i low-contrast.png --min-confidence 0.2
+claude-code-skills ocr-finder -f "faded text" -i low-contrast.png --min-confidence 0.2
 ```
 
 ### Get Click Coordinates (`--click`)
@@ -75,14 +75,14 @@ Get the center coordinates of text for clicking.
 
 ```bash
 # Get coords for first match
-claude-code-skills macos-ocr-finder --click "Submit" -i form.png
+claude-code-skills ocr-finder --click "Submit" -i form.png
 # Output: 320,450
 
 # Get coords for second match (index 1)
-claude-code-skills macos-ocr-finder --click "Button" -i form.png --index 1
+claude-code-skills ocr-finder --click "Button" -i form.png --index 1
 
 # JSON output
-claude-code-skills macos-ocr-finder --click "OK" -i dialog.png --json
+claude-code-skills ocr-finder --click "OK" -i dialog.png --json
 # Output: {"x": 420, "y": 380}
 ```
 
@@ -137,7 +137,7 @@ claude-code-skills macos-ocr-finder --click "OK" -i dialog.png --json
 
 ```bash
 # Find button and click it
-coords=$(claude-code-skills macos-ocr-finder --click "Submit" -i screenshot.png)
+coords=$(claude-code-skills ocr-finder --click "Submit" -i screenshot.png)
 # Use coords with your automation tool
 ```
 
@@ -145,7 +145,7 @@ coords=$(claude-code-skills macos-ocr-finder --click "Submit" -i screenshot.png)
 
 ```bash
 # List all buttons visible in a dialog screenshot
-claude-code-skills macos-ocr-finder -l -i dialog.png --json | jq '.[] | select(.text | test("OK|Cancel|Apply"))'
+claude-code-skills ocr-finder -l -i dialog.png --json | jq '.[] | select(.text | test("OK|Cancel|Apply"))'
 ```
 
 ### Cross-Skill Workflow
@@ -155,9 +155,9 @@ Combine with `verified-screenshot` for end-to-end automation:
 ```bash
 # Capture window → Find text → Get click coords
 # Screenshot returns path in JSON - use that for ocr-finder
-claude-code-skills macos-verified-screenshot capture "Safari" --json
+claude-code-skills verified-screenshot capture "Safari" --json
 # Use the returned "path" field for subsequent OCR
-claude-code-skills macos-ocr-finder --click "Downloads" -i <path-from-json> --json
+claude-code-skills ocr-finder --click "Downloads" -i <path-from-json> --json
 ```
 
 ## How It Works

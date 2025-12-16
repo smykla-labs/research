@@ -1,9 +1,9 @@
 """Tests for ScreenCaptureKit modules across all skills.
 
 These tests cover the common ScreenCaptureKit functionality used by:
-- macos-verified-screenshot
-- macos-window-controller
-- macos-screen-recorder
+- verified-screenshot
+- window-controller
+- screen-recorder
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 # Claude Code Skills Development Specification
 
-Version 3.0.0 | Derived from: `macos-space-finder`, `macos-window-controller`, `browser-controller`
+Version 3.0.0 | Derived from: `space-finder`, `window-controller`, `browser-controller`
 
 This document defines requirements, guidelines, and best practices for developing Claude Code skills. Use it to validate new skills for consistency, quality, security, and maintainability.
 
@@ -46,7 +46,7 @@ tests/
 claude-code/
 ├── artifacts/                  # Default output for skill artifacts
 │   ├── browser-controller/     # Per-skill artifact directories
-│   ├── macos-window-controller/
+│   ├── window-controller/
 │   └── ...
 └── skills/
     ├── _bin/                   # CLI wrapper (excluded from workspace)
@@ -69,7 +69,7 @@ claude-code/
 
 ### Naming Rules
 
-- **Skill directory**: `kebab-case` (e.g., `macos-space-finder`)
+- **Skill directory**: `kebab-case` (e.g., `space-finder`)
 - **Python package**: Unique `snake_case` name (e.g., `space_finder`, `verified_screenshot`)
 - **Test file**: `test_{package_name}.py` in `tests/skills/`
 
@@ -127,7 +127,7 @@ package = false
 
 ```toml
 [project]
-name = "macos-skill-name"
+name = "skill-name"
 version = "1.0.0"
 description = "Brief description of what the skill does"
 requires-python = ">=3.11"
@@ -725,7 +725,7 @@ from pathlib import Path
 
 from _shared.artifacts import save_artifact, validate_extension, ArtifactError
 
-SKILL_NAME = "macos-window-controller"
+SKILL_NAME = "window-controller"
 
 @app.command("screenshot")
 def screenshot_cmd(
@@ -824,8 +824,8 @@ claude-code-skills <skill-name> <command> [args]
 
 # Examples
 claude-code-skills browser-controller tabs
-claude-code-skills macos-window-controller find "GoLand"
-claude-code-skills macos-window-controller screenshot "GoLand" --json
+claude-code-skills window-controller find "GoLand"
+claude-code-skills window-controller screenshot "GoLand" --json
 ```
 
 **How It Works:**
@@ -909,7 +909,7 @@ If `--output` is explicitly requested:
 ```json
 {
   "screenshot": "/custom/path/screenshot.png",
-  "tracking_copy": "/path/to/artifacts/macos-window-controller/241216143052-screenshot_GoLand.png"
+  "tracking_copy": "/path/to/artifacts/window-controller/241216143052-screenshot_GoLand.png"
 }
 ```
 
@@ -1309,4 +1309,4 @@ Use this checklist to validate new skills:
 |---------|------------|---------------------------------------------------------------------------------------|
 | 3.0.0   | 2024-12-16 | **Breaking**: Replace argparse with Typer throughout; change module structure to minimum requirements (`__init__.py`, `__main__.py`, `cli.py` required; others optional); add `_shared/artifacts.py` documentation; add `_bin/claude-code-skills` CLI wrapper documentation; add documentation-only skills pattern (`package = false`); add artifact output patterns with CRITICAL warning; fix escaped backticks; update workspace exclude patterns |
 | 2.0.0   | 2024-12-14 | **Breaking**: Migrate from per-skill `scripts/` to unique package names; centralize tests in `tests/skills/`; use uv workspace with single lockfile; skills are now installable packages (`package = true`) |
-| 1.0.0   | 2024-12-14 | Initial specification derived from `macos-space-finder` and `macos-window-controller` |
+| 1.0.0   | 2024-12-14 | Initial specification derived from `space-finder` and `window-controller` |

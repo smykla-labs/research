@@ -1,5 +1,5 @@
 [project]
-name = "macos-window-controller"
+name = "window-controller"
 version = "1.0.0"
 description = "macOS window detection, activation, and screenshot capture across Spaces"
 requires-python = ">=3.11"

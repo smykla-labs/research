@@ -1,5 +1,5 @@
 ---
-name: macos-verified-screenshot
+name: verified-screenshot
 description: Capture macOS screenshots with verification and retry logic. Integrates with window-controller for window discovery.
 ---
 
@@ -11,33 +11,33 @@ Capture macOS window screenshots with automatic verification and retry logic. Th
 
 > **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
 
-Screenshots are automatically saved to `claude-code/artifacts/macos-verified-screenshot/` with timestamped filenames (e.g., `251216120000-screenshot_GoLand.png`). The artifact path is always returned in the JSON output - use that path for subsequent operations.
+Screenshots are automatically saved to `claude-code/artifacts/verified-screenshot/` with timestamped filenames (e.g., `251216120000-screenshot_GoLand.png`). The artifact path is always returned in the JSON output - use that path for subsequent operations.
 
 ## Quick Start
 
 ```bash
 # Capture screenshot - path is returned in output
-claude-code-skills macos-verified-screenshot capture "GoLand" --json
+claude-code-skills verified-screenshot capture "GoLand" --json
 # Returns: {"path": "/path/to/artifacts/.../251216120000-screenshot_GoLand.png", ...}
 
 # Capture with full verification
-claude-code-skills macos-verified-screenshot capture "GoLand" --verify all
+claude-code-skills verified-screenshot capture "GoLand" --verify all
 
 # Capture sandbox IDE (JetBrains via Gradle runIde)
 # Note: Sandbox IDEs appear as "Main", use --no-activate since AppleScript can't activate them
-claude-code-skills macos-verified-screenshot capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+claude-code-skills verified-screenshot capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 
 # Capture specific window by title
-claude-code-skills macos-verified-screenshot capture "Chrome" --title "GitHub"
+claude-code-skills verified-screenshot capture "Chrome" --title "GitHub"
 
 # Capture with 3 retries
-claude-code-skills macos-verified-screenshot capture "Code" -r 3
+claude-code-skills verified-screenshot capture "Code" -r 3
 
 # Capture without Space switching (uses ScreenCaptureKit on macOS 12.3+)
-claude-code-skills macos-verified-screenshot capture "GoLand" --backend screencapturekit
+claude-code-skills verified-screenshot capture "GoLand" --backend screencapturekit
 
 # Find window info without capturing
-claude-code-skills macos-verified-screenshot find "GoLand" --json
+claude-code-skills verified-screenshot find "GoLand" --json
 ```
 
 ## How It Works
@@ -194,7 +194,7 @@ else:
 ### JSON Output
 
 ```bash
-claude-code-skills macos-verified-screenshot capture "GoLand" --verify all --json
+claude-code-skills verified-screenshot capture "GoLand" --verify all --json
 ```
 
 ```json
@@ -222,10 +222,10 @@ Use this skill to capture screenshots for verification:
 
 ```bash
 # Load the skill context
-Skill tool: macos-verified-screenshot
+Skill tool: verified-screenshot
 
 # Capture with verification - use the returned path
-claude-code-skills macos-verified-screenshot capture "GoLand" --verify all --json
+claude-code-skills verified-screenshot capture "GoLand" --verify all --json
 # Use the "path" field from JSON output for subsequent operations
 
 # If capture fails, it will retry up to 5 times
@@ -271,13 +271,13 @@ By default, activation switches to the target window's Space. Two options:
 
 **Option 1: Use ScreenCaptureKit (recommended for macOS 12.3+)**
 ```bash
-claude-code-skills macos-verified-screenshot capture "App" --backend screencapturekit
+claude-code-skills verified-screenshot capture "App" --backend screencapturekit
 ```
 Captures windows on ANY Space without switching. Works with covered windows too.
 
 **Option 2: Disable activation**
 ```bash
-claude-code-skills macos-verified-screenshot capture "App" --no-activate
+claude-code-skills verified-screenshot capture "App" --no-activate
 ```
 **Tradeoff**: Uses Quartz backend which cannot capture windows on other Spaces (produces transparent/stale image). Only use if window is on current Space.
 
@@ -287,7 +287,7 @@ JetBrains sandbox IDEs appear as "Main" (Java process name), and AppleScript can
 
 ```bash
 # Must use --no-activate for sandbox IDEs
-claude-code-skills macos-verified-screenshot capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+claude-code-skills verified-screenshot capture "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 ```
 
 If the sandbox window needs to be active, manually switch to its Space before capturing.

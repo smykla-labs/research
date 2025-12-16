@@ -7,8 +7,8 @@ Usage:
 
 Examples:
     claude-code-skills browser-controller tabs
-    claude-code-skills macos-ui-inspector list --app Finder
-    claude-code-skills macos-window-controller find --app "Google Chrome"
+    claude-code-skills ui-inspector list --app Finder
+    claude-code-skills window-controller find --app "Google Chrome"
 """
 from __future__ import annotations
 

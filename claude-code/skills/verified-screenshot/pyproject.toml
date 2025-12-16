@@ -1,5 +1,5 @@
 [project]
-name = "macos-verified-screenshot"
+name = "verified-screenshot"
 version = "1.0.0"
 description = "Capture macOS screenshots with verification and retry logic"
 requires-python = ">=3.11"
