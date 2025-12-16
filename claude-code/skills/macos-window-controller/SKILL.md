@@ -118,17 +118,24 @@ osascript -e 'tell application "GoLand" to activate'
 
 macOS automatically switches to the Space containing the activated window (when enabled in System Settings).
 
+## Artifact Output Path
+
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+Screenshots are automatically saved to `claude-code/artifacts/macos-window-controller/` with timestamped filenames (e.g., `251216120000-screenshot_GoLand.png`). The artifact path is always returned in the JSON output - use that path for subsequent operations.
+
 ## Screenshot Capture
 
 ```bash
-# Take screenshot of specific window
-claude-code-skills macos-window-controller --screenshot "GoLand" --output ~/shot.png
+# Take screenshot - path is returned in output
+claude-code-skills macos-window-controller screenshot "GoLand" --json
+# Returns: {"screenshot": "/path/to/artifacts/.../251216120000-screenshot_GoLand.png", ...}
 
 # Screenshot without activating first
-claude-code-skills macos-window-controller --screenshot "GoLand" --no-activate
+claude-code-skills macos-window-controller screenshot "GoLand" --no-activate
 
 # Control settle time (default 1000ms)
-claude-code-skills macos-window-controller --screenshot "GoLand" --settle-ms 2000
+claude-code-skills macos-window-controller screenshot "GoLand" --settle-ms 2000
 ```
 
 ### Capture Backends

@@ -19,11 +19,18 @@ claude-code-skills macos-screen-recorder --help
 PYTHONPATH=claude-code/skills/macos-screen-recorder python -m screen_recorder.cli --help
 ```
 
+## Artifact Output Path
+
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+Recordings are automatically saved to `claude-code/artifacts/macos-screen-recorder/` with timestamped filenames (e.g., `251216120000-recording_GoLand.gif`). The artifact path is always returned in the JSON output - use that path for subsequent operations.
+
 ## Quick Start
 
 ```bash
-# Record a window for 5 seconds (saves to claude-code/artifacts/ by default)
-claude-code-skills macos-screen-recorder record "GoLand" -d 5
+# Record a window for 5 seconds - path is returned in output
+claude-code-skills macos-screen-recorder record "GoLand" -d 5 --json
+# Returns: {"final_path": "/path/to/artifacts/.../251216120000-recording_GoLand.mov", ...}
 
 # Record optimized for Discord upload (10MB max, WebP)
 claude-code-skills macos-screen-recorder record "GoLand" -d 5 --preset discord
@@ -35,7 +42,7 @@ claude-code-skills macos-screen-recorder record "Code" -d 10 --preset github
 claude-code-skills macos-screen-recorder record "IntelliJ" -d 8 --preset jetbrains
 
 # Record full screen
-claude-code-skills macos-screen-recorder full-screen -d 3 -o demo.gif
+claude-code-skills macos-screen-recorder full-screen -d 3
 
 # Record sandbox IDE (JetBrains via Gradle runIde)
 claude-code-skills macos-screen-recorder record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
@@ -369,11 +376,12 @@ claude-code-skills macos-screen-recorder --record "GoLand" -d 5 --preset github 
 # Load the skill context
 Skill tool: macos-screen-recorder
 
-# Record with platform preset
-claude-code-skills macos-screen-recorder --record "GoLand" -d 5 --preset discord -o ~/demo.webp
+# Record with platform preset - use the returned path
+claude-code-skills macos-screen-recorder record "GoLand" -d 5 --preset discord --json
+# Use the "final_path" field from JSON output for subsequent operations
 
 # Verify dependencies first
-claude-code-skills macos-screen-recorder --check-deps
+claude-code-skills macos-screen-recorder check-deps
 ```
 
 ## Testing

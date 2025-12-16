@@ -7,11 +7,18 @@ description: Capture macOS screenshots with verification and retry logic. Integr
 
 Capture macOS window screenshots with automatic verification and retry logic. This skill ensures you actually captured what you intended by verifying the screenshot content, dimensions, and optionally text via OCR.
 
+## Artifact Output Path
+
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+Screenshots are automatically saved to `claude-code/artifacts/macos-verified-screenshot/` with timestamped filenames (e.g., `251216120000-screenshot_GoLand.png`). The artifact path is always returned in the JSON output - use that path for subsequent operations.
+
 ## Quick Start
 
 ```bash
-# Simple capture with default verification (saves to claude-code/artifacts/ by default)
-claude-code-skills macos-verified-screenshot capture "GoLand"
+# Capture screenshot - path is returned in output
+claude-code-skills macos-verified-screenshot capture "GoLand" --json
+# Returns: {"path": "/path/to/artifacts/.../251216120000-screenshot_GoLand.png", ...}
 
 # Capture with full verification
 claude-code-skills macos-verified-screenshot capture "GoLand" --verify all
@@ -23,8 +30,8 @@ claude-code-skills macos-verified-screenshot capture "Main" --args "idea.plugin.
 # Capture specific window by title
 claude-code-skills macos-verified-screenshot capture "Chrome" --title "GitHub"
 
-# Custom output path with 3 retries
-claude-code-skills macos-verified-screenshot capture "Code" -o ~/screenshots/vscode.png -r 3
+# Capture with 3 retries
+claude-code-skills macos-verified-screenshot capture "Code" -r 3
 
 # Capture without Space switching (uses ScreenCaptureKit on macOS 12.3+)
 claude-code-skills macos-verified-screenshot capture "GoLand" --backend screencapturekit
@@ -217,8 +224,9 @@ Use this skill to capture screenshots for verification:
 # Load the skill context
 Skill tool: macos-verified-screenshot
 
-# Capture with verification
-claude-code-skills macos-verified-screenshot --capture "GoLand" --verify all -o ~/screenshot.png
+# Capture with verification - use the returned path
+claude-code-skills macos-verified-screenshot capture "GoLand" --verify all --json
+# Use the "path" field from JSON output for subsequent operations
 
 # If capture fails, it will retry up to 5 times
 # Final result indicates whether verification passed
