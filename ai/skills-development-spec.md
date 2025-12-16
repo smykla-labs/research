@@ -1,6 +1,6 @@
 # Claude Code Skills Development Specification
 
-Version 2.0.0 | Derived from: `macos-space-finder`, `macos-window-controller`, `macos-verified-screenshot`
+Version 3.0.0 | Derived from: `macos-space-finder`, `macos-window-controller`, `browser-controller`
 
 This document defines requirements, guidelines, and best practices for developing Claude Code skills. Use it to validate new skills for consistency, quality, security, and maintainability.
 
@@ -9,24 +9,28 @@ This document defines requirements, guidelines, and best practices for developin
 ## Table of Contents
 
 1. [Directory Structure](#directory-structure)
-2. [Required Files](#required-files)
-3. [Code Architecture](#code-architecture)
-4. [Naming Conventions](#naming-conventions)
-5. [Data Models](#data-models)
-6. [Exception Handling](#exception-handling)
-7. [Security Requirements](#security-requirements)
-8. [CLI Design](#cli-design)
-9. [JSON Output](#json-output)
-10. [Testing Requirements](#testing-requirements)
-11. [Documentation](#documentation)
-12. [Validation & Verification](#validation--verification)
-13. [Quality Checklist](#quality-checklist)
+2. [Skill Types](#skill-types)
+3. [Required Files](#required-files)
+4. [Code Architecture](#code-architecture)
+5. [Naming Conventions](#naming-conventions)
+6. [Data Models](#data-models)
+7. [Exception Handling](#exception-handling)
+8. [Security Requirements](#security-requirements)
+9. [CLI Design](#cli-design)
+10. [Shared Modules](#shared-modules)
+11. [CLI Wrapper](#cli-wrapper)
+12. [JSON Output](#json-output)
+13. [Artifact Output](#artifact-output)
+14. [Testing Requirements](#testing-requirements)
+15. [Documentation](#documentation)
+16. [Validation & Verification](#validation--verification)
+17. [Quality Checklist](#quality-checklist)
 
 ---
 
 ## Directory Structure
 
-Skills are organized as a uv workspace with centralized tests:
+Skills are organized as a uv workspace with centralized tests and shared modules:
 
 ```
 # Root workspace
@@ -38,17 +42,29 @@ tests/
     ├── test_verified_screenshot.py
     └── test_window_controller.py
 
-# Skill directory structure
-.claude/skills/{skill-name}/
-├── SKILL.md                    # Required: Skill documentation
-├── pyproject.toml              # Required: Project configuration (workspace member)
-└── {package_name}/             # Required: Python package (unique name)
-    ├── __init__.py             # Public API exports
-    ├── __main__.py             # Entry point (python -m {package_name})
-    ├── models.py               # Data classes, exceptions, constants
-    ├── core.py                 # Core functionality (pure logic)
-    ├── actions.py              # Action functions (side effects)
-    └── cli.py                  # CLI interface
+# Skills directory structure
+claude-code/
+├── artifacts/                  # Default output for skill artifacts
+│   ├── browser-controller/     # Per-skill artifact directories
+│   ├── macos-window-controller/
+│   └── ...
+└── skills/
+    ├── _bin/                   # CLI wrapper (excluded from workspace)
+    │   └── claude-code-skills  # Unified CLI entry point
+    ├── _shared/                # Shared modules (excluded from workspace)
+    │   ├── __init__.py
+    │   └── artifacts.py        # Artifact management utilities
+    ├── {skill-name}/           # Python-based skill
+    │   ├── SKILL.md            # Required: Skill documentation
+    │   ├── pyproject.toml      # Required: Project configuration
+    │   └── {package_name}/     # Required: Python package
+    │       ├── __init__.py     # Public API exports
+    │       ├── __main__.py     # Entry point (python -m {package_name})
+    │       └── cli.py          # CLI interface (Typer app)
+    └── {docs-skill}/           # Documentation-only skill
+        ├── SKILL.md            # Required: Main documentation
+        ├── pyproject.toml      # Required: package = false
+        └── *.md                # Additional documentation files
 ```
 
 ### Naming Rules
@@ -63,21 +79,56 @@ Root `pyproject.toml` defines the workspace:
 
 ```toml
 [tool.uv.workspace]
-members = [".claude/skills/*"]
+members = ["claude-code/skills/*"]
+exclude = ["claude-code/skills/_bin", "claude-code/skills/_shared"]
 ```
 
 Skills are installed as editable packages via `uv pip install -e .claude/skills/{skill-name}`.
 
 ---
 
+## Skill Types
+
+### Python-Based Skills
+
+Executable skills with CLI interface. Requires:
+
+- `pyproject.toml` with `package = true`
+- Python package with `__init__.py`, `__main__.py`, `cli.py`
+- Installable entry point in `[project.scripts]`
+
+### Documentation-Only Skills
+
+Knowledge/reference skills without executable code. Requires:
+
+- `pyproject.toml` with `package = false`
+- `SKILL.md` with proper frontmatter
+- Additional markdown files as needed
+
+Example `pyproject.toml` for documentation-only skill:
+
+```toml
+[project]
+name = "web-automation-investigation"
+version = "0.1.0"
+description = "Complete guide for investigating and implementing web browser automation"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false
+```
+
+---
+
 ## Required Files
 
-### `pyproject.toml` (Skill)
+### `pyproject.toml` (Python-Based Skill)
 
 ```toml
 [project]
 name = "macos-skill-name"
-version = "0.1.0"
+version = "1.0.0"
 description = "Brief description of what the skill does"
 requires-python = ">=3.11"
 dependencies = []  # Managed by workspace root
@@ -107,13 +158,15 @@ dependencies = [
     # Shared dependencies for all skills
     "pyobjc-framework-Quartz>=10.0",
     "psutil>=5.9",
+    "typer>=0.15.0",  # CLI framework
 ]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = [".claude/skills/*"]
+members = ["claude-code/skills/*"]
+exclude = ["claude-code/skills/_bin", "claude-code/skills/_shared"]
 ```
 
 ### `SKILL.md`
@@ -133,14 +186,44 @@ See [Documentation](#documentation) section for full requirements.
 
 ## Code Architecture
 
-### Module Responsibilities
+### Minimum Required Files
 
-| Module       | Purpose                             | Side Effects            |
-|--------------|-------------------------------------|-------------------------|
-| `models.py`  | Data classes, exceptions, constants | None                    |
-| `core.py`    | Core logic, parsing, filtering      | Minimal (reads only)    |
-| `actions.py` | Actions with external effects       | Yes (subprocess, files) |
-| `cli.py`     | CLI parsing and handlers            | Yes (stdout/stderr)     |
+Every Python-based skill MUST have these files:
+
+| File           | Purpose                                      |
+|----------------|----------------------------------------------|
+| `__init__.py`  | Public API exports with `__all__`            |
+| `__main__.py`  | Entry point for `python -m {package_name}`   |
+| `cli.py`       | Typer CLI application                        |
+
+### Recommended Additional Files
+
+| File           | Purpose                                   | When to Use                    |
+|----------------|-------------------------------------------|--------------------------------|
+| `models.py`    | Data classes, exceptions, constants       | Skills with domain models      |
+| `core.py`      | Core logic, parsing, filtering            | Skills with business logic     |
+| `actions.py`   | Actions with external effects             | Skills with side effects       |
+
+### Extended Structures
+
+Skills may include additional modules as needed:
+
+```
+{package_name}/
+├── __init__.py
+├── __main__.py
+├── cli.py
+├── models.py           # Optional: Data models
+├── core.py             # Optional: Core logic
+├── actions.py          # Optional: Side-effect operations
+├── backends/           # Optional: Protocol implementations
+│   ├── __init__.py
+│   ├── cdp.py          # Chrome DevTools Protocol
+│   └── marionette.py   # Firefox Marionette
+├── utils/              # Optional: Utility functions
+│   └── __init__.py
+└── screencapturekit.py # Optional: Platform-specific modules
+```
 
 ### File Header
 
@@ -160,11 +243,13 @@ from __future__ import annotations
 from __future__ import annotations
 
 # Standard library
-import argparse
 import json
-import subprocess
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
+
+# Third-party
+import typer
 
 # Local imports
 from .models import SomeClass, SomeError
@@ -182,7 +267,7 @@ Export all public API with explicit `__all__`:
 """Skill name - Brief description."""
 
 from .actions import action_func, sanitize_func
-from .cli import create_parser, main
+from .cli import main
 from .core import core_func
 from .models import (
     CONSTANT,
@@ -202,7 +287,6 @@ __all__ = [
     # Functions (alphabetical)
     "action_func",
     "core_func",
-    "create_parser",
     "main",
     "sanitize_func",
 ]
@@ -247,8 +331,9 @@ if __name__ == "__main__":
 
 - All caps with underscores: `SPACES_PLIST_PATH`
 - Type mappings: `{DOMAIN}_TYPE_{NAME}` (e.g., `SPACE_TYPE_FULLSCREEN`)
+- Skill name: `SKILL_NAME = "skill-name"` (for artifact tracking)
 
-### CLI Arguments
+### CLI Arguments (Typer)
 
 | Long Flag      | Short Flag | Pattern         |
 |----------------|------------|-----------------|
@@ -377,19 +462,24 @@ def function_with_error() -> Result:
     return result
 ```
 
-### CLI Error Handling
+### CLI Error Handling (Typer)
 
 ```python
-def main(argv: Sequence[str] | None = None) -> int:
+@app.command("action")
+def action_cmd(json_output: JsonOpt = False) -> None:
+    """Perform action."""
     try:
-        # ... logic ...
+        result = perform_action()
+        if json_output:
+            print(json.dumps(result.to_dict(), indent=2))
+        else:
+            print(f"Success: {result.name}")
     except SkillError as e:
-        if args.json:
-            print(json.dumps({"error": str(e)}))
+        if json_output:
+            print(json.dumps({"error": str(e)}), file=sys.stderr)
         else:
             print(f"Error: {e}", file=sys.stderr)
-        return 1
-    return 0
+        raise typer.Exit(1) from e
 ```
 
 ---
@@ -453,86 +543,304 @@ def safe_subprocess(args: list[str], *, capture_output: bool = True) -> subproce
 
 ## CLI Design
 
-### Parser Structure
+Skills use [Typer](https://typer.tiangolo.com/) for CLI interfaces with subcommand-based structure.
+
+### App Structure
 
 ```python
-def create_parser() -> argparse.ArgumentParser:
-    """Create and configure the argument parser."""
-    parser = argparse.ArgumentParser(
-        description="Brief skill description.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --list              List all items
-  %(prog)s --find "query"      Find items
-  %(prog)s --json --list       Output as JSON
-        """,
-    )
+"""Command-line interface for skill name."""
 
-    # Actions group
-    parser.add_argument("--list", "-l", action="store_true", help="List all items")
-    parser.add_argument("--find", "-f", metavar="QUERY", help="Find items")
-    parser.add_argument("--json", "-j", action="store_true", help="Output as JSON")
+from __future__ import annotations
 
-    # Positional argument (optional)
-    parser.add_argument("query", nargs="?", metavar="QUERY", help="Search query")
+import json
+import sys
+from typing import Annotated
 
-    return parser
+import typer
+
+from .core import get_items, find_items
+from .models import SkillError
+
+# Skill name for artifact tracking
+SKILL_NAME = "skill-name"
+
+app = typer.Typer(
+    name="skill-name",
+    help="Brief skill description.",
+)
 ```
 
-### Handler Pattern
+### Type Aliases for Options
+
+Define reusable type aliases for common options:
+
+```python
+# Common type aliases
+JsonOpt = Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")]
+AppArg = Annotated[str, typer.Argument(help="Application name")]
+TitleOpt = Annotated[str | None, typer.Option("--title", "-t", help="Regex for title")]
+OutputOpt = Annotated[
+    str | None,
+    typer.Option("--output", "-o", help="Output path (must have .png extension)"),
+]
+```
+
+### Command Pattern
+
+```python
+@app.command("list")
+def list_cmd(
+    json_output: JsonOpt = False,
+) -> None:
+    """List all items."""
+    try:
+        items = get_items()
+
+        if json_output:
+            print(json.dumps([item.to_dict() for item in items], indent=2))
+        else:
+            for item in items:
+                print(f"{item.name}: {item.description}")
+
+    except SkillError as e:
+        msg = json.dumps({"error": str(e)}) if json_output else f"Error: {e}"
+        print(msg, file=sys.stderr)
+        raise typer.Exit(1) from e
+
+
+@app.command("find")
+def find_cmd(
+    query: Annotated[str, typer.Argument(help="Search query")],
+    title: TitleOpt = None,
+    json_output: JsonOpt = False,
+) -> None:
+    """Find items matching query."""
+    try:
+        items = find_items(query, title_pattern=title)
+
+        if not items:
+            msg = {"error": f"No items found for: {query}"}
+            print(json.dumps(msg) if json_output else f"No items found for: {query}")
+            raise typer.Exit(1)
+
+        if json_output:
+            print(json.dumps([item.to_dict() for item in items], indent=2))
+        else:
+            for item in items:
+                print(f"Found: {item.name}")
+                print(f"  Description: {item.description}\n")
+
+    except SkillError as e:
+        msg = json.dumps({"error": str(e)}) if json_output else f"Error: {e}"
+        print(msg, file=sys.stderr)
+        raise typer.Exit(1) from e
+```
+
+### Main Function Pattern
+
+```python
+def main(argv: list[str] | None = None) -> int:
+    """Main entry point for skill-name CLI.
+
+    Args:
+        argv: Command-line arguments (default: sys.argv[1:]).
+
+    Returns:
+        Exit code (0 for success, non-zero for error).
+    """
+    if argv is not None:
+        sys.argv = ["skill-name", *list(argv)]
+    try:
+        app(prog_name="skill-name")
+        return 0
+    except SystemExit as e:
+        return e.code if isinstance(e.code, int) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### Handler Functions (Optional)
+
+For complex commands, extract handler functions:
 
 ```python
 def _handle_list(items: Sequence[Item], *, json_output: bool = False) -> int:
-    """Handle --list command."""
+    """Handle list command."""
     if json_output:
         print(json.dumps([item.to_dict() for item in items], indent=2))
     else:
         for item in items:
             print(f"{item.name}: {item.description}")
     return 0
+
+
+@app.command("list")
+def list_cmd(json_output: JsonOpt = False) -> None:
+    """List all items."""
+    try:
+        items = get_items()
+        result = _handle_list(items, json_output=json_output)
+        if result != 0:
+            raise typer.Exit(result)
+    except SkillError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
 ```
 
-### Main Function
+---
+
+## Shared Modules
+
+### `_shared/artifacts.py`
+
+Provides consistent artifact output management for all skills.
+
+**Location:** `claude-code/skills/_shared/artifacts.py`
+
+**Key Functions:**
 
 ```python
-def main(argv: Sequence[str] | None = None) -> int:
-    """Main entry point.
-
-    Args:
-        argv: Command line arguments (defaults to sys.argv[1:]).
-
-    Returns:
-        Exit code (0 for success, non-zero for errors).
-    """
-    parser = create_parser()
-    args = parser.parse_args(argv)
-
-    # Validate: at least one action required
-    if not any([args.list, args.find, args.query]):
-        parser.print_help()
-        return 1
-
-    try:
-        # Load data
-        data = load_data()
-
-        # Dispatch to handlers
-        json_output = args.json
-
-        if args.list:
-            return _handle_list(data, json_output=json_output)
-        if args.find:
-            return _handle_find(data, args.find, json_output=json_output)
-        if args.query:
-            return _handle_query(data, args.query, json_output=json_output)
-
-    except SkillError as e:
-        print(json.dumps({"error": str(e)}) if args.json else f"Error: {e}", file=sys.stderr)
-        return 1
-
-    return 0
+from _shared.artifacts import (
+    ArtifactError,
+    ArtifactResult,
+    save_artifact,
+    validate_extension,
+    get_default_artifact_path,
+)
 ```
+
+**Output Structure:**
+
+```
+claude-code/artifacts/<skill-name>/<YYMMDDHHMMSS>-<description>.<ext>
+```
+
+**Usage Pattern:**
+
+```python
+import tempfile
+from pathlib import Path
+
+from _shared.artifacts import save_artifact, validate_extension, ArtifactError
+
+SKILL_NAME = "macos-window-controller"
+
+@app.command("screenshot")
+def screenshot_cmd(
+    app_name: str,
+    output: OutputOpt = None,
+    json_output: JsonOpt = False,
+) -> None:
+    """Take screenshot of window."""
+    try:
+        # Validate output extension if provided
+        if output is not None:
+            validate_extension(output, ["png"])
+
+        # Create temp file for capture
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+
+        try:
+            # Capture to temp file
+            capture_screenshot(app_name, tmp_path)
+
+            # Save with tracking
+            result = save_artifact(
+                source_path=tmp_path,
+                skill_name=SKILL_NAME,
+                description=f"screenshot_{app_name}",
+                output_path=output,
+                allowed_extensions=["png"],
+            )
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+        if json_output:
+            print(json.dumps({
+                "screenshot": str(result.primary_path),
+                "tracking_copy": str(result.tracking_path),
+            }, indent=2))
+        else:
+            print(f"Screenshot saved: {result.primary_path}")
+
+    except ArtifactError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+```
+
+**Fallback Pattern:**
+
+For skills that may run without `_shared` available:
+
+```python
+try:
+    from _shared.artifacts import save_artifact, validate_extension, ArtifactError
+except ImportError:
+    # Fallback implementation when _shared not available
+    class ArtifactError(Exception):
+        pass
+
+    def save_artifact(source_path, skill_name, description, output_path=None, allowed_extensions=None):
+        # Minimal fallback implementation
+        ...
+
+    def validate_extension(path, allowed=None):
+        # Minimal fallback implementation
+        ...
+```
+
+---
+
+## CLI Wrapper
+
+### `claude-code-skills`
+
+Unified CLI wrapper that auto-discovers and runs Python-based skills.
+
+**Location:** `claude-code/skills/_bin/claude-code-skills`
+
+**Setup:**
+
+Add to PATH for global access:
+
+```bash
+export PATH="$PATH:/path/to/research/claude-code/skills/_bin"
+```
+
+**Usage:**
+
+```bash
+# List available skills
+claude-code-skills --list
+
+# Get help for a skill
+claude-code-skills <skill-name> --help
+
+# Run a skill command
+claude-code-skills <skill-name> <command> [args]
+
+# Examples
+claude-code-skills browser-controller tabs
+claude-code-skills macos-window-controller find "GoLand"
+claude-code-skills macos-window-controller screenshot "GoLand" --json
+```
+
+**How It Works:**
+
+1. Auto-discovers skills by scanning `claude-code/skills/*/`
+2. Identifies Python-based skills by presence of `__init__.py` and `cli.py`
+3. Ignores documentation-only skills and special directories
+4. Runs skills via `uv run python -m {module_name}.cli`
+
+**Discovery Criteria:**
+
+A directory is recognized as a Python-based skill if it contains:
+- A subdirectory with `__init__.py` AND `cli.py`
+
+Documentation-only skills (no `cli.py`) are silently ignored.
 
 ---
 
@@ -563,6 +871,46 @@ print(json.dumps({
     "action": "activated",
     "item": item.to_dict(),
 }))
+
+# Artifact result
+print(json.dumps({
+    "screenshot": str(result.primary_path),
+    "tracking_copy": str(result.tracking_path),
+    "window": target_window.to_dict(),
+}, indent=2))
+```
+
+---
+
+## Artifact Output
+
+### CRITICAL: Default Output Behavior
+
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+### Default Behavior
+
+Skills that produce artifacts (screenshots, recordings, exports) MUST:
+
+1. Save to default location: `claude-code/artifacts/<skill-name>/<timestamp>-<description>.<ext>`
+2. Return the artifact path in JSON output
+3. Use the returned path for subsequent operations
+
+### When Custom Output Is Used
+
+If `--output` is explicitly requested:
+
+1. Save to the specified path
+2. Also create a tracking copy in the default location
+3. Return both paths in JSON output
+
+### JSON Output for Artifacts
+
+```json
+{
+  "screenshot": "/custom/path/screenshot.png",
+  "tracking_copy": "/path/to/artifacts/macos-window-controller/241216143052-screenshot_GoLand.png"
+}
 ```
 
 ---
@@ -590,7 +938,6 @@ from package_name import (
     public_function,
     main,
 )
-from package_name.cli import _handle_action
 
 # =============================================================================
 # Fixtures
@@ -647,11 +994,9 @@ class TestDataClass:
    - Security (sanitization)
 
 4. **CLI Tests**
-   - Parser arguments
-   - Short flags
-   - Handler functions
-   - Main function
+   - Commands execute successfully
    - JSON output mode
+   - Error handling
 
 5. **Error Tests**
    - Custom exceptions raised correctly
@@ -686,7 +1031,7 @@ def test_external_call_failure(self) -> None:
 
 ### SKILL.md Structure
 
-```markdown
+````markdown
 ---
 name: skill-name
 description: One-line description for skill discovery in Claude Code
@@ -698,15 +1043,12 @@ Brief description of what the skill does and when to use it.
 
 ## Quick Start
 
-\```bash
-# Most common use cases (using CLI entry point)
-uv run skill-name --list
-uv run skill-name --find "query"
-uv run skill-name --json --list
-
-# Or using module syntax
-uv run python -m package_name --list
-\```
+```bash
+# Most common use cases
+claude-code-skills skill-name list
+claude-code-skills skill-name find "query"
+claude-code-skills skill-name action --json
+```
 
 ## How It Works
 
@@ -720,33 +1062,35 @@ Document known limitations and workarounds.
 
 ## Command Reference
 
-| Flag     | Short | Description    |
-|----------|-------|----------------|
-| `--list` | `-l`  | List all items |
-| `--find` | `-f`  | Find items     |
-| `--json` | `-j`  | Output as JSON |
+| Command    | Description         |
+|------------|---------------------|
+| `list`     | List all items      |
+| `find`     | Find items by query |
+| `activate` | Activate an item    |
 
-## Integration Examples
+### Common Options
 
-\```python
-# Example code for programmatic use
-import subprocess
-result = subprocess.run(
-    ["uv", "run", "skill-name", "--list", "--json"],
-    capture_output=True, text=True
-)
-data = json.loads(result.stdout)
-\```
+| Flag       | Short | Description        |
+|------------|-------|--------------------|
+| `--json`   | `-j`  | Output as JSON     |
+| `--output` | `-o`  | Custom output path |
+| `--title`  | `-t`  | Filter by title    |
+
+## Artifact Output Path
+
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location.
+
+Screenshots/recordings are automatically saved to `claude-code/artifacts/skill-name/` with timestamped filenames.
 
 ## Testing
 
-\```bash
+```bash
 # Verify the skill works
-uv run skill-name --list
+claude-code-skills skill-name list
 
 # Run tests
 uv run pytest tests/skills/test_package_name.py -v
-\```
+```
 
 ## Troubleshooting
 
@@ -762,7 +1106,7 @@ Steps to diagnose and fix.
 
 - [Link to relevant documentation](url)
 - [Link to API reference](url)
-```
+````
 
 ### Code Comments
 
@@ -784,18 +1128,18 @@ Run these commands from the workspace root:
 #### 1. Structure Validation
 
 ```bash
-SKILL_DIR=".claude/skills/{skill-name}"
+SKILL_DIR="claude-code/skills/{skill-name}"
 PKG_NAME="{package_name}"
 
 # Required files exist
-test -f "$SKILL_DIR/SKILL.md" && echo "✅ SKILL.md" || echo "❌ SKILL.md missing"
-test -f "$SKILL_DIR/pyproject.toml" && echo "✅ pyproject.toml" || echo "❌ pyproject.toml missing"
-test -d "$SKILL_DIR/$PKG_NAME" && echo "✅ $PKG_NAME/" || echo "❌ $PKG_NAME/ missing"
-test -f "tests/skills/test_${PKG_NAME}.py" && echo "✅ tests/skills/test_${PKG_NAME}.py" || echo "❌ test file missing"
+test -f "$SKILL_DIR/SKILL.md" && echo "SKILL.md" || echo "SKILL.md missing"
+test -f "$SKILL_DIR/pyproject.toml" && echo "pyproject.toml" || echo "pyproject.toml missing"
+test -d "$SKILL_DIR/$PKG_NAME" && echo "$PKG_NAME/" || echo "$PKG_NAME/ missing"
+test -f "tests/skills/test_${PKG_NAME}.py" && echo "tests/skills/test_${PKG_NAME}.py" || echo "test file missing"
 
 # Required Python files in package
-for f in __init__.py __main__.py models.py core.py actions.py cli.py; do
-  test -f "$SKILL_DIR/$PKG_NAME/$f" && echo "✅ $PKG_NAME/$f" || echo "❌ $PKG_NAME/$f missing"
+for f in __init__.py __main__.py cli.py; do
+  test -f "$SKILL_DIR/$PKG_NAME/$f" && echo "$PKG_NAME/$f" || echo "$PKG_NAME/$f missing"
 done
 ```
 
@@ -823,101 +1167,61 @@ uv run pytest "tests/skills/test_${PKG_NAME}.py" --cov="$PKG_NAME" --cov-fail-un
 
 ```bash
 # Check for shell=True (should return no matches)
-grep -r "shell=True" "$SKILL_DIR/$PKG_NAME/" && echo "❌ shell=True found!" || echo "✅ No shell=True"
+grep -r "shell=True" "$SKILL_DIR/$PKG_NAME/" && echo "shell=True found!" || echo "No shell=True"
 
 # Check for eval/exec (should return no matches)
-grep -rE "\b(eval|exec)\s*\(" "$SKILL_DIR/$PKG_NAME/" && echo "❌ eval/exec found!" || echo "✅ No eval/exec"
+grep -rE "\b(eval|exec)\s*\(" "$SKILL_DIR/$PKG_NAME/" && echo "eval/exec found!" || echo "No eval/exec"
 
-# Verify sanitization functions exist
-grep -l "sanitize_" "$SKILL_DIR/$PKG_NAME/actions.py" && echo "✅ Sanitization exists" || echo "⚠️ No sanitization"
+# Verify sanitization functions exist (for skills with user input)
+grep -l "sanitize_" "$SKILL_DIR/$PKG_NAME/actions.py" 2>/dev/null && echo "Sanitization exists" || echo "No sanitization (may be OK)"
 ```
 
 ### Manual Validation Checks
 
 #### Structure Compliance
 
-| Check | How to Validate | Expected |
-|-------|-----------------|----------|
-| Directory naming | `basename "$SKILL_DIR"` | `kebab-case` |
-| Package naming | `ls "$SKILL_DIR/"` | Unique `snake_case` package |
-| Test file naming | `ls tests/skills/` | `test_{package_name}.py` |
+| Check            | How to Validate         | Expected                    |
+|------------------|-------------------------|-----------------------------|
+| Directory naming | `basename "$SKILL_DIR"` | `kebab-case`                |
+| Package naming   | `ls "$SKILL_DIR/"`      | Unique `snake_case` package |
+| Test file naming | `ls tests/skills/`      | `test_{package_name}.py`    |
 
 #### Code Architecture Compliance
 
 ```bash
 # Verify __all__ is defined
-grep -q "__all__" "$SKILL_DIR/$PKG_NAME/__init__.py" && echo "✅ __all__ defined" || echo "❌ __all__ missing"
+grep -q "__all__" "$SKILL_DIR/$PKG_NAME/__init__.py" && echo "__all__ defined" || echo "__all__ missing"
 
 # Verify future annotations
 for f in "$SKILL_DIR/$PKG_NAME"/*.py; do
-  grep -q "from __future__ import annotations" "$f" && echo "✅ $f" || echo "❌ $f missing future annotations"
+  grep -q "from __future__ import annotations" "$f" && echo "$f" || echo "$f missing future annotations"
 done
 
-# Verify __main__.py pattern
-grep -q "sys.exit(main())" "$SKILL_DIR/$PKG_NAME/__main__.py" && echo "✅ __main__.py correct" || echo "❌ __main__.py pattern wrong"
-```
-
-#### Data Model Compliance
-
-```bash
-# Check frozen dataclasses
-grep -E "@dataclass\(frozen=True\)" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ Frozen dataclasses" || echo "❌ Not frozen"
-
-# Check for list fields (should use tuple)
-grep -E ":\s*list\[" "$SKILL_DIR/$PKG_NAME/models.py" && echo "⚠️ Using list (should use tuple)" || echo "✅ No list fields"
-
-# Check to_dict exists
-grep -q "def to_dict" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ to_dict exists" || echo "❌ to_dict missing"
-```
-
-#### Exception Hierarchy Compliance
-
-```bash
-# Check base exception exists
-grep -E "class \w+Error\(Exception\):" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ Base exception" || echo "❌ No base exception"
-
-# List all exceptions
-grep -E "class \w+Error\(" "$SKILL_DIR/$PKG_NAME/models.py"
+# Verify Typer app exists
+grep -q "typer.Typer" "$SKILL_DIR/$PKG_NAME/cli.py" && echo "Typer app exists" || echo "Typer app missing"
 ```
 
 #### CLI Compliance
 
 ```bash
-# Check short flags exist
-grep -E '"-[a-z]"' "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ Short flags exist" || echo "❌ No short flags"
-
 # Check JSON flag
-grep -q '"-j"' "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ -j flag" || echo "❌ -j flag missing"
+grep -q '"-j"' "$SKILL_DIR/$PKG_NAME/cli.py" && echo "-j flag" || echo "-j flag missing"
 
-# Check help epilog with examples
-grep -q "Examples:" "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ Examples in help" || echo "❌ No examples"
+# Check subcommands
+grep -c "@app.command" "$SKILL_DIR/$PKG_NAME/cli.py"
 ```
 
 ### Test Coverage Requirements
 
 #### Required Test Categories
 
-| Category | What to Test | Minimum Tests |
-|----------|--------------|---------------|
-| Data Models | Field access, `to_dict()`, properties, immutability | 4+ per class |
-| Core Functions | Normal operation, edge cases, errors | 3+ per function |
-| Actions | Success, failure, sanitization | 3+ per action |
-| CLI Parser | All flags, short flags, positional args | 1 per flag |
-| CLI Handlers | Success path, error path, JSON output | 3 per handler |
-| Main Function | No args, success, error | 3+ |
-
-#### Test Pattern Validation
-
-```bash
-# Check fixture usage
-grep -c "@pytest.fixture" "tests/skills/test_${PKG_NAME}.py"
-
-# Check class-based tests
-grep -c "class Test" "tests/skills/test_${PKG_NAME}.py"
-
-# Check error testing
-grep -c "pytest.raises" "tests/skills/test_${PKG_NAME}.py"
-```
+| Category       | What to Test                                        | Minimum Tests   |
+|----------------|-----------------------------------------------------|-----------------|
+| Data Models    | Field access, `to_dict()`, properties, immutability | 4+ per class    |
+| Core Functions | Normal operation, edge cases, errors                | 3+ per function |
+| Actions        | Success, failure, sanitization                      | 3+ per action   |
+| CLI Commands   | Success path, error path, JSON output               | 3 per command   |
+| Main Function  | No args, success, error                             | 3+              |
 
 ### Documentation Compliance
 
@@ -925,135 +1229,12 @@ grep -c "pytest.raises" "tests/skills/test_${PKG_NAME}.py"
 
 ```bash
 # Check frontmatter
-head -5 "$SKILL_DIR/SKILL.md" | grep -q "^---" && echo "✅ Frontmatter exists" || echo "❌ No frontmatter"
+head -5 "$SKILL_DIR/SKILL.md" | grep -q "^---" && echo "Frontmatter exists" || echo "No frontmatter"
 
 # Check required sections
-for section in "Quick Start" "How It Works" "Command Reference" "Troubleshooting"; do
-  grep -q "## $section" "$SKILL_DIR/SKILL.md" && echo "✅ $section" || echo "❌ $section missing"
+for section in "Quick Start" "How It Works" "Troubleshooting"; do
+  grep -q "## $section" "$SKILL_DIR/SKILL.md" && echo "$section" || echo "$section missing"
 done
-
-# Check command table
-grep -q "| Flag" "$SKILL_DIR/SKILL.md" && echo "✅ Command table" || echo "❌ No command table"
-```
-
-### Full Validation Script
-
-Create and run this script for comprehensive validation:
-
-```bash
-#!/bin/bash
-# validate-skill.sh - Run from workspace root
-# Usage: ./validate-skill.sh macos-space-finder space_finder
-
-SKILL_NAME="${1:?Usage: $0 <skill-name> <package-name>}"
-PKG_NAME="${2:?Usage: $0 <skill-name> <package-name>}"
-SKILL_DIR=".claude/skills/$SKILL_NAME"
-
-echo "=== Skill Validation: $SKILL_NAME ($PKG_NAME) ==="
-
-# Structure
-echo -e "\n--- Structure ---"
-test -f "$SKILL_DIR/SKILL.md" && echo "✅ SKILL.md" || echo "❌ SKILL.md"
-test -f "$SKILL_DIR/pyproject.toml" && echo "✅ pyproject.toml" || echo "❌ pyproject.toml"
-test -d "$SKILL_DIR/$PKG_NAME" && echo "✅ $PKG_NAME/" || echo "❌ $PKG_NAME/"
-for f in __init__.py __main__.py models.py core.py actions.py cli.py; do
-  test -f "$SKILL_DIR/$PKG_NAME/$f" && echo "✅ $PKG_NAME/$f" || echo "❌ $PKG_NAME/$f"
-done
-test -f "tests/skills/test_${PKG_NAME}.py" && echo "✅ tests/skills/test_${PKG_NAME}.py" || echo "❌ tests/skills/test_${PKG_NAME}.py"
-
-# Linting
-echo -e "\n--- Linting ---"
-uv run ruff check "$SKILL_DIR/$PKG_NAME/" "tests/skills/test_${PKG_NAME}.py" --quiet && echo "✅ Lint passed" || echo "❌ Lint failed"
-
-# Tests
-echo -e "\n--- Tests ---"
-uv run pytest "tests/skills/test_${PKG_NAME}.py" -q && echo "✅ Tests passed" || echo "❌ Tests failed"
-
-# Coverage
-echo -e "\n--- Coverage ---"
-uv run pytest "tests/skills/test_${PKG_NAME}.py" --cov="$PKG_NAME" --cov-fail-under=80 -q 2>/dev/null && \
-  echo "✅ Coverage ≥80%" || echo "⚠️ Coverage <80%"
-
-# Security
-echo -e "\n--- Security ---"
-! grep -rq "shell=True" "$SKILL_DIR/$PKG_NAME/" && echo "✅ No shell=True" || echo "❌ shell=True found"
-! grep -rqE "\b(eval|exec)\s*\(" "$SKILL_DIR/$PKG_NAME/" && echo "✅ No eval/exec" || echo "❌ eval/exec found"
-grep -q "sanitize_" "$SKILL_DIR/$PKG_NAME/actions.py" && echo "✅ Sanitization" || echo "⚠️ No sanitization"
-
-# Code patterns
-echo -e "\n--- Code Patterns ---"
-grep -q "__all__" "$SKILL_DIR/$PKG_NAME/__init__.py" && echo "✅ __all__" || echo "❌ __all__"
-grep -qE "@dataclass\(frozen=True\)" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ Frozen" || echo "❌ Not frozen"
-grep -q "def to_dict" "$SKILL_DIR/$PKG_NAME/models.py" && echo "✅ to_dict" || echo "❌ to_dict"
-
-# CLI
-echo -e "\n--- CLI ---"
-grep -q '"-j"' "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ -j flag" || echo "❌ -j flag"
-grep -q "Examples:" "$SKILL_DIR/$PKG_NAME/cli.py" && echo "✅ Examples" || echo "❌ Examples"
-
-# Documentation
-echo -e "\n--- Documentation ---"
-head -1 "$SKILL_DIR/SKILL.md" | grep -q "^---" && echo "✅ Frontmatter" || echo "❌ Frontmatter"
-grep -q "## Quick Start" "$SKILL_DIR/SKILL.md" && echo "✅ Quick Start" || echo "❌ Quick Start"
-grep -q "## Troubleshooting" "$SKILL_DIR/SKILL.md" && echo "✅ Troubleshooting" || echo "❌ Troubleshooting"
-
-echo -e "\n=== Validation Complete ==="
-```
-
-### CI/CD Integration
-
-For automated validation in CI pipelines:
-
-```yaml
-# .github/workflows/validate-skills.yml
-name: Validate Skills
-
-on:
-  pull_request:
-    paths:
-      - '.claude/skills/**'
-      - 'tests/skills/**'
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
-
-      - name: Install workspace
-        run: |
-          uv sync
-          uv pip install -e .claude/skills/macos-space-finder
-          uv pip install -e .claude/skills/macos-verified-screenshot
-          uv pip install -e .claude/skills/macos-window-controller
-
-      - name: Validate Structure
-        run: |
-          for skill_pkg in "macos-space-finder:space_finder" "macos-verified-screenshot:verified_screenshot" "macos-window-controller:window_controller"; do
-            skill="${skill_pkg%%:*}"
-            pkg="${skill_pkg##*:}"
-            echo "Checking $skill ($pkg)"
-            test -f ".claude/skills/$skill/SKILL.md"
-            test -f ".claude/skills/$skill/pyproject.toml"
-            test -d ".claude/skills/$skill/$pkg"
-            test -f "tests/skills/test_${pkg}.py"
-          done
-
-      - name: Lint
-        run: |
-          uv run ruff check .claude/skills/ tests/skills/
-
-      - name: Test
-        run: |
-          uv run pytest tests/skills/ -v
-
-      - name: Security Check
-        run: |
-          ! grep -r "shell=True" .claude/skills/*/
-          ! grep -rE "\b(eval|exec)\s*\(" .claude/skills/*/
 ```
 
 ---
@@ -1064,9 +1245,9 @@ Use this checklist to validate new skills:
 
 ### Structure
 
-- [ ] Skill directory in `.claude/skills/{skill-name}/`
+- [ ] Skill directory in `claude-code/skills/{skill-name}/`
 - [ ] Unique Python package name (e.g., `space_finder/`, not `scripts/`)
-- [ ] `pyproject.toml` with `package = true`
+- [ ] `pyproject.toml` with `package = true` (or `false` for docs-only)
 - [ ] Test file in `tests/skills/test_{package_name}.py`
 
 ### Code Quality
@@ -1091,12 +1272,19 @@ Use this checklist to validate new skills:
 - [ ] File paths validated
 - [ ] No eval/exec of user input
 
-### CLI
+### CLI (Typer)
 
-- [ ] Short and long flags for all options
+- [ ] `typer.Typer()` app with subcommands
 - [ ] `--json/-j` flag supported
-- [ ] Help text with examples
-- [ ] Proper exit codes (0 success, 1+ error)
+- [ ] Type aliases for common options
+- [ ] Proper exit codes (`typer.Exit(1)`)
+
+### Artifacts (if applicable)
+
+- [ ] Uses `_shared/artifacts` for output management
+- [ ] Default output to `claude-code/artifacts/{skill-name}/`
+- [ ] `--output` is optional, not default
+- [ ] Returns path in JSON output
 
 ### Testing
 
@@ -1110,7 +1298,7 @@ Use this checklist to validate new skills:
 
 - [ ] `SKILL.md` with frontmatter
 - [ ] Quick start examples
-- [ ] Command reference table
+- [ ] Command reference
 - [ ] Troubleshooting section
 
 ---
@@ -1119,5 +1307,6 @@ Use this checklist to validate new skills:
 
 | Version | Date       | Changes                                                                               |
 |---------|------------|---------------------------------------------------------------------------------------|
+| 3.0.0   | 2024-12-16 | **Breaking**: Replace argparse with Typer throughout; change module structure to minimum requirements (`__init__.py`, `__main__.py`, `cli.py` required; others optional); add `_shared/artifacts.py` documentation; add `_bin/claude-code-skills` CLI wrapper documentation; add documentation-only skills pattern (`package = false`); add artifact output patterns with CRITICAL warning; fix escaped backticks; update workspace exclude patterns |
 | 2.0.0   | 2024-12-14 | **Breaking**: Migrate from per-skill `scripts/` to unique package names; centralize tests in `tests/skills/`; use uv workspace with single lockfile; skills are now installable packages (`package = true`) |
 | 1.0.0   | 2024-12-14 | Initial specification derived from `macos-space-finder` and `macos-window-controller` |

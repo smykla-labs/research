@@ -15,41 +15,86 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
-# Mapping from skill directory name to Python module name
-SKILL_MODULES: dict[str, str] = {
-    "browser-controller": "browser_controller",
-    "macos-ocr-finder": "ocr_finder",
-    "macos-screen-recorder": "screen_recorder",
-    "macos-space-finder": "space_finder",
-    "macos-ui-inspector": "ui_inspector",
-    "macos-verified-screenshot": "verified_screenshot",
-    "macos-window-controller": "window_controller",
-}
+# Directories to skip when discovering skills
+SKIP_DIRS = {"_bin", "_shared", "__pycache__"}
+
+
+@dataclass(frozen=True)
+class SkillInfo:
+    """Information about a discovered Python-based skill."""
+
+    name: str
+    path: Path
+    module_name: str
 
 
 def get_skills_dir() -> Path:
-    """Get the skills directory (parent of bin/)."""
+    """Get the skills directory (parent of _bin/)."""
     return Path(__file__).resolve().parent.parent
 
 
-def discover_skills() -> dict[str, Path]:
-    """Discover available skills from sibling directories."""
+def get_workspace_root() -> Path:
+    """Get the workspace root directory (parent of claude-code/)."""
+    return get_skills_dir().parent.parent
+
+
+def is_python_package(path: Path) -> bool:
+    """Check if a directory is a valid Python package with CLI.
+
+    A valid package must have:
+    - __init__.py (makes it a package)
+    - cli.py (CLI entry point)
+    """
+    return (path / "__init__.py").exists() and (path / "cli.py").exists()
+
+
+def discover_skills() -> dict[str, SkillInfo]:
+    """Discover available Python-based skills.
+
+    Scans the skills directory for subdirectories containing valid Python
+    packages with CLI entry points. Documentation-only skills and other
+    non-Python directories are silently ignored.
+
+    Returns:
+        Dict mapping skill name to SkillInfo.
+    """
     skills_dir = get_skills_dir()
-    discovered: dict[str, Path] = {}
+    discovered: dict[str, SkillInfo] = {}
 
-    for skill_name, module_name in SKILL_MODULES.items():
-        skill_path = skills_dir / skill_name
-        module_path = skill_path / module_name
+    for skill_path in skills_dir.iterdir():
+        # Skip non-directories
+        if not skill_path.is_dir():
+            continue
 
-        if skill_path.is_dir() and module_path.is_dir():
-            discovered[skill_name] = skill_path
+        # Skip hidden and special directories
+        if skill_path.name.startswith(".") or skill_path.name in SKIP_DIRS:
+            continue
+
+        # Look for a Python package inside the skill directory
+        for subdir in skill_path.iterdir():
+            if not subdir.is_dir():
+                continue
+
+            # Skip hidden and private directories
+            if subdir.name.startswith((".", "_")):
+                continue
+
+            # Check if it's a valid Python package with cli.py
+            if is_python_package(subdir):
+                discovered[skill_path.name] = SkillInfo(
+                    name=skill_path.name,
+                    path=skill_path,
+                    module_name=subdir.name,
+                )
+                break  # Found the module for this skill
 
     return discovered
 
 
-def print_usage(skills: dict[str, Path]) -> None:
+def print_usage(skills: dict[str, SkillInfo]) -> None:
     """Print usage information."""
     print(__doc__)
     print("\nAvailable skills:")
@@ -58,21 +103,15 @@ def print_usage(skills: dict[str, Path]) -> None:
     print("\nUse 'claude-code-skills <skill-name> --help' for skill-specific help.")
 
 
-def get_workspace_root() -> Path:
-    """Get the workspace root directory (parent of claude-code/)."""
-    return get_skills_dir().parent.parent
-
-
-def run_skill(skill_name: str, skill_path: Path, args: list[str]) -> int:
+def run_skill(skill: SkillInfo, args: list[str]) -> int:
     """Run a skill with the given arguments."""
-    module_name = SKILL_MODULES[skill_name]
     skills_dir = get_skills_dir()
     workspace_root = get_workspace_root()
 
     # Set PYTHONPATH to include the skill directory and shared module
     env = os.environ.copy()
     current_pythonpath = env.get("PYTHONPATH", "")
-    paths = [str(skill_path), str(skills_dir)]
+    paths = [str(skill.path), str(skills_dir)]
     if current_pythonpath:
         paths.append(current_pythonpath)
     env["PYTHONPATH"] = os.pathsep.join(paths)
@@ -82,7 +121,7 @@ def run_skill(skill_name: str, skill_path: Path, args: list[str]) -> int:
     cmd = [
         "uv", "run",
         "--directory", str(workspace_root),
-        "python", "-m", f"{module_name}.cli", *args,
+        "python", "-m", f"{skill.module_name}.cli", *args,
     ]
 
     try:
@@ -122,7 +161,7 @@ def main() -> int:
 
     # Pass remaining arguments to the skill
     skill_args = sys.argv[2:]
-    return run_skill(skill_name, skills[skill_name], skill_args)
+    return run_skill(skills[skill_name], skill_args)
 
 
 if __name__ == "__main__":

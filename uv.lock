@@ -20,6 +20,7 @@ members = [
     "macos-verified-screenshot",
     "macos-window-controller",
     "smykla-labs-research",
+    "web-automation-investigation",
 ]
 
 [[package]]
@@ -1933,6 +1934,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/24/30/6b0809f4510673dc7
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/b5/123f13c975e9f27ab9c0770f514345bd406d0e8d3b7a0723af9d43f710af/wcwidth-0.2.14-py2.py3-none-any.whl", hash = "sha256:a7bb560c8aee30f9957e5f9895805edd20602f2d7f720186dfd906e82b4982e1", size = 37286, upload-time = "2025-09-22T16:29:51.641Z" },
 ]
+
+[[package]]
+name = "web-automation-investigation"
+version = "0.1.0"
+source = { virtual = "claude-code/skills/web-automation-investigation" }
 
 [[package]]
 name = "websockets"
