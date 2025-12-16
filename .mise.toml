@@ -1,4 +1,5 @@
 [tools]
+python = "3.14"  # Use mise mode (bypasses nix for faster loading)
 lefthook = "2.0.12"
 ruff = "0.14.9"
 shellspec = "0.28.1"

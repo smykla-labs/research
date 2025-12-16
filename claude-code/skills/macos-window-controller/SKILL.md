@@ -11,22 +11,22 @@ Find, activate, and screenshot macOS windows across Spaces. Supports filtering b
 
 ```bash
 # List ALL windows
-uv run window-controller --list
+claude-code-skills macos-window-controller list
 
 # Find windows by app name (partial match)
-uv run window-controller --find "GoLand"
+claude-code-skills macos-window-controller find "GoLand"
 
 # Find windows by title pattern (regex)
-uv run window-controller --find --title "research.*"
+claude-code-skills macos-window-controller find --title "research.*"
 
 # Activate window (switches to its Space)
-uv run window-controller --activate "GoLand"
+claude-code-skills macos-window-controller activate "GoLand"
 
-# Take screenshot of window
-uv run window-controller --screenshot "GoLand" --output ~/shot.png
+# Take screenshot of window (saves to claude-code/artifacts/ by default)
+claude-code-skills macos-window-controller screenshot "GoLand"
 
 # Get window info as JSON (for automation)
-uv run window-controller --find "GoLand" --json
+claude-code-skills macos-window-controller find "GoLand" --json
 ```
 
 ## Filtering Options
@@ -35,39 +35,39 @@ uv run window-controller --find "GoLand" --json
 
 ```bash
 # Partial match on kCGWindowOwnerName
-uv run window-controller --find "GoLand"
-uv run window-controller --find "Chrome"
+claude-code-skills macos-window-controller --find "GoLand"
+claude-code-skills macos-window-controller --find "Chrome"
 ```
 
 ### By Window Title (Regex)
 
 ```bash
 # Match window title with regex
-uv run window-controller --find --title "monokai-islands"
-uv run window-controller --find --title ".*\.py$"
-uv run window-controller --find "GoLand" --title "research"
+claude-code-skills macos-window-controller --find --title "monokai-islands"
+claude-code-skills macos-window-controller --find --title ".*\.py$"
+claude-code-skills macos-window-controller --find "GoLand" --title "research"
 ```
 
 ### By Process Path
 
 ```bash
 # Filter by executable path
-uv run window-controller --find "GoLand" --path-contains "Applications"
-uv run window-controller --find "GoLand" --path-excludes "~/Applications/"
+claude-code-skills macos-window-controller --find "GoLand" --path-contains "Applications"
+claude-code-skills macos-window-controller --find "GoLand" --path-excludes "~/Applications/"
 ```
 
 ### By Command Line Arguments
 
 ```bash
 # Filter by process command line
-uv run window-controller --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
+claude-code-skills macos-window-controller --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
 ```
 
 ### By PID
 
 ```bash
 # Find window by specific process ID
-uv run window-controller --find --pid 12345
+claude-code-skills macos-window-controller --find --pid 12345
 ```
 
 ## JetBrains Sandbox IDEs
@@ -78,13 +78,13 @@ JetBrains sandbox IDEs (launched via `./gradlew runIde`) have a key difference:
 
 ```bash
 # Find sandbox IDE (reliable method)
-uv run window-controller --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
+claude-code-skills macos-window-controller --find "Main" --args-contains "idea.plugin.in.sandbox.mode"
 
 # Find by Gradle cache path
-uv run window-controller --find "Main" --path-contains ".gradle/caches"
+claude-code-skills macos-window-controller --find "Main" --path-contains ".gradle/caches"
 
 # Find by project name in title
-uv run window-controller --find "Main" --title "my-project"
+claude-code-skills macos-window-controller --find "Main" --title "my-project"
 ```
 
 ## How It Works
@@ -118,17 +118,24 @@ osascript -e 'tell application "GoLand" to activate'
 
 macOS automatically switches to the Space containing the activated window (when enabled in System Settings).
 
+## Artifact Output Path
+
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+Screenshots are automatically saved to `claude-code/artifacts/macos-window-controller/` with timestamped filenames (e.g., `251216120000-screenshot_GoLand.png`). The artifact path is always returned in the JSON output - use that path for subsequent operations.
+
 ## Screenshot Capture
 
 ```bash
-# Take screenshot of specific window
-uv run window-controller --screenshot "GoLand" --output ~/shot.png
+# Take screenshot - path is returned in output
+claude-code-skills macos-window-controller screenshot "GoLand" --json
+# Returns: {"screenshot": "/path/to/artifacts/.../251216120000-screenshot_GoLand.png", ...}
 
 # Screenshot without activating first
-uv run window-controller --screenshot "GoLand" --no-activate
+claude-code-skills macos-window-controller screenshot "GoLand" --no-activate
 
 # Control settle time (default 1000ms)
-uv run window-controller --screenshot "GoLand" --settle-ms 2000
+claude-code-skills macos-window-controller screenshot "GoLand" --settle-ms 2000
 ```
 
 ### Capture Backends
@@ -154,7 +161,7 @@ The screenshot command automatically uses ScreenCaptureKit when available (macOS
 For automation and scripting, use `--json` with `--find`:
 
 ```bash
-uv run window-controller --find "GoLand" --json
+claude-code-skills macos-window-controller --find "GoLand" --json
 ```
 
 Output:
@@ -190,13 +197,13 @@ Verify the skill works by running:
 
 ```bash
 # Should list all windows with titles
-uv run window-controller --list
+claude-code-skills macos-window-controller --list
 
 # Should show info for a running app
-uv run window-controller --find "Finder"
+claude-code-skills macos-window-controller --find "Finder"
 
 # If you have an app in full-screen, this should switch and return:
-uv run window-controller --activate "GoLand"
+claude-code-skills macos-window-controller --activate "GoLand"
 ```
 
 Expected `--list` output:

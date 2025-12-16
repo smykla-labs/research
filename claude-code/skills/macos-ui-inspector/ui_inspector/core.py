@@ -132,3 +132,38 @@ def find_elements_in_window(
     ]
 
     return tuple(results)
+
+
+def find_raw_element(
+    window: Any,
+    filter_: ElementFilter | None = None,
+) -> Any | None:
+    """Find first raw atomacos element matching filter.
+
+    Unlike find_elements_in_window, this returns the raw atomacos
+    element which allows calling actions like Press() on it.
+
+    Args:
+        window: atomacos window reference
+        filter_: Optional filter criteria for element search
+
+    Returns:
+        Raw atomacos element or None if not found
+    """
+    criteria = {}
+    if filter_:
+        if filter_.role:
+            criteria["AXRole"] = filter_.role
+        if filter_.title:
+            criteria["AXTitle"] = filter_.title
+        if filter_.identifier:
+            criteria["AXIdentifier"] = filter_.identifier
+
+    try:
+        if criteria:
+            return window.findFirst(**criteria)
+        # No criteria - return first element
+        elements = window.findAll()
+        return elements[0] if elements else None
+    except Exception:
+        return None

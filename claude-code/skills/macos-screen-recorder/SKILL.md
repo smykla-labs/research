@@ -9,53 +9,58 @@ Record macOS screen with automatic verification, retry logic, and optimized form
 
 ## Workspace Context
 
-This skill is part of a uv workspace. Run commands from either location:
+Use the unified `claude-code-skills` CLI wrapper:
 
 ```bash
-# From workspace root (~/Projects/github.com/smykla-labs/research)
-uv run screen-recorder --help
+# Recommended: Use CLI wrapper (works from anywhere when in PATH)
+claude-code-skills macos-screen-recorder --help
 
-# From skill subdirectory (.claude/skills/macos-screen-recorder)
-uv run --package macos-screen-recorder screen-recorder --help
+# Alternative: Use PYTHONPATH from workspace root
+PYTHONPATH=claude-code/skills/macos-screen-recorder python -m screen_recorder.cli --help
 ```
 
-Both methods work identically—use whichever matches your current working directory.
+## Artifact Output Path
+
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+Recordings are automatically saved to `claude-code/artifacts/macos-screen-recorder/` with timestamped filenames (e.g., `251216120000-recording_GoLand.gif`). The artifact path is always returned in the JSON output - use that path for subsequent operations.
 
 ## Quick Start
 
 ```bash
-# Record a window for 5 seconds (default: GIF output)
-uv run screen-recorder --record "GoLand" -d 5
+# Record a window for 5 seconds - path is returned in output
+claude-code-skills macos-screen-recorder record "GoLand" -d 5 --json
+# Returns: {"final_path": "/path/to/artifacts/.../251216120000-recording_GoLand.mov", ...}
 
 # Record optimized for Discord upload (10MB max, WebP)
-uv run screen-recorder --record "GoLand" -d 5 --preset discord
+claude-code-skills macos-screen-recorder record "GoLand" -d 5 --preset discord
 
 # Record optimized for GitHub README (GIF, ~5MB)
-uv run screen-recorder --record "Code" -d 10 --preset github
+claude-code-skills macos-screen-recorder record "Code" -d 10 --preset github
 
 # Record optimized for JetBrains Marketplace (1280x800 GIF)
-uv run screen-recorder --record "IntelliJ" -d 8 --preset jetbrains
+claude-code-skills macos-screen-recorder record "IntelliJ" -d 8 --preset jetbrains
 
 # Record full screen
-uv run screen-recorder --full-screen -d 3 -o demo.gif
+claude-code-skills macos-screen-recorder full-screen -d 3
 
 # Record sandbox IDE (JetBrains via Gradle runIde)
-uv run screen-recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
+claude-code-skills macos-screen-recorder record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate
 
 # Record window on different Space (no activation, ScreenCaptureKit)
-uv run screen-recorder --record "Terminal" -d 5 --backend screencapturekit
+claude-code-skills macos-screen-recorder record "Terminal" -d 5 --backend screencapturekit
 
 # Record absolute screen region (x=100, y=200, w=800, h=600)
-uv run screen-recorder -R 100,200,800,600 -d 5
+claude-code-skills macos-screen-recorder region 100,200,800,600 -d 5
 
 # Record window-relative region (terminal area at bottom of IDE)
-uv run screen-recorder --record "GoLand" --window-region 0,800,1600,400 -d 5
+claude-code-skills macos-screen-recorder record "GoLand" --window-region 0,800,1600,400 -d 5
 
 # Preview region before recording (iterative coordinate refinement)
-uv run screen-recorder --record "GoLand" --window-region 0,800,1600,400 --preview-region
+claude-code-skills macos-screen-recorder record "GoLand" --window-region 0,800,1600,400 --preview-region
 
 # Check if ffmpeg is installed
-uv run screen-recorder --check-deps
+claude-code-skills macos-screen-recorder check-deps
 ```
 
 ## How It Works
@@ -147,7 +152,7 @@ Two region modes for capturing specific screen areas:
 Use `--find` to discover window bounds before recording:
 
 ```bash
-uv run screen-recorder --find "GoLand" --json | jq '.bounds'
+claude-code-skills macos-screen-recorder --find "GoLand" --json | jq '.bounds'
 # {"x": 50, "y": 25, "width": 2056, "height": 1290}
 ```
 
@@ -157,17 +162,17 @@ When capturing specific UI elements, use `--preview-region` to test coordinates:
 
 ```bash
 # Step 1: Find window bounds
-uv run screen-recorder --find "GoLand" --json
+claude-code-skills macos-screen-recorder --find "GoLand" --json
 
 # Step 2: Preview estimated region
-uv run screen-recorder --record "GoLand" --window-region 0,890,2056,400 --preview-region
+claude-code-skills macos-screen-recorder --record "GoLand" --window-region 0,890,2056,400 --preview-region
 # Preview saved: recordings/goland_preview_20241215_120000.png
 
 # Step 3: View preview, adjust coordinates
 open recordings/goland_preview_*.png
 
 # Step 4: Record when satisfied
-uv run screen-recorder --record "GoLand" --window-region 0,890,2056,400 -d 5
+claude-code-skills macos-screen-recorder --record "GoLand" --window-region 0,890,2056,400 -d 5
 ```
 
 ### Space-Aware Recording
@@ -184,10 +189,10 @@ This happens transparently—no special flags required:
 
 ```bash
 # Record Terminal on Space 2 while you're on Space 1
-uv run screen-recorder --record "Terminal" -d 5
+claude-code-skills macos-screen-recorder --record "Terminal" -d 5
 
 # Record fullscreen Safari (which is its own Space)
-uv run screen-recorder --record "Safari" -d 10
+claude-code-skills macos-screen-recorder --record "Safari" -d 10
 ```
 
 **Requirements:**
@@ -332,7 +337,7 @@ else:
 ### JSON Output
 
 ```bash
-uv run screen-recorder --record "GoLand" -d 5 --preset github --json
+claude-code-skills macos-screen-recorder --record "GoLand" -d 5 --preset github --json
 ```
 
 ```json
@@ -371,11 +376,12 @@ uv run screen-recorder --record "GoLand" -d 5 --preset github --json
 # Load the skill context
 Skill tool: macos-screen-recorder
 
-# Record with platform preset
-uv run screen-recorder --record "GoLand" -d 5 --preset discord -o ~/demo.webp
+# Record with platform preset - use the returned path
+claude-code-skills macos-screen-recorder record "GoLand" -d 5 --preset discord --json
+# Use the "final_path" field from JSON output for subsequent operations
 
 # Verify dependencies first
-uv run screen-recorder --check-deps
+claude-code-skills macos-screen-recorder check-deps
 ```
 
 ## Testing
@@ -404,7 +410,7 @@ brew install ffmpeg
 Verify installation:
 
 ```bash
-uv run screen-recorder --check-deps
+claude-code-skills macos-screen-recorder --check-deps
 ```
 
 ### "No window found matching filter"
@@ -433,7 +439,7 @@ uv run screen-recorder --check-deps
 
 ```bash
 # Discord free limit is 10MB
-uv run screen-recorder --record "App" -d 5 --preset discord
+claude-code-skills macos-screen-recorder --record "App" -d 5 --preset discord
 ```
 
 If still too large:
@@ -456,7 +462,7 @@ For large GIFs, drag-drop into GitHub issue/PR to upload to GitHub's CDN instead
 JetBrains sandbox IDEs appear as "Main" and AppleScript cannot activate them:
 
 ```bash
-uv run screen-recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate -d 10
+claude-code-skills macos-screen-recorder --record "Main" --args "idea.plugin.in.sandbox.mode" --no-activate -d 10
 ```
 
 With `--no-activate`, you must manually switch to the sandbox window's Space before recording. Alternatively, if the sandbox IDE is on a different Space, the Space-aware recording will switch to it automatically (activation via AppleScript still won't work, but the correct Space will be selected).

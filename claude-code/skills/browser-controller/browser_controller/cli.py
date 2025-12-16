@@ -5,11 +5,78 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from .actions import (
+# Skill name for artifact tracking
+SKILL_NAME = "browser-controller"
+
+try:
+    from _shared.artifacts import (
+        ArtifactError,
+        save_artifact,
+        validate_extension,
+    )
+    ARTIFACTS_AVAILABLE = True
+except ImportError:
+    ARTIFACTS_AVAILABLE = False
+    from datetime import datetime
+
+    class ArtifactError(Exception):  # type: ignore[no-redef]
+        pass
+
+    def get_default_artifact_path(
+        _skill_name: str, description: str, ext: str
+    ) -> Path:
+        timestamp = datetime.now().strftime("%y%m%d%H%M%S")
+        return Path.cwd() / f"{timestamp}-{description}.{ext}"
+
+    def save_artifact(
+        source_path, skill_name, description, output_path=None, allowed_extensions=None
+    ):
+        # Fallback: just return the source path
+        import shutil
+        from dataclasses import dataclass
+
+        @dataclass
+        class FallbackResult:
+            primary_path: Path
+            tracking_path: Path
+            skill_name: str
+            description: str
+            timestamp: str
+            def to_dict(self):
+                return {"primary_path": str(self.primary_path)}
+
+        # Validate extension if allowed_extensions is provided
+        if allowed_extensions is not None:
+            ext = Path(source_path).suffix.lstrip(".")
+            if ext and ext not in allowed_extensions:
+                raise ArtifactError(
+                    f"Extension '.{ext}' not allowed. Allowed: {allowed_extensions}"
+                )
+
+        if output_path:
+            resolved = Path(output_path).resolve()
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, resolved)
+            return FallbackResult(resolved, resolved, skill_name, description, "")
+        return FallbackResult(
+            Path(source_path), Path(source_path), skill_name, description, ""
+        )
+
+    def validate_extension(path, allowed=None):
+        ext = Path(path).suffix.lstrip(".")
+        if not ext:
+            raise ArtifactError(f"Path must have extension: {path}")
+        if allowed is not None and ext not in allowed:
+            raise ArtifactError(f"Extension '.{ext}' not allowed. Allowed: {list(allowed)}")
+        return ext
+
+from .actions import (  # noqa: E402
     activate_tab,
     click,
     close_connection,
@@ -23,10 +90,10 @@ from .actions import (
     run_script,
     screenshot,
 )
-from .backends.cdp import DEFAULT_CDP_PORT
-from .backends.marionette import DEFAULT_MARIONETTE_PORT
-from .core import detect_running_browsers, get_browser_launch_command
-from .models import BrowserError, BrowserType
+from .backends.cdp import DEFAULT_CDP_PORT  # noqa: E402
+from .backends.marionette import DEFAULT_MARIONETTE_PORT  # noqa: E402
+from .core import detect_running_browsers, get_browser_launch_command  # noqa: E402
+from .models import BrowserError, BrowserType  # noqa: E402
 
 app = typer.Typer(
     name="browser-controller",
@@ -348,8 +415,11 @@ def run_cmd(  # noqa: PLR0913
 
 
 @app.command("screenshot")
-def screenshot_cmd(  # noqa: PLR0913
-    output: Annotated[str, typer.Option("--output", "-o", help="Output path")] = "screenshot.png",
+def screenshot_cmd(  # noqa: PLR0913, PLR0912
+    output: Annotated[
+        str | None,
+        typer.Option("--output", "-o", help="Output path (must have .png extension)"),
+    ] = None,
     browser: BrowserOpt = "auto",
     chrome_port: ChromePortOpt = DEFAULT_CDP_PORT,
     firefox_port: FirefoxPortOpt = DEFAULT_MARIONETTE_PORT,
@@ -359,17 +429,71 @@ def screenshot_cmd(  # noqa: PLR0913
 ) -> None:
     """Take screenshot of page."""
     try:
+        # Validate output extension if provided
+        if output is not None:
+            try:
+                validate_extension(output, ["png"])
+            except ArtifactError as e:
+                _print_error(str(e), json_output)
+                raise typer.Exit(1) from e
+
         browser_type = _parse_browser_type(browser)
         conn = connect(browser_type, chrome_port=chrome_port, firefox_port=firefox_port)
-        path = screenshot(conn, output, tab, full_page)
-        close_connection(conn)
+
+        # Get tab info for description
+        tabs = list_tabs(conn)
+        target_tab = None
+        if tab:
+            target_tab = next((t for t in tabs if t.tab_id == tab), None)
+        elif tabs:
+            target_tab = tabs[0]
+
+        # Generate description from tab info
+        if target_tab:
+            # Use URL domain or title for description
+            url_part = target_tab.url.split("//")[-1].split("/")[0] if target_tab.url else "unknown"
+            description = f"screenshot_{url_part}"
+        else:
+            description = "screenshot_browser"
+
+        # Take screenshot to temp file first
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+
+        try:
+            screenshot(conn, tmp_path, tab, full_page)
+            close_connection(conn)
+
+            # Save artifact with proper tracking
+            result = save_artifact(
+                source_path=tmp_path,
+                skill_name=SKILL_NAME,
+                description=description,
+                output_path=output,
+                allowed_extensions=["png"],
+            )
+        finally:
+            # Clean up temp file even if an exception occurs
+            tmp_path.unlink(missing_ok=True)
 
         if json_output:
-            print(json.dumps({"screenshot": str(path)}, indent=2))
+            output_data = {
+                "screenshot": str(result.primary_path),
+                "tracking_copy": str(result.tracking_path),
+            }
+            if target_tab:
+                output_data["url"] = target_tab.url
+                output_data["title"] = target_tab.title
+            print(json.dumps(output_data, indent=2))
         else:
-            print(f"Screenshot saved: {path}")
+            print(f"Screenshot saved: {result.primary_path}")
+            if result.primary_path != result.tracking_path:
+                print(f"Tracking copy: {result.tracking_path}")
 
     except BrowserError as e:
+        _print_error(str(e), json_output)
+        raise typer.Exit(1) from e
+    except ArtifactError as e:
         _print_error(str(e), json_output)
         raise typer.Exit(1) from e
 
@@ -566,6 +690,165 @@ def cleanup_cmd(
     killed = _kill_processes(processes)
 
     print(f"\nKilled {killed}/{len(processes)} process(es).")
+
+
+# Default user data directory for Chrome automation
+DEFAULT_CHROME_USER_DATA_DIR = "$HOME/.chrome-debug"
+# Startup wait time in seconds
+DEFAULT_STARTUP_WAIT = 3
+
+
+def _wait_for_chrome_startup(port: int, timeout: float = 10.0) -> bool:
+    """Wait for Chrome to accept CDP connections.
+
+    Args:
+        port: Chrome CDP port to check.
+        timeout: Maximum time to wait in seconds.
+
+    Returns:
+        True if Chrome is ready, False if timeout reached.
+    """
+    import time
+    import urllib.request
+
+    start = time.monotonic()
+    while time.monotonic() - start < timeout:
+        try:
+            req = urllib.request.Request(f"http://localhost:{port}/json/version", method="GET")
+            urllib.request.urlopen(req, timeout=1)
+            return True
+        except Exception:
+            time.sleep(0.5)
+    return False
+
+
+def _dismiss_chrome_popups() -> list[str]:
+    """Dismiss Chrome startup popups using ui-inspector AXPress.
+
+    Attempts to:
+    1. Uncheck "Make Google Chrome the default browser" checkbox
+    2. Click "Not now" or similar dismiss buttons
+
+    Returns:
+        List of actions taken (for logging/display).
+    """
+    actions_taken = []
+
+    try:
+        # Try importing ui-inspector for AXPress
+        from ui_inspector.actions import press_element  # type: ignore[import-not-found]
+        from ui_inspector.models import ElementNotFoundError  # type: ignore[import-not-found]
+    except ImportError:
+        return ["ui-inspector not available - skipping popup dismissal"]
+
+    # Known popup elements to dismiss
+    dismiss_patterns = [
+        # Default browser checkbox
+        {"role": "AXCheckBox", "title": "Make Google Chrome the default browser"},
+        {"role": "AXCheckBox", "title": "Make Google Chrome your default browser"},
+        # Dismiss buttons
+        {"role": "AXButton", "title": "Not now"},
+        {"role": "AXButton", "title": "Skip"},
+        {"role": "AXButton", "title": "No thanks"},
+        {"role": "AXButton", "title": "Close"},
+    ]
+
+    for pattern in dismiss_patterns:
+        try:
+            press_element("Google Chrome", **pattern)
+            actions_taken.append(f"Pressed: {pattern.get('role')} '{pattern.get('title')}'")
+        except ElementNotFoundError:
+            # Element not present, that's okay
+            pass
+        except Exception as e:
+            # Log other errors but continue trying remaining patterns
+            actions_taken.append(
+                f"Error pressing {pattern.get('role')} '{pattern.get('title')}': {type(e).__name__}"
+            )
+
+    return actions_taken
+
+
+def _print_start_result(result: dict, json_output: bool) -> None:
+    """Print start command result in appropriate format."""
+    if json_output:
+        print(json.dumps(result, indent=2))
+        return
+
+    if result.get("success"):
+        print(f"Chrome started successfully on port {result['port']}")
+        print(f"  User data dir: {result['user_data_dir']}")
+        if result.get("popups_dismissed"):
+            print("  Popups dismissed:")
+            for action in result["popups_dismissed"]:
+                print(f"    - {action}")
+    elif result.get("error"):
+        print(f"Error: {result['error']}", file=sys.stderr)
+    else:
+        print(f"Warning: Chrome started but not accepting CDP on port {result['port']}")
+
+
+@app.command("start")
+def start_cmd(
+    port: Annotated[
+        int,
+        typer.Option("--port", "-p", help=f"CDP port (default: {DEFAULT_CDP_PORT})"),
+    ] = DEFAULT_CDP_PORT,
+    user_data_dir: Annotated[
+        str,
+        typer.Option("--user-data-dir", help="Chrome profile directory"),
+    ] = DEFAULT_CHROME_USER_DATA_DIR,
+    dismiss_popups: Annotated[
+        bool,
+        typer.Option("--dismiss-popups", help="Auto-dismiss startup popups"),
+    ] = False,
+    wait: Annotated[
+        float,
+        typer.Option("--wait", help="Seconds to wait for startup"),
+    ] = DEFAULT_STARTUP_WAIT,
+    json_output: JsonOpt = False,
+) -> None:
+    """Start Chrome with remote debugging (ALWAYS uses --user-data-dir)."""
+    import os
+    import time
+
+    expanded_user_data_dir = os.path.expandvars(user_data_dir)
+    launch_cmd = [
+        "open", "-a", "Google Chrome", "--args",
+        f"--remote-debugging-port={port}",
+        f"--user-data-dir={expanded_user_data_dir}",
+    ]
+
+    result: dict = {
+        "action": "start",
+        "port": port,
+        "user_data_dir": expanded_user_data_dir,
+        "success": False,
+        "popups_dismissed": [],
+    }
+
+    try:
+        subprocess.run(launch_cmd, capture_output=True, text=True, check=True)
+        if not json_output:
+            print(f"Launching Chrome on port {port}...")
+        time.sleep(wait)
+
+        if _wait_for_chrome_startup(port):
+            result["success"] = True
+            if dismiss_popups:
+                time.sleep(1)
+                result["popups_dismissed"] = _dismiss_chrome_popups()
+        else:
+            result["error"] = "Chrome failed to accept CDP connections"
+
+        _print_start_result(result, json_output)
+        if not result["success"]:
+            raise typer.Exit(1)
+
+    except subprocess.CalledProcessError as e:
+        result["error"] = str(e)
+        _print_start_result(result, json_output)
+        raise typer.Exit(1) from e
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -19,6 +19,10 @@ class ElementNotFoundError(UiInspectorError):
     """Raised when UI element is not found."""
 
 
+class ActionError(UiInspectorError):
+    """Raised when UI action fails."""
+
+
 @dataclass(frozen=True)
 class UIElement:
     """Information about a UI element from Accessibility API."""
