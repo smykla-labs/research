@@ -112,8 +112,8 @@ def sanitize_description(description: str) -> str:
     Returns:
         Sanitized string safe for filenames.
     """
-    # Replace spaces and special chars with underscores
-    sanitized = re.sub(r"[^\w\-.]", "_", description)
+    # Replace spaces and special chars with underscores (exclude dots for safety)
+    sanitized = re.sub(r"[^\w\-]", "_", description)
     # Collapse multiple underscores
     sanitized = re.sub(r"_+", "_", sanitized)
     # Remove leading/trailing underscores
@@ -233,7 +233,7 @@ def save_artifact(
         # Generate tracking filename with encoded custom path
         encoded_custom = encode_path_for_filename(custom_path)
         tracking_filename = generate_artifact_filename(
-            f"{description}.{encoded_custom}",
+            f"{description}-at-{encoded_custom}",
             ext,
             timestamp,
         )

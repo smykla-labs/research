@@ -17,7 +17,6 @@ SKILL_NAME = "browser-controller"
 try:
     from _shared.artifacts import (
         ArtifactError,
-        get_default_artifact_path,
         save_artifact,
         validate_extension,
     )
@@ -36,7 +35,7 @@ except ImportError:
         return Path.cwd() / f"{timestamp}-{description}.{ext}"
 
     def save_artifact(
-        source_path, skill_name, description, output_path=None, _allowed_extensions=None
+        source_path, skill_name, description, output_path=None, allowed_extensions=None
     ):
         # Fallback: just return the source path
         import shutil
@@ -52,6 +51,14 @@ except ImportError:
             def to_dict(self):
                 return {"primary_path": str(self.primary_path)}
 
+        # Validate extension if allowed_extensions is provided
+        if allowed_extensions is not None:
+            ext = Path(source_path).suffix.lstrip(".")
+            if ext and ext not in allowed_extensions:
+                raise ArtifactError(
+                    f"Extension '.{ext}' not allowed. Allowed: {allowed_extensions}"
+                )
+
         if output_path:
             resolved = Path(output_path).resolve()
             resolved.parent.mkdir(parents=True, exist_ok=True)
@@ -61,10 +68,12 @@ except ImportError:
             Path(source_path), Path(source_path), skill_name, description, ""
         )
 
-    def validate_extension(path, _allowed=None):
+    def validate_extension(path, allowed=None):
         ext = Path(path).suffix.lstrip(".")
         if not ext:
             raise ArtifactError(f"Path must have extension: {path}")
+        if allowed is not None and ext not in allowed:
+            raise ArtifactError(f"Extension '.{ext}' not allowed. Allowed: {list(allowed)}")
         return ext
 
 from .actions import (  # noqa: E402
@@ -747,7 +756,7 @@ def _dismiss_chrome_popups() -> list[str]:
         try:
             press_element("Google Chrome", **pattern)
             actions_taken.append(f"Pressed: {pattern.get('role')} '{pattern.get('title')}'")
-        except (ElementNotFoundError, Exception):
+        except ElementNotFoundError:
             # Element not present, that's okay
             pass
 
