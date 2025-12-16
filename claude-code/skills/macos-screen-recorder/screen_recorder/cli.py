@@ -590,7 +590,11 @@ def find_cmd(  # noqa: PLR0913
             args_contains=args_contains,
         )
         config = build_config(
-            filter_opts, RecordingOptions(), OutputOptions(), FormatOptions(), RetryOptions()
+            filter_opts,
+            RecordingOptions(),
+            OutputOptions(),
+            FormatOptions(),
+            RetryOptions(),
         )
         result = _handle_find(config, json_output=json_output)
         if result != 0:
@@ -637,7 +641,11 @@ def preview_region_cmd(  # noqa: PLR0913
         )
         recording_opts = RecordingOptions(region=region, window_region=window_region)
         config = build_config(
-            filter_opts, recording_opts, OutputOptions(), FormatOptions(), RetryOptions()
+            filter_opts,
+            recording_opts,
+            OutputOptions(),
+            FormatOptions(),
+            RetryOptions(),
         )
         result = _handle_preview_region(config, json_output=json_output)
         if result != 0:
@@ -706,7 +714,13 @@ def record_cmd(  # noqa: PLR0913 - Typer CLI requires many options
         format_opts = _build_format_options(fps, max_width, max_height, quality, max_size)
         retry_opts = _build_retry_options(verify, retries, retry_delay, retry_strategy)
 
-        config = build_config(filter_opts, recording_opts, output_opts, format_opts, retry_opts)
+        config = build_config(
+            filter_opts,
+            recording_opts,
+            output_opts,
+            format_opts,
+            retry_opts,
+        )
         result = _handle_record(config, json_output=json_output)
         if result != 0:
             raise typer.Exit(result)
@@ -756,7 +770,11 @@ def full_screen_cmd(  # noqa: PLR0913 - Typer CLI requires many options
         retry_opts = _build_retry_options(verify, retries, retry_delay, retry_strategy)
 
         config = build_config(
-            WindowFilterOptions(), recording_opts, output_opts, format_opts, retry_opts
+            WindowFilterOptions(),
+            recording_opts,
+            output_opts,
+            format_opts,
+            retry_opts,
         )
         result = _handle_record(config, json_output=json_output)
         if result != 0:
