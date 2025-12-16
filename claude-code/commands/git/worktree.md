@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(bash -c:*), Bash(pwd:*), Bash(git:*)
-argument-hint: <task-description|@file> [--no-pbcopy]
+allowed-tools: Bash(bash -c:*), Bash(pwd:*), Bash(git:*), Bash(ls:*)
+argument-hint: <task-description|@file> [--no-pbcopy] [--ide [name]]
 description: Create git worktree with context transfer for feature branches
 ---
 
@@ -11,6 +11,10 @@ $ARGUMENTS
 ## Arguments
 
 - `--no-pbcopy`: Skip copying the cd command to clipboard
+- `--ide [name]`: Open worktree in JetBrains IDE
+  - Without value: Auto-detect IDE from project config files (go.mod → goland, pyproject.toml → pycharm, etc.)
+  - With value: Use specified IDE (e.g., `--ide webstorm`)
+  - Modifies clipboard command to: `<ide> <path>; cd <path> && mise trust && direnv allow`
 
 ## Constraints
 
@@ -25,13 +29,15 @@ $ARGUMENTS
 - Git status: !`git status --porcelain`
 - Available remotes: !`git remote -v`
 - Current branch: !`git branch --show-current`
+- Project config files (for IDE detection): !`ls go.mod Cargo.toml pyproject.toml setup.py pom.xml build.gradle build.gradle.kts Gemfile composer.json CMakeLists.txt tsconfig.json package.json requirements.txt 2>/dev/null | tr '\n' ' ' || echo "none"`
 
 ## Workflow
 
 1. **Invoke worktree-manager** with the Task tool
    - Include: task description (`$ARGUMENTS` minus flags)
-   - Include: all context from above (directory, git status, remotes, current branch)
+   - Include: all context from above (directory, git status, remotes, current branch, project config files)
    - Include: `--no-pbcopy` flag if present in arguments
+   - Include: `--ide` flag if present (with or without IDE name)
    - If no task description provided: ask agent to request details via `STATUS: NEEDS_INPUT`
 
 2. **Parse status block** from output:
@@ -60,6 +66,7 @@ The agent may request input for:
 - **ACTION**: Uncommitted changes handling [commit|stash|abort]
 - **REMOTE**: Which remote if multiple exist
 - **BRANCH**: Default branch if auto-detection fails
+- **IDE**: Which JetBrains IDE when auto-detection fails or multiple Tier 1 config files found [goland|pycharm|webstorm|idea|rubymine|phpstorm|clion|rustrover]
 
 ## Notes
 
@@ -69,3 +76,5 @@ The agent may request input for:
 - Script checks `git ls-files` before each symlink to determine if file is tracked
 - Worktree-specific git excludes are configured automatically for symlinked files
 - Clipboard contains ready-to-execute `cd && mise trust && direnv allow` command (unless `--no-pbcopy`)
+- With `--ide`: clipboard command starts with `<ide> <path>;` to open worktree in JetBrains IDE first
+- IDE auto-detection uses confidence tiers: Tier 1 config files (go.mod, Cargo.toml, etc.) always win over Tier 2 (package.json alone)

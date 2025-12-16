@@ -53,6 +53,18 @@ Describe "worktree-manager agent scripts"
       The output should include '[ -n "$P" ]'
     End
 
+    It "readable script includes I variable for IDE control"
+      When call extract_readable_script
+      The output should include 'I="goland"'
+      The output should include '[ -n "$I" ]'
+    End
+
+    It "single-line script includes IDE variable"
+      When call extract_single_line_script
+      The output should include 'I="goland"'
+      The output should include 'IDE='
+    End
+
     It "single-line script includes git ls-files check"
       When call extract_single_line_script
       The output should include 'git ls-files'
@@ -127,6 +139,50 @@ Describe "worktree-manager agent scripts"
         [ -n \"\$P\" ] && echo 'PBCOPY_ENABLED' || echo 'PBCOPY_DISABLED'
       "
       The output should equal "PBCOPY_DISABLED"
+    End
+  End
+
+  Describe "IDE control (I variable)"
+    It "I='goland' includes IDE prefix in clipboard command"
+      When run bash -c "
+        P='1'
+        I='goland'
+        W='/tmp/test'
+        if [ -n \"\$P\" ]; then
+          if [ -n \"\$I\" ]; then
+            echo \"\$I \$W; cd \$W && mise trust && direnv allow\"
+          else
+            echo \"cd \$W && mise trust && direnv allow\"
+          fi
+        fi
+      "
+      The output should equal "goland /tmp/test; cd /tmp/test && mise trust && direnv allow"
+    End
+
+    It "I='' excludes IDE prefix from clipboard command"
+      When run bash -c "
+        P='1'
+        I=''
+        W='/tmp/test'
+        if [ -n \"\$P\" ]; then
+          if [ -n \"\$I\" ]; then
+            echo \"\$I \$W; cd \$W && mise trust && direnv allow\"
+          else
+            echo \"cd \$W && mise trust && direnv allow\"
+          fi
+        fi
+      "
+      The output should equal "cd /tmp/test && mise trust && direnv allow"
+    End
+
+    It "IDE command uses semicolon separator not &&"
+      # IDE should launch independently; cd should run regardless
+      When run bash -c "
+        I='pycharm'
+        W='/tmp/test'
+        [ -n \"\$I\" ] && echo \"\$I \$W;\" | grep -q ';' && echo 'SEMICOLON' || echo 'NO_SEMICOLON'
+      "
+      The output should equal "SEMICOLON"
     End
   End
 
@@ -289,6 +345,11 @@ Describe "worktree-manager agent scripts"
       script=$(extract_readable_script)
       The value "${script}" should include 'echo "PBCOPY=$P"'
     End
+
+    It "outputs IDE variable"
+      script=$(extract_readable_script)
+      The value "${script}" should include 'echo "IDE=$I"'
+    End
   End
 
   Describe "clipboard command"
@@ -305,9 +366,21 @@ Describe "worktree-manager agent scripts"
     It "uses printf without trailing newline for clipboard"
       # printf '%s' avoids trailing newline that echo would add
       script=$(extract_readable_script)
-      The value "${script}" should include "printf '%s'"
+      The value "${script}" should include 'printf "%s"'
       The value "${script}" should not include 'echo "cd $W'
       The value "${script}" should not include "echo 'cd \$W"
+    End
+
+    It "clipboard command supports IDE prefix with semicolon separator"
+      script=$(extract_readable_script)
+      # When IDE is set, format is: <ide> $W; cd $W && mise trust && direnv allow
+      The value "${script}" should include '$I $W; cd $W'
+    End
+
+    It "clipboard command has conditional IDE prefix"
+      script=$(extract_readable_script)
+      # IDE prefix only added when I is non-empty
+      The value "${script}" should include '[ -n "$I" ]'
     End
   End
 
