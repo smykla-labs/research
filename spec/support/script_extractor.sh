@@ -60,9 +60,21 @@ extract_script() {
       next
     }
 
+    # Reset-main: "With remote specified"
+    !found && id == "reset-with-remote" && line_lower ~ /with remote specified/ {
+      found=1
+      next
+    }
+
+    # Reset-main: "Without remote" (auto-detect)
+    !found && id == "reset-auto" && line_lower ~ /without remote.*auto-detect/ {
+      found=1
+      next
+    }
+
     # Generic identifier match (case-sensitive for custom identifiers)
     # Skip for known identifiers that have specific patterns above
-    !found && id != "default" && id != "dry-run" && id != "no-worktrees" && id != "worktree-readable" && id != "worktree-single-line" && id != "worktree-light" && $0 ~ id {
+    !found && id != "default" && id != "dry-run" && id != "no-worktrees" && id != "worktree-readable" && id != "worktree-single-line" && id != "worktree-light" && id != "reset-with-remote" && id != "reset-auto" && $0 ~ id {
       found=1
       next
     }
