@@ -11,16 +11,16 @@ Find text in images using EasyOCR. Returns text locations with bounding boxes an
 
 ```bash
 # List all text found in an image
-uv run ocr-finder --list --image screenshot.png
+claude-code-skills macos-ocr-finder list --image screenshot.png
 
 # Find specific text (substring match, case-insensitive)
-uv run ocr-finder --find "Accept" --image dialog.png
+claude-code-skills macos-ocr-finder find "Accept" --image dialog.png
 
 # Get click coordinates for text
-uv run ocr-finder --click "Submit" --image form.png
+claude-code-skills macos-ocr-finder click "Submit" --image form.png
 
 # JSON output for automation
-uv run ocr-finder --list --image screenshot.png --json
+claude-code-skills macos-ocr-finder list --image screenshot.png --json
 ```
 
 ## Commands
@@ -31,13 +31,13 @@ Detect and list all text regions in an image.
 
 ```bash
 # Basic listing
-uv run ocr-finder -l -i screenshot.png
+claude-code-skills macos-ocr-finder -l -i screenshot.png
 
 # With low confidence threshold (detect more text)
-uv run ocr-finder -l -i screenshot.png --min-confidence 0.3
+claude-code-skills macos-ocr-finder -l -i screenshot.png --min-confidence 0.3
 
 # JSON output
-uv run ocr-finder -l -i screenshot.png --json
+claude-code-skills macos-ocr-finder -l -i screenshot.png --json
 ```
 
 Example output:
@@ -57,16 +57,16 @@ Search for specific text in an image.
 
 ```bash
 # Substring match (default)
-uv run ocr-finder -f "Accept" -i dialog.png
+claude-code-skills macos-ocr-finder -f "Accept" -i dialog.png
 
 # Exact match only
-uv run ocr-finder -f "OK" -i dialog.png --exact
+claude-code-skills macos-ocr-finder -f "OK" -i dialog.png --exact
 
 # Case-sensitive match
-uv run ocr-finder -f "Submit" -i form.png --case-sensitive
+claude-code-skills macos-ocr-finder -f "Submit" -i form.png --case-sensitive
 
 # Low confidence threshold
-uv run ocr-finder -f "faded text" -i low-contrast.png --min-confidence 0.2
+claude-code-skills macos-ocr-finder -f "faded text" -i low-contrast.png --min-confidence 0.2
 ```
 
 ### Get Click Coordinates (`--click`)
@@ -75,14 +75,14 @@ Get the center coordinates of text for clicking.
 
 ```bash
 # Get coords for first match
-uv run ocr-finder --click "Submit" -i form.png
+claude-code-skills macos-ocr-finder --click "Submit" -i form.png
 # Output: 320,450
 
 # Get coords for second match (index 1)
-uv run ocr-finder --click "Button" -i form.png --index 1
+claude-code-skills macos-ocr-finder --click "Button" -i form.png --index 1
 
 # JSON output
-uv run ocr-finder --click "OK" -i dialog.png --json
+claude-code-skills macos-ocr-finder --click "OK" -i dialog.png --json
 # Output: {"x": 420, "y": 380}
 ```
 
@@ -137,7 +137,7 @@ uv run ocr-finder --click "OK" -i dialog.png --json
 
 ```bash
 # Find button and click it
-coords=$(uv run ocr-finder --click "Submit" -i screenshot.png)
+coords=$(claude-code-skills macos-ocr-finder --click "Submit" -i screenshot.png)
 # Use coords with your automation tool
 ```
 
@@ -145,7 +145,7 @@ coords=$(uv run ocr-finder --click "Submit" -i screenshot.png)
 
 ```bash
 # List all buttons visible in a dialog screenshot
-uv run ocr-finder -l -i dialog.png --json | jq '.[] | select(.text | test("OK|Cancel|Apply"))'
+claude-code-skills macos-ocr-finder -l -i dialog.png --json | jq '.[] | select(.text | test("OK|Cancel|Apply"))'
 ```
 
 ### Cross-Skill Workflow
@@ -154,8 +154,8 @@ Combine with `verified-screenshot` for end-to-end automation:
 
 ```bash
 # Capture window → Find text → Get click coords
-uv run verified-screenshot --app "Safari" --output /tmp/safari.png
-uv run ocr-finder --click "Downloads" -i /tmp/safari.png --json
+claude-code-skills macos-verified-screenshot --app "Safari" --output /tmp/safari.png
+claude-code-skills macos-ocr-finder --click "Downloads" -i /tmp/safari.png --json
 ```
 
 ## How It Works

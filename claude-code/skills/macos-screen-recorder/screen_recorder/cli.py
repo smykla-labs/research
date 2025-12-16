@@ -9,9 +9,25 @@ from typing import Annotated
 
 import typer
 
-from .actions import preview_region, record_verified
-from .core import check_dependencies, find_target_window
-from .models import (
+# Skill name for artifact tracking
+SKILL_NAME = "macos-screen-recorder"
+
+try:
+    from _shared.artifacts import get_default_artifact_path
+except ImportError:
+    # Fallback if shared module not available
+    from datetime import datetime
+    from pathlib import Path
+
+    def get_default_artifact_path(
+        _skill_name: str, description: str, ext: str
+    ) -> Path:
+        timestamp = datetime.now().strftime("%y%m%d%H%M%S")
+        return Path.cwd() / f"{timestamp}-{description}.{ext}"
+
+from .actions import preview_region, record_verified  # noqa: E402
+from .core import check_dependencies, find_target_window  # noqa: E402
+from .models import (  # noqa: E402
     DEFAULT_DURATION_SECONDS,
     DEFAULT_FPS,
     DEFAULT_MAX_DURATION_SECONDS,
@@ -350,6 +366,9 @@ def _build_output_options(
     keep_raw: bool,
 ) -> OutputOptions:
     """Build OutputOptions from CLI args."""
+    # Use artifacts directory if no output path specified
+    if output is None:
+        output = str(get_default_artifact_path(SKILL_NAME, "recording", format_str))
     return OutputOptions(
         output=output,
         format_str=format_str,

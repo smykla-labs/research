@@ -13,16 +13,16 @@ Find which macOS Space/Desktop contains a specific application and navigate to i
 
 ```bash
 # List all spaces
-uv run space-finder --list
+claude-code-skills macos-space-finder list
 
 # Find space containing an app
-uv run space-finder "GoLand"
+claude-code-skills macos-space-finder find "GoLand"
 
 # Show current space
-uv run space-finder --current
+claude-code-skills macos-space-finder current
 
 # Go to app's space and return to original
-uv run space-finder --go "GoLand"
+claude-code-skills macos-space-finder go "GoLand"
 ```
 
 ## How It Works
@@ -105,13 +105,13 @@ Verify the skill works by running:
 
 ```bash
 # Should list all your Spaces
-uv run space-finder --list
+claude-code-skills macos-space-finder --list
 
 # Should show current app (e.g., "Ghostty" or "Desktop")
-uv run space-finder --current
+claude-code-skills macos-space-finder --current
 
 # If you have GoLand in full-screen, this should work:
-uv run space-finder --go GoLand
+claude-code-skills macos-space-finder --go GoLand
 ```
 
 Expected `--list` output:

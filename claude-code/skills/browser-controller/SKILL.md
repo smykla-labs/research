@@ -13,19 +13,30 @@ Programmatic control of Chrome and Firefox browsers via CDP (Chrome DevTools Pro
 
 Start your browser with remote debugging enabled.
 
+**CRITICAL: Chrome REQUIRES `--user-data-dir`**
+
+When starting Chrome for automation, you MUST always use `--user-data-dir`:
+
+```bash
+open -a "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-debug"
+```
+
+This flag is **mandatory** because:
+
+1. Chrome may fail to accept `--remote-debugging-port` without a separate profile
+2. It prevents interference with your normal Chrome session
+3. It ensures a clean, predictable automation environment
+
 **IMPORTANT (macOS):** Use `open -a` instead of direct binary paths. This ensures screen recording permissions are attributed to Chrome/Firefox rather than your terminal app, avoiding the persistent "Currently Sharing" indicator.
 
 **Chrome:**
 
 ```bash
-# macOS - RECOMMENDED: Launch via LaunchServices (avoids screen sharing indicator)
-open -a "Google Chrome" --args --remote-debugging-port=9222
-
-# With separate profile (required if Chrome is already running)
+# macOS - REQUIRED: Always use --user-data-dir with remote debugging
 open -a "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-debug"
 
 # Alternative: Direct binary (NOT recommended - causes screen sharing indicator)
-# /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
+# /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-debug"
 ```
 
 **Firefox:**
@@ -42,28 +53,28 @@ open -a Firefox --args --marionette
 
 ```bash
 # Check for running browsers
-PYTHONPATH=claude-code/skills/browser-controller python -m browser_controller.cli check
+claude-code-skills browser-controller check
 
 # List all open tabs
-PYTHONPATH=claude-code/skills/browser-controller python -m browser_controller.cli tabs
+claude-code-skills browser-controller tabs
 
 # Navigate to URL
-PYTHONPATH=claude-code/skills/browser-controller python -m browser_controller.cli navigate "https://example.com"
+claude-code-skills browser-controller navigate "https://example.com"
 
 # Click an element
-PYTHONPATH=claude-code/skills/browser-controller python -m browser_controller.cli click "#submit-btn"
+claude-code-skills browser-controller click "#submit-btn"
 
 # Fill a form field
-PYTHONPATH=claude-code/skills/browser-controller python -m browser_controller.cli fill "#email" "test@example.com"
+claude-code-skills browser-controller fill "#email" "test@example.com"
 
 # Read page content
-PYTHONPATH=claude-code/skills/browser-controller python -m browser_controller.cli read
+claude-code-skills browser-controller read
 
 # Execute JavaScript
-PYTHONPATH=claude-code/skills/browser-controller python -m browser_controller.cli run "document.title"
+claude-code-skills browser-controller run "document.title"
 
-# Take screenshot
-PYTHONPATH=claude-code/skills/browser-controller python -m browser_controller.cli screenshot -o screenshot.png
+# Take screenshot (saves to claude-code/artifacts/ by default)
+claude-code-skills browser-controller screenshot
 ```
 
 ## Command Reference
@@ -177,10 +188,30 @@ browser-controller close TAB_ID
 Kill orphaned browser processes with remote debugging:
 
 ```bash
-browser-controller cleanup              # With confirmation
-browser-controller cleanup --dry-run    # Show without killing
-browser-controller cleanup --force      # No confirmation
+claude-code-skills browser-controller cleanup              # With confirmation
+claude-code-skills browser-controller cleanup --dry-run    # Show without killing
+claude-code-skills browser-controller cleanup --force      # No confirmation
 ```
+
+### start
+
+Start Chrome with remote debugging (always uses `--user-data-dir`):
+
+```bash
+# Basic start (port 9222, ~/.chrome-debug profile)
+claude-code-skills browser-controller start
+
+# Custom port
+claude-code-skills browser-controller start --port 9223
+
+# Auto-dismiss startup popups (uses ui-inspector AXPress)
+claude-code-skills browser-controller start --dismiss-popups
+
+# JSON output
+claude-code-skills browser-controller start --json
+```
+
+The `start` command always includes `--user-data-dir` to ensure a clean automation environment.
 
 ## Common Options
 

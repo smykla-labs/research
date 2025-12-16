@@ -13,6 +13,9 @@ tmp/
 *.tmp
 screenshots/
 
+# Skills artifacts output directory
+claude-code/artifacts/
+
 # Claude Code session handovers (personal context)
 .claude/sessions/
 .claude/settings.local.json

@@ -4,14 +4,71 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from .actions import activate_window, take_screenshot
-from .core import find_windows, get_all_windows
-from .models import WindowError, WindowFilter
+# Skill name for artifact tracking
+SKILL_NAME = "macos-window-controller"
+
+try:
+    from _shared.artifacts import (
+        ArtifactError,
+        get_default_artifact_path,
+        save_artifact,
+        validate_extension,
+    )
+    ARTIFACTS_AVAILABLE = True
+except ImportError:
+    ARTIFACTS_AVAILABLE = False
+    from datetime import datetime
+
+    class ArtifactError(Exception):  # type: ignore[no-redef]
+        pass
+
+    def get_default_artifact_path(
+        _skill_name: str, description: str, ext: str
+    ) -> Path:
+        timestamp = datetime.now().strftime("%y%m%d%H%M%S")
+        return Path.cwd() / f"{timestamp}-{description}.{ext}"
+
+    def save_artifact(
+        source_path, skill_name, description, output_path=None, _allowed_extensions=None
+    ):
+        import shutil
+        from dataclasses import dataclass as dc
+
+        @dc
+        class FallbackResult:
+            primary_path: Path
+            tracking_path: Path
+            skill_name: str
+            description: str
+            timestamp: str
+            def to_dict(self):
+                return {"primary_path": str(self.primary_path)}
+
+        if output_path:
+            resolved = Path(output_path).resolve()
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, resolved)
+            return FallbackResult(resolved, resolved, skill_name, description, "")
+        return FallbackResult(
+            Path(source_path), Path(source_path), skill_name, description, ""
+        )
+
+    def validate_extension(path, _allowed=None):
+        ext = Path(path).suffix.lstrip(".")
+        if not ext:
+            raise ArtifactError(f"Path must have extension: {path}")
+        return ext
+
+from .actions import activate_window, take_screenshot  # noqa: E402
+from .core import find_windows, get_all_windows  # noqa: E402
+from .models import WindowError, WindowFilter  # noqa: E402
 
 app = typer.Typer(
     name="window-controller",
@@ -207,7 +264,10 @@ def activate_cmd(  # noqa: PLR0913
 @app.command("screenshot")
 def screenshot_cmd(  # noqa: PLR0913
     app_name: AppArgRequired,
-    output: Annotated[str | None, typer.Option("--output", "-o", help="Output path")] = None,
+    output: Annotated[
+        str | None,
+        typer.Option("--output", "-o", help="Output path (must have .png extension)"),
+    ] = None,
     no_activate: Annotated[
         bool, typer.Option("--no-activate", help="Don't activate first")
     ] = False,
@@ -224,16 +284,68 @@ def screenshot_cmd(  # noqa: PLR0913
 ) -> None:
     """Take screenshot of window."""
     try:
+        # Validate output extension if provided
+        if output is not None:
+            try:
+                validate_extension(output, ["png"])
+            except ArtifactError as e:
+                msg = json.dumps({"error": str(e)}) if json_output else f"Error: {e}"
+                print(msg, file=sys.stderr)
+                raise typer.Exit(1) from e
+
+        # Build filter and find window first to get description
         filter_opts = _build_filter_options(title, pid, path_contains, path_excludes, args_contains)
         f = _build_filter(app_name, filter_opts, all_windows)
-        path = take_screenshot(f, output, not no_activate, settle_ms)
+        windows = find_windows(f)
+
+        if not windows:
+            msg = {"error": "No windows found matching filter"}
+            print(json.dumps(msg) if json_output else "No windows found matching filter.")
+            raise typer.Exit(1)
+
+        target_window = windows[0]
+
+        # Generate description from window info
+        description = f"screenshot_{app_name}"
+        if target_window.window_title:
+            title_part = target_window.window_title[:20].replace(" ", "_")
+            description = f"screenshot_{app_name}_{title_part}"
+
+        # Take screenshot to temp file first
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+
+        take_screenshot(f, str(tmp_path), not no_activate, settle_ms)
+
+        # Save artifact with proper tracking
+        result = save_artifact(
+            source_path=tmp_path,
+            skill_name=SKILL_NAME,
+            description=description,
+            output_path=output,
+            allowed_extensions=["png"],
+        )
+
+        # Clean up temp file
+        tmp_path.unlink(missing_ok=True)
 
         if json_output:
-            print(json.dumps({"screenshot": str(path)}))
+            output_data = {
+                "screenshot": str(result.primary_path),
+                "tracking_copy": str(result.tracking_path),
+                "window": target_window.to_dict(),
+            }
+            print(json.dumps(output_data, indent=2))
         else:
-            print(f"Screenshot saved: {path}")
+            print(f"Screenshot saved: {result.primary_path}")
+            if result.primary_path != result.tracking_path:
+                print(f"Tracking copy: {result.tracking_path}")
 
     except WindowError as e:
+        msg = json.dumps({"error": str(e)}) if json_output else f"Error: {e}"
+        print(msg, file=sys.stderr)
+        raise typer.Exit(1) from e
+    except ArtifactError as e:
         msg = json.dumps({"error": str(e)}) if json_output else f"Error: {e}"
         print(msg, file=sys.stderr)
         raise typer.Exit(1) from e
