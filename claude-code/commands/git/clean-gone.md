@@ -37,13 +37,13 @@ Pre-execution state (establishes baseline for validation):
      Deletes branches that are gone OR merged (via squash/rebase), removes associated worktrees.
 
      ```bash
-     bash -c 'git fetch --prune --all 2>&1 | grep -v "^From\|^   \|^ \*\|^ +\|^ -" || :; remote=$(git for-each-ref --format="%(upstream:remotename)" refs/heads/main 2>/dev/null); [ -z "$remote" ] && remote=$(git remote | head -1); main=$(git symbolic-ref "refs/remotes/$remote/HEAD" 2>/dev/null | sed "s@^refs/remotes/$remote/@@"); [ -z "$main" ] && main="main"; tl=$(git rev-parse --show-toplevel); current=$(git branch --show-current); del_branches=0; del_worktrees=0; kept_branches=""; skipped=""; git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | while read -r branch track; do [ "$branch" = "$main" ] && continue; [ "$branch" = "$current" ] && echo "SKIPPED:$branch:current branch" && continue; delete=false; reason=""; case "$track" in *"[gone]"*) delete=true; reason="gone";; esac; if [ "$delete" = "false" ]; then unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ "$unmerged" -eq 0 ] 2>/dev/null && delete=true && reason="merged"; fi; if [ "$delete" = "true" ]; then wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); [ -n "$wt" ] && [ "$wt" != "$tl" ] && git worktree remove --force "$wt" 2>/dev/null && echo "REMOVED_WT:$(basename "$wt"):$branch"; git branch -D "$branch" >/dev/null 2>&1 && echo "DELETED:$branch:$reason"; else wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "KEPT_WT:$(basename "$wt"):$branch:$unmerged unmerged" || echo "KEPT:$branch:$unmerged unmerged"; fi; done'
+     bash -c 'git fetch --prune --all 2>&1 | grep -v "^From\|^   \|^ \*\|^ +\|^ -" || :; remote=$(git for-each-ref --format="%(upstream:remotename)" refs/heads/main 2>/dev/null); [ -z "$remote" ] && remote=$(git remote | head -1); main=$(git symbolic-ref "refs/remotes/$remote/HEAD" 2>/dev/null | sed "s@^refs/remotes/$remote/@@"); [ -z "$main" ] && main="main"; tl=$(git rev-parse --show-toplevel); current=$(git branch --show-current); merged_prs=""; command -v gh &>/dev/null && merged_prs=$(gh pr list --state merged --limit 200 --json headRefName --jq ".[].headRefName" 2>/dev/null | tr "\n" "|"); git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | while read -r branch track; do [ "$branch" = "$main" ] && continue; [ "$branch" = "$current" ] && echo "SKIPPED:$branch:current branch" && continue; delete=false; reason=""; case "$track" in *"[gone]"*) delete=true; reason="gone";; esac; if [ "$delete" = "false" ]; then unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ "$unmerged" -eq 0 ] 2>/dev/null && delete=true && reason="merged"; fi; if [ "$delete" = "false" ] && [ -n "$merged_prs" ] && echo "|${merged_prs}" | grep -q "|${branch}|"; then delete=true; reason="squash-merged"; fi; if [ "$delete" = "true" ]; then wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); [ -n "$wt" ] && [ "$wt" != "$tl" ] && git worktree remove --force "$wt" 2>/dev/null && echo "REMOVED_WT:$(basename "$wt"):$branch"; git branch -D "$branch" >/dev/null 2>&1 && echo "DELETED:$branch:$reason"; else wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "KEPT_WT:$(basename "$wt"):$branch:$unmerged unmerged" || echo "KEPT:$branch:$unmerged unmerged"; fi; done'
      ```
 
    - **With `--dry-run` flag** (preview only, no changes):
 
      ```bash
-     bash -c 'git fetch --prune --all 2>&1 | grep -v "^From\|^   \|^ \*\|^ +\|^ -" || :; remote=$(git for-each-ref --format="%(upstream:remotename)" refs/heads/main 2>/dev/null); [ -z "$remote" ] && remote=$(git remote | head -1); main=$(git symbolic-ref "refs/remotes/$remote/HEAD" 2>/dev/null | sed "s@^refs/remotes/$remote/@@"); [ -z "$main" ] && main="main"; tl=$(git rev-parse --show-toplevel); current=$(git branch --show-current); git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | while read -r branch track; do [ "$branch" = "$main" ] && continue; [ "$branch" = "$current" ] && echo "WOULD_SKIP:$branch:current branch" && continue; delete=false; reason=""; case "$track" in *"[gone]"*) delete=true; reason="gone";; esac; if [ "$delete" = "false" ]; then unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ "$unmerged" -eq 0 ] 2>/dev/null && delete=true && reason="merged"; fi; if [ "$delete" = "true" ]; then wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "WOULD_REMOVE_WT:$(basename "$wt"):$branch"; echo "WOULD_DELETE:$branch:$reason"; else wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "WOULD_KEEP_WT:$(basename "$wt"):$branch:$unmerged unmerged" || echo "WOULD_KEEP:$branch:$unmerged unmerged"; fi; done'
+     bash -c 'git fetch --prune --all 2>&1 | grep -v "^From\|^   \|^ \*\|^ +\|^ -" || :; remote=$(git for-each-ref --format="%(upstream:remotename)" refs/heads/main 2>/dev/null); [ -z "$remote" ] && remote=$(git remote | head -1); main=$(git symbolic-ref "refs/remotes/$remote/HEAD" 2>/dev/null | sed "s@^refs/remotes/$remote/@@"); [ -z "$main" ] && main="main"; tl=$(git rev-parse --show-toplevel); current=$(git branch --show-current); merged_prs=""; command -v gh &>/dev/null && merged_prs=$(gh pr list --state merged --limit 200 --json headRefName --jq ".[].headRefName" 2>/dev/null | tr "\n" "|"); git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | while read -r branch track; do [ "$branch" = "$main" ] && continue; [ "$branch" = "$current" ] && echo "WOULD_SKIP:$branch:current branch" && continue; delete=false; reason=""; case "$track" in *"[gone]"*) delete=true; reason="gone";; esac; if [ "$delete" = "false" ]; then unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ "$unmerged" -eq 0 ] 2>/dev/null && delete=true && reason="merged"; fi; if [ "$delete" = "false" ] && [ -n "$merged_prs" ] && echo "|${merged_prs}" | grep -q "|${branch}|"; then delete=true; reason="squash-merged"; fi; if [ "$delete" = "true" ]; then wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "WOULD_REMOVE_WT:$(basename "$wt"):$branch"; echo "WOULD_DELETE:$branch:$reason"; else wt=$(git worktree list | awk -v b="[$branch]" "index(\$0, b) {print \$1}"); unmerged=$(git cherry "$remote/$main" "$branch" 2>/dev/null | grep -c "^+" || :); [ -n "$wt" ] && [ "$wt" != "$tl" ] && echo "WOULD_KEEP_WT:$(basename "$wt"):$branch:$unmerged unmerged" || echo "WOULD_KEEP:$branch:$unmerged unmerged"; fi; done'
      ```
 
    - **With `--no-worktrees` flag** (gone branches only, no worktree removal):
@@ -55,7 +55,8 @@ Pre-execution state (establishes baseline for validation):
    **Cleanup logic**:
    - Detects remote from main branch's upstream (works with origin, upstream, etc.)
    - Deletes branches marked as `[gone]` (remote tracking deleted)
-   - Deletes branches fully merged via squash/rebase (detected via `git cherry`)
+   - Deletes branches fully merged via rebase/cherry-pick (detected via `git cherry`)
+   - Deletes branches squash-merged via PR (detected via `gh pr list --state merged`)
    - Removes associated worktrees before branch deletion
    - Skips main and current branch
 
@@ -150,8 +151,10 @@ Would keep:
 - Main worktree is never removed
 - Uses `git worktree remove --force` to handle uncommitted changes in worktrees
 - Uses `git branch -D` for gone branches (force, since remote is gone)
-- Uses `git cherry` to detect squash/rebase merges (not just `--is-ancestor`)
+- Uses `git cherry` to detect rebase/cherry-pick merges (compares patch IDs)
+- Uses `gh pr list --state merged` to detect squash merges (GitHub API, requires `gh` CLI)
 - Detects remote dynamically from main branch's upstream (works with origin, upstream, etc.)
+- Falls back gracefully if `gh` is unavailable (squash merges won't be detected)
 
 **CRITICAL**: All scripts use `bash -c '...'` format for reliable atomic execution.
 
@@ -163,7 +166,9 @@ Would keep:
 - **Uncommitted changes in worktree**: Force remove with `--force` flag (preserves branch safety)
 - **No worktrees exist**: Still checks and deletes merged branches without worktrees
 - **Multiple worktrees, mixed states**: Process each independently, report counts
-- **Squash/rebase merged branches**: Detected via `git cherry`, deleted with all commits merged
+- **Squash-merged branches**: Detected via `gh pr list --state merged` (requires `gh` CLI and GitHub repo)
+- **Rebase/cherry-pick merged branches**: Detected via `git cherry` (works locally without API)
+- **gh CLI unavailable**: Falls back to `git cherry` only (squash merges won't be detected)
 - **No remote configured**: Falls back to first available remote
 - **Non-origin remote (upstream, etc.)**: Detected from main branch's upstream tracking
 

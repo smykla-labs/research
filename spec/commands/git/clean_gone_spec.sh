@@ -39,6 +39,8 @@ Describe "clean-gone command scripts"
       The status should be success
       The output should include "git fetch --prune"
       The output should include "git cherry"
+      The output should include "gh pr list"
+      The output should include "squash-merged"
     End
 
     It "extracts the dry-run script"
@@ -102,12 +104,53 @@ Describe "clean-gone command scripts"
       }
       Before "setup_merged_branch"
 
-      It "keeps squash-merged branches (git cherry limitation)"
-        script=$(extract_default_script)
-        When run bash -c "cd '${TEST_REPO}' && ${script}"
-        The output should include "KEPT:feature/squash-me:"
-        The output should include "unmerged"
-        The status should be success
+      Describe "with gh CLI available"
+        setup_mock_gh() {
+          # Create mock gh command that returns the squash-merged branch
+          mkdir -p "${_TEST_CONTEXT_DIR}/bin"
+          cat > "${_TEST_CONTEXT_DIR}/bin/gh" <<'MOCK_GH'
+#!/bin/bash
+# Mock gh CLI that simulates merged PR detection
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+  echo '[{"headRefName":"feature/squash-me"}]'
+  exit 0
+fi
+exit 1
+MOCK_GH
+          chmod +x "${_TEST_CONTEXT_DIR}/bin/gh"
+          export PATH="${_TEST_CONTEXT_DIR}/bin:${PATH}"
+        }
+        Before "setup_mock_gh"
+
+        It "detects and deletes squash-merged branches via GitHub API"
+          script=$(extract_default_script)
+          When run bash -c "cd '${TEST_REPO}' && ${script}"
+          The output should include "DELETED:feature/squash-me:squash-merged"
+          The status should be success
+        End
+
+        It "actually removes the squash-merged branch"
+          script=$(extract_default_script)
+          bash -c "cd '${TEST_REPO}' && ${script}" >/dev/null
+          When call branch_exists "${TEST_REPO}" "feature/squash-me"
+          The status should be failure
+        End
+      End
+
+      Describe "with gh CLI unavailable"
+        setup_no_gh() {
+          # Ensure gh is not in PATH for this test
+          export PATH="/usr/bin:/bin"
+        }
+        Before "setup_no_gh"
+
+        It "keeps squash-merged branches (fallback to git cherry)"
+          script=$(extract_default_script)
+          When run bash -c "cd '${TEST_REPO}' && ${script}"
+          The output should include "KEPT:feature/squash-me:"
+          The output should include "unmerged"
+          The status should be success
+        End
       End
     End
 
@@ -203,13 +246,41 @@ Describe "clean-gone command scripts"
       }
       Before "setup_mixed"
 
-      It "handles all branch states correctly"
-        script=$(extract_default_script)
-        When run bash -c "cd '${TEST_REPO}' && ${script}"
-        The output should include "DELETED:feature/gone:gone"
-        The output should include "KEPT:feature/merged:"
-        The output should include "KEPT:feature/wip:"
-        The status should be success
+      Describe "without gh CLI (fallback behavior)"
+        It "handles all branch states correctly"
+          script=$(extract_default_script)
+          When run bash -c "cd '${TEST_REPO}' && ${script}"
+          The output should include "DELETED:feature/gone:gone"
+          The output should include "KEPT:feature/merged:"
+          The output should include "KEPT:feature/wip:"
+          The status should be success
+        End
+      End
+
+      Describe "with gh CLI available"
+        setup_mock_gh() {
+          mkdir -p "${_TEST_CONTEXT_DIR}/bin"
+          cat > "${_TEST_CONTEXT_DIR}/bin/gh" <<'MOCK_GH'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+  echo '[{"headRefName":"feature/merged"}]'
+  exit 0
+fi
+exit 1
+MOCK_GH
+          chmod +x "${_TEST_CONTEXT_DIR}/bin/gh"
+          export PATH="${_TEST_CONTEXT_DIR}/bin:${PATH}"
+        }
+        Before "setup_mock_gh"
+
+        It "deletes squash-merged branch via GitHub API"
+          script=$(extract_default_script)
+          When run bash -c "cd '${TEST_REPO}' && ${script}"
+          The output should include "DELETED:feature/gone:gone"
+          The output should include "DELETED:feature/merged:squash-merged"
+          The output should include "KEPT:feature/wip:"
+          The status should be success
+        End
       End
     End
 
@@ -295,6 +366,63 @@ Describe "clean-gone command scripts"
         worktree_path="${_TEST_CONTEXT_DIR}/preview-wt"
         When call test -d "${worktree_path}"
         The status should be success
+      End
+    End
+
+    Describe "with squash-merged branches"
+      setup_squash_merged() {
+        create_branch "${TEST_REPO}" "feature/dry-squash" 3
+        push_branch "${TEST_REPO}" "origin" "feature/dry-squash"
+        setup_tracking "${TEST_REPO}" "feature/dry-squash" "origin"
+        simulate_squash_merge "${TEST_REPO}" "feature/dry-squash"
+        push_to_remote "${TEST_REPO}" "origin" "main"
+      }
+      Before "setup_squash_merged"
+
+      Describe "with gh CLI available"
+        setup_mock_gh() {
+          mkdir -p "${_TEST_CONTEXT_DIR}/bin"
+          cat > "${_TEST_CONTEXT_DIR}/bin/gh" <<'MOCK_GH'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+  echo '[{"headRefName":"feature/dry-squash"}]'
+  exit 0
+fi
+exit 1
+MOCK_GH
+          chmod +x "${_TEST_CONTEXT_DIR}/bin/gh"
+          export PATH="${_TEST_CONTEXT_DIR}/bin:${PATH}"
+        }
+        Before "setup_mock_gh"
+
+        It "outputs WOULD_DELETE for squash-merged branches"
+          script=$(extract_dryrun_script)
+          When run bash -c "cd '${TEST_REPO}' && ${script}"
+          The output should include "WOULD_DELETE:feature/dry-squash:squash-merged"
+          The status should be success
+        End
+
+        It "does NOT actually delete the branch"
+          script=$(extract_dryrun_script)
+          bash -c "cd '${TEST_REPO}' && ${script}" >/dev/null
+          When call branch_exists "${TEST_REPO}" "feature/dry-squash"
+          The status should be success
+        End
+      End
+
+      Describe "with gh CLI unavailable"
+        setup_no_gh() {
+          export PATH="/usr/bin:/bin"
+        }
+        Before "setup_no_gh"
+
+        It "outputs WOULD_KEEP for squash-merged branches (fallback)"
+          script=$(extract_dryrun_script)
+          When run bash -c "cd '${TEST_REPO}' && ${script}"
+          The output should include "WOULD_KEEP:feature/dry-squash:"
+          The output should include "unmerged"
+          The status should be success
+        End
       End
     End
 
