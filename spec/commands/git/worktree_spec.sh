@@ -398,3 +398,56 @@ Describe "worktree-manager agent scripts"
     End
   End
 End
+
+# Light agent tests
+LIGHT_AGENT_FILE="${PWD}/claude-code/agents/worktree-manager-light.md"
+
+Describe "worktree-manager-light agent scripts"
+  # Script extraction helpers for light agent
+  extract_light_script() {
+    extract_script "${LIGHT_AGENT_FILE}" "worktree-light"
+  }
+
+  Describe "light agent script extraction"
+    It "extracts the script template"
+      When call extract_light_script
+      The status should be success
+      The output should include "set -euo pipefail"
+      The output should include "git worktree add"
+    End
+
+    It "script includes symlink logic"
+      When call extract_light_script
+      The output should include "ln -sfn"
+      The output should include ".claude"
+      The output should include "CLAUDE.md"
+    End
+
+    It "script includes IDE variable"
+      When call extract_light_script
+      The output should include 'I="'
+      The output should include 'IDE='
+    End
+
+    It "script includes pbcopy control"
+      When call extract_light_script
+      The output should include 'P="'
+      The output should include 'PBCOPY='
+    End
+  End
+
+  Describe "light agent defaults"
+    It "uses chore/ prefix as default (visible in example)"
+      When run bash -c "grep -o 'chore/[a-z-]*' '${LIGHT_AGENT_FILE}' | head -1"
+      The output should include "chore/"
+    End
+  End
+
+  Describe "light agent script syntax"
+    It "script template has valid bash syntax"
+      script=$(extract_light_script)
+      When run bash -n -c "${script}"
+      The status should be success
+    End
+  End
+End
