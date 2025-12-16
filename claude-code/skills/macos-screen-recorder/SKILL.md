@@ -78,7 +78,7 @@ The recorder supports multiple capture backends with different capabilities:
 |---------|---------|-------------|-------|
 | Video recording | ScreenCaptureKit | Yes | macOS 12.3+, no activation needed |
 | Video recording | `screencapture -v` | Requires activation | Built-in macOS tool, fallback |
-| Region preview | ScreenCaptureKit | Yes | macOS 12.3+ |
+| Region preview | `screencapture` | Requires activation | Built-in macOS tool |
 
 **Backend Selection** (`--backend`):
 
@@ -100,9 +100,9 @@ The recorder supports multiple capture backends with different capabilities:
 - Always used for full-screen recording (`--full-screen`)
 
 **Region Preview** (`--preview-region`):
-- Uses ScreenCaptureKit for screenshot preview
-- Can capture regions across Spaces without switching
-- Falls back to Quartz on older macOS versions
+- Uses macOS built-in `screencapture` command for screenshot preview
+- Requires window activation to capture windows on other Spaces
+- Space-aware preview automatically switches Spaces when needed
 
 5. **Format Conversion**: Converts to target format using ffmpeg:
    - **GIF**: Two-pass palette optimization with sierra2_4a dithering
