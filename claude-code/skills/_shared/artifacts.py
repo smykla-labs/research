@@ -96,8 +96,9 @@ def validate_extension(path: Path | str, allowed_extensions: list[str] | None = 
         )
 
     if allowed_extensions and ext.lower() not in [e.lower() for e in allowed_extensions]:
+        allowed_lower = [e.lower() for e in allowed_extensions]
         raise ArtifactError(
-            f"Extension '.{ext}' not allowed. Allowed: {', '.join(allowed_extensions)}"
+            f"Extension '.{ext.lower()}' not allowed. Allowed: {', '.join(allowed_lower)}"
         )
 
     return ext
@@ -138,12 +139,14 @@ def encode_path_for_filename(path: Path | str) -> str:
     """
     p = Path(path)
     # Get path without extension
-    path_without_ext = str(p.with_suffix(""))
-    # Remove leading / or drive letter
-    if path_without_ext.startswith("/"):
-        path_without_ext = path_without_ext[1:]
-    # Replace separators
-    return path_without_ext.replace("/", "_").replace("\\", "_")
+    path_without_ext = p.with_suffix("")
+    # Use Path.parts to handle both Unix (leading /) and Windows (drive letter) paths
+    # Skip root/anchor: '/' on Unix or 'C:\' on Windows
+    parts = path_without_ext.parts
+    if parts and path_without_ext.is_absolute():
+        parts = parts[1:]
+    # Join with underscores
+    return "_".join(parts)
 
 
 def generate_artifact_filename(

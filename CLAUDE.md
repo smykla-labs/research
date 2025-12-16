@@ -48,6 +48,12 @@ Skills in `claude-code/skills/` are accessible via the unified `claude-code-skil
 
 ### Using the CLI Wrapper (Recommended)
 
+To use `claude-code-skills` from anywhere, add `claude-code/skills/_bin` to your PATH:
+
+```bash
+export PATH="$PATH:/path/to/research/claude-code/skills/_bin"
+```
+
 ```bash
 # General pattern
 claude-code-skills <skill-name> <command> [args]
