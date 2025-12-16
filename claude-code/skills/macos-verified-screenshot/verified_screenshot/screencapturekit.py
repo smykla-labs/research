@@ -6,7 +6,7 @@ ScreenCaptureKit framework. Key advantages over CGWindowListCreateImage:
 - Captures windows on ANY Space without switching
 - Works with occluded (covered) windows
 - Works with off-screen windows
-- Future-proof (CGWindowListCreateImage deprecated in macOS 14)
+- Future-proof (CGWindowListCreateImage deprecated in macOS 15)
 
 Limitations:
 - Requires macOS 12.3+
@@ -160,7 +160,7 @@ def capture_with_screencapturekit(
     Args:
         target: Window target information (must include window_id).
         output_path: Path to save the screenshot.
-        no_shadow: Whether to exclude window shadow (not applicable for SCK).
+        no_shadow: Whether to exclude the window shadow from the screenshot.
         timeout: Timeout in seconds for async operations.
 
     Returns:
