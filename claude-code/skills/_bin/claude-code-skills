@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""Unified CLI wrapper for claude-code skills.
+
+Usage:
+    claude-code-skills <skill-name> <command> [args...]
+    claude-code-skills --list
+
+Examples:
+    claude-code-skills browser-controller tabs
+    claude-code-skills macos-ui-inspector list --app Finder
+    claude-code-skills macos-window-controller find --app "Google Chrome"
+"""
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+# Mapping from skill directory name to Python module name
+SKILL_MODULES: dict[str, str] = {
+    "browser-controller": "browser_controller",
+    "macos-ocr-finder": "ocr_finder",
+    "macos-screen-recorder": "screen_recorder",
+    "macos-space-finder": "space_finder",
+    "macos-ui-inspector": "ui_inspector",
+    "macos-verified-screenshot": "verified_screenshot",
+    "macos-window-controller": "window_controller",
+}
+
+
+def get_skills_dir() -> Path:
+    """Get the skills directory (parent of bin/)."""
+    return Path(__file__).resolve().parent.parent
+
+
+def discover_skills() -> dict[str, Path]:
+    """Discover available skills from sibling directories."""
+    skills_dir = get_skills_dir()
+    discovered: dict[str, Path] = {}
+
+    for skill_name, module_name in SKILL_MODULES.items():
+        skill_path = skills_dir / skill_name
+        module_path = skill_path / module_name
+
+        if skill_path.is_dir() and module_path.is_dir():
+            discovered[skill_name] = skill_path
+
+    return discovered
+
+
+def print_usage(skills: dict[str, Path]) -> None:
+    """Print usage information."""
+    print(__doc__)
+    print("\nAvailable skills:")
+    for skill_name in sorted(skills.keys()):
+        print(f"  {skill_name}")
+    print("\nUse 'claude-code-skills <skill-name> --help' for skill-specific help.")
+
+
+def get_workspace_root() -> Path:
+    """Get the workspace root directory (parent of claude-code/)."""
+    return get_skills_dir().parent.parent
+
+
+def run_skill(skill_name: str, skill_path: Path, args: list[str]) -> int:
+    """Run a skill with the given arguments."""
+    module_name = SKILL_MODULES[skill_name]
+    skills_dir = get_skills_dir()
+    workspace_root = get_workspace_root()
+
+    # Set PYTHONPATH to include the skill directory and shared module
+    env = os.environ.copy()
+    current_pythonpath = env.get("PYTHONPATH", "")
+    paths = [str(skill_path), str(skills_dir)]
+    if current_pythonpath:
+        paths.append(current_pythonpath)
+    env["PYTHONPATH"] = os.pathsep.join(paths)
+
+    # Use uv run from workspace root to get dependencies
+    # The PYTHONPATH ensures the skill module is found
+    cmd = [
+        "uv", "run",
+        "--directory", str(workspace_root),
+        "python", "-m", f"{module_name}.cli", *args,
+    ]
+
+    try:
+        result = subprocess.run(cmd, env=env)
+        return result.returncode
+    except KeyboardInterrupt:
+        return 130  # Standard exit code for SIGINT
+
+
+def main() -> int:
+    """Main entry point."""
+    skills = discover_skills()
+
+    if len(sys.argv) < 2:
+        print_usage(skills)
+        return 1
+
+    first_arg = sys.argv[1]
+
+    # Handle --help and -h
+    if first_arg in ("--help", "-h"):
+        print_usage(skills)
+        return 0
+
+    # Handle --list
+    if first_arg == "--list":
+        for skill_name in sorted(skills.keys()):
+            print(skill_name)
+        return 0
+
+    # Handle skill invocation
+    skill_name = first_arg
+    if skill_name not in skills:
+        print(f"Error: Unknown skill '{skill_name}'", file=sys.stderr)
+        print(f"\nAvailable skills: {', '.join(sorted(skills.keys()))}", file=sys.stderr)
+        return 1
+
+    # Pass remaining arguments to the skill
+    skill_args = sys.argv[2:]
+    return run_skill(skill_name, skills[skill_name], skill_args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

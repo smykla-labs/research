@@ -8,7 +8,6 @@ from .actions import (
     resolve_backend,
     sanitize_app_name,
 )
-from .cli import main
 from .core import (
     compute_hash_distance,
     compute_image_hash,
@@ -65,7 +64,6 @@ __all__ = [
     "get_image_dimensions",
     "is_image_blank",
     "is_screencapturekit_available",
-    "main",
     "resolve_backend",
     "sanitize_app_name",
     "verify_basic",

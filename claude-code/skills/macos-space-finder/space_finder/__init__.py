@@ -7,7 +7,6 @@ from .actions import (
     sanitize_app_name,
     switch_to_space,
 )
-from .cli import list_spaces, main, print_space_details
 from .core import find_space_by_app, get_current_space, get_spaces_plist, parse_spaces
 from .models import (
     DEFAULT_RETURN_DELAY,
@@ -40,10 +39,7 @@ __all__ = [
     "get_current_space",
     "get_spaces_plist",
     "go_to_space",
-    "list_spaces",
-    "main",
     "parse_spaces",
-    "print_space_details",
     "return_to_space",
     "sanitize_app_name",
     "switch_to_space",

@@ -9,9 +9,25 @@ from typing import Annotated
 
 import typer
 
-from .actions import capture_verified
-from .core import find_target_window
-from .models import (
+# Skill name for artifact tracking
+SKILL_NAME = "macos-verified-screenshot"
+
+try:
+    from _shared.artifacts import get_default_artifact_path
+except ImportError:
+    # Fallback if shared module not available
+    from datetime import datetime
+    from pathlib import Path
+
+    def get_default_artifact_path(
+        _skill_name: str, description: str, ext: str
+    ) -> Path:
+        timestamp = datetime.now().strftime("%y%m%d%H%M%S")
+        return Path.cwd() / f"{timestamp}-{description}.{ext}"
+
+from .actions import capture_verified  # noqa: E402
+from .core import find_target_window  # noqa: E402
+from .models import (  # noqa: E402
     CaptureBackend,
     CaptureConfig,
     RetryStrategy,
@@ -164,6 +180,9 @@ def _build_output_options(
     json_output: bool,
 ) -> OutputOptions:
     """Build output options from CLI params."""
+    # Use artifacts directory if no output path specified
+    if output is None:
+        output = str(get_default_artifact_path(SKILL_NAME, "capture", "png"))
     return OutputOptions(
         output=output,
         json_output=json_output,

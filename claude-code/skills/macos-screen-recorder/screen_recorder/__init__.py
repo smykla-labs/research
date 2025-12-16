@@ -14,7 +14,6 @@ from .actions import (
     record_verified,
     sanitize_app_name,
 )
-from .cli import main
 from .core import (
     check_dependencies,
     compute_hash_distance,
@@ -114,7 +113,6 @@ __all__ = [
     "get_video_info",
     "is_screencapturekit_available",
     "is_video_streaming_supported",
-    "main",
     "preview_region",
     "record_screen_region",
     "record_simple",

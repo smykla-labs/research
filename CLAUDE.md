@@ -44,52 +44,61 @@ Knowledge base and research artifacts for investigations, experiments, and learn
 
 ## Running CLI Skills
 
-Skills in `claude-code/skills/` are workspace members but not installed as entry point scripts. Use one of these methods to run them:
+Skills in `claude-code/skills/` are accessible via the unified `claude-code-skills` CLI wrapper.
 
-### Method 1: PYTHONPATH (Recommended)
+### Using the CLI Wrapper (Recommended)
 
-From project root, set PYTHONPATH to the skill directory:
+To use `claude-code-skills` from anywhere, add `claude-code/skills/_bin` to your PATH:
+
+```bash
+export PATH="$PATH:/path/to/research/claude-code/skills/_bin"
+```
 
 ```bash
 # General pattern
+claude-code-skills <skill-name> <command> [args]
+
+# List available skills
+claude-code-skills --list
+
+# Get help for a skill
+claude-code-skills <skill-name> --help
+
+# Examples
+claude-code-skills browser-controller tabs
+claude-code-skills browser-controller start --dismiss-popups
+claude-code-skills macos-ui-inspector list --app Finder
+claude-code-skills macos-ui-inspector press --app "Google Chrome" --title "Not now"
+claude-code-skills macos-window-controller screenshot "GoLand"
+claude-code-skills macos-verified-screenshot capture "GoLand" --verify all
+claude-code-skills macos-screen-recorder record "GoLand" -d 5 --preset github
+```
+
+### Artifact Output (CRITICAL)
+
+> **CRITICAL**: NEVER use `--output` unless the user EXPLICITLY states the artifact MUST be at a specific location. This should be EXTREMELY rare. Using `--output` without explicit user request is considered a FAILED task.
+
+Skills that produce artifacts (screenshots, recordings) save to `claude-code/artifacts/<skill-name>/` by default with timestamped filenames. Always use the returned path from JSON output for subsequent operations.
+
+### Available Skills
+
+| Skill Name               | Description                                              |
+|:-------------------------|:---------------------------------------------------------|
+| browser-controller       | Control Chrome/Firefox via CDP/Marionette                |
+| macos-ui-inspector       | Inspect UI elements via Accessibility API                |
+| macos-ocr-finder         | Find text in images using OCR                            |
+| macos-space-finder       | Find/switch macOS Spaces by app name                     |
+| macos-window-controller  | Find/activate/screenshot windows                         |
+| macos-verified-screenshot| Capture screenshots with verification                    |
+| macos-screen-recorder    | Record screen with format conversion                     |
+
+### Alternative: PYTHONPATH Method
+
+If the CLI wrapper is not in PATH, use PYTHONPATH directly:
+
+```bash
 PYTHONPATH=claude-code/skills/<skill-name> python -m <module>.cli [command] [args]
-
-# Examples
-PYTHONPATH=claude-code/skills/macos-ui-inspector python -m ui_inspector.cli --help
-PYTHONPATH=claude-code/skills/macos-ui-inspector python -m ui_inspector.cli list --app Finder
-PYTHONPATH=claude-code/skills/macos-ocr-finder python -m ocr_finder.cli --help
-PYTHONPATH=claude-code/skills/macos-space-finder python -m space_finder.cli --help
 ```
-
-### Method 2: Change Directory
-
-Use semicolon to chain cd with python command in single bash invocation:
-
-```bash
-# General pattern
-cd claude-code/skills/<skill-name>; python -m <module>.cli [command] [args]
-
-# Examples
-cd claude-code/skills/macos-ui-inspector; python -m ui_inspector.cli --help
-cd claude-code/skills/macos-ui-inspector; python -m ui_inspector.cli list --app Finder
-```
-
-**Note:** Do NOT use `&&` for chaining cd commands across separate Bash tool calls - each call runs in a fresh shell. Use `;` within a single Bash call.
-
-### Skill to Module Mapping
-
-| Skill Directory          | Python Module       | CLI Entry Point             |
-|:-------------------------|:--------------------|:----------------------------|
-| macos-ui-inspector       | ui_inspector        | ui_inspector.cli            |
-| macos-ocr-finder         | ocr_finder          | ocr_finder.cli              |
-| macos-space-finder       | space_finder        | space_finder.cli            |
-| macos-window-controller  | window_controller   | window_controller.cli       |
-| macos-verified-screenshot| verified_screenshot | verified_screenshot.cli     |
-| macos-screen-recorder    | screen_recorder     | screen_recorder.cli         |
-
-### Why Not Installed as Scripts?
-
-The workspace root has `tool.uv.package = false`, so workspace members are not installed as editable packages or entry point scripts. This is intentional - the repository is a research/knowledge base, not a production package.
 
 ## Agent Workflow System
 

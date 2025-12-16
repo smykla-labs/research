@@ -190,7 +190,8 @@ class CDPBackend:
         ws_url = f"ws://{self.host}:{self.port}/devtools/page/{target_id}"
 
         try:
-            ws = await websockets.connect(ws_url)
+            # Increase max_size to 16MB to handle large screenshots
+            ws = await websockets.connect(ws_url, max_size=16 * 1024 * 1024)
             conn = CDPConnection(ws=ws, target_id=target_id)
             self._connections[target_id] = conn
             return conn

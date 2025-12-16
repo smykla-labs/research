@@ -5,7 +5,7 @@ import sys
 
 import typer
 
-from ui_inspector.actions import find_element, get_click_target, list_elements
+from ui_inspector.actions import find_element, get_click_target, list_elements, press_element
 from ui_inspector.models import UiInspectorError
 
 # Text column width for table display
@@ -136,6 +136,40 @@ def click_cmd(
         print(json.dumps({"x": x, "y": y}))
     else:
         print(f"{x},{y}")
+
+
+@app.command("press")
+def press_cmd(
+    app_name: str = typer.Option(..., "--app", "-a", help="Application name or bundle ID"),
+    role: str | None = typer.Option(None, "--role", help="Filter by element role"),
+    title: str | None = typer.Option(None, "--title", help="Filter by element title"),
+    identifier: str | None = typer.Option(
+        None, "--identifier", help="Filter by element identifier"
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Press element using Accessibility API (no mouse movement required)."""
+    try:
+        element = press_element(
+            app_name,
+            role=role,
+            title=title,
+            identifier=identifier,
+        )
+    except UiInspectorError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise typer.Exit(1) from e
+
+    if json_output:
+        print(json.dumps({"pressed": element.to_dict()}))
+    else:
+        print(f"Pressed: {element.role}")
+        if element.title:
+            print(f"  Title: {element.title}")
+        print(f"  Position: ({element.position[0]}, {element.position[1]})")
 
 
 def main(argv: list[str] | None = None) -> int:
