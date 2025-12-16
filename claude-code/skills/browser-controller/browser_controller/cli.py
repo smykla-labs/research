@@ -20,9 +20,7 @@ try:
         save_artifact,
         validate_extension,
     )
-    ARTIFACTS_AVAILABLE = True
 except ImportError:
-    ARTIFACTS_AVAILABLE = False
     from datetime import datetime
 
     class ArtifactError(Exception):  # type: ignore[no-redef]
