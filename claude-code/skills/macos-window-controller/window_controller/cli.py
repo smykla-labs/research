@@ -324,19 +324,20 @@ def screenshot_cmd(  # noqa: PLR0913
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             tmp_path = Path(tmp.name)
 
-        take_screenshot(f, str(tmp_path), not no_activate, settle_ms)
+        try:
+            take_screenshot(f, str(tmp_path), not no_activate, settle_ms)
 
-        # Save artifact with proper tracking
-        result = save_artifact(
-            source_path=tmp_path,
-            skill_name=SKILL_NAME,
-            description=description,
-            output_path=output,
-            allowed_extensions=["png"],
-        )
-
-        # Clean up temp file
-        tmp_path.unlink(missing_ok=True)
+            # Save artifact with proper tracking
+            result = save_artifact(
+                source_path=tmp_path,
+                skill_name=SKILL_NAME,
+                description=description,
+                output_path=output,
+                allowed_extensions=["png"],
+            )
+        finally:
+            # Clean up temp file even if an exception occurs
+            tmp_path.unlink(missing_ok=True)
 
         if json_output:
             output_data = {

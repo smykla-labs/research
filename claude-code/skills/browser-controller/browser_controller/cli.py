@@ -415,7 +415,7 @@ def run_cmd(  # noqa: PLR0913
 
 
 @app.command("screenshot")
-def screenshot_cmd(  # noqa: PLR0913
+def screenshot_cmd(  # noqa: PLR0913, PLR0912
     output: Annotated[
         str | None,
         typer.Option("--output", "-o", help="Output path (must have .png extension)"),
@@ -460,20 +460,21 @@ def screenshot_cmd(  # noqa: PLR0913
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             tmp_path = Path(tmp.name)
 
-        screenshot(conn, tmp_path, tab, full_page)
-        close_connection(conn)
+        try:
+            screenshot(conn, tmp_path, tab, full_page)
+            close_connection(conn)
 
-        # Save artifact with proper tracking
-        result = save_artifact(
-            source_path=tmp_path,
-            skill_name=SKILL_NAME,
-            description=description,
-            output_path=output,
-            allowed_extensions=["png"],
-        )
-
-        # Clean up temp file
-        tmp_path.unlink(missing_ok=True)
+            # Save artifact with proper tracking
+            result = save_artifact(
+                source_path=tmp_path,
+                skill_name=SKILL_NAME,
+                description=description,
+                output_path=output,
+                allowed_extensions=["png"],
+            )
+        finally:
+            # Clean up temp file even if an exception occurs
+            tmp_path.unlink(missing_ok=True)
 
         if json_output:
             output_data = {
@@ -710,8 +711,8 @@ def _wait_for_chrome_startup(port: int, timeout: float = 10.0) -> bool:
     import time
     import urllib.request
 
-    start = time.time()
-    while time.time() - start < timeout:
+    start = time.monotonic()
+    while time.monotonic() - start < timeout:
         try:
             req = urllib.request.Request(f"http://localhost:{port}/json/version", method="GET")
             urllib.request.urlopen(req, timeout=1)
@@ -759,6 +760,11 @@ def _dismiss_chrome_popups() -> list[str]:
         except ElementNotFoundError:
             # Element not present, that's okay
             pass
+        except Exception as e:
+            # Log other errors but continue trying remaining patterns
+            actions_taken.append(
+                f"Error pressing {pattern.get('role')} '{pattern.get('title')}': {type(e).__name__}"
+            )
 
     return actions_taken
 
