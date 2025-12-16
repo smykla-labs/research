@@ -1,5 +1,5 @@
 f---
-name: macos-ui-inspector
+name: ui-inspector
 description: Inspect live macOS UI elements via Accessibility API (atomacos). Find buttons, text fields, and other elements in running applications. Returns element metadata (role, title, position, enabled state) and click coordinates. Requires Accessibility permissions.
 ---
 
@@ -11,22 +11,22 @@ Inspect live UI elements in running macOS applications using the Accessibility A
 
 ```bash
 # List all UI elements in an application
-claude-code-skills macos-ui-inspector list --app "Finder"
+claude-code-skills ui-inspector list --app "Finder"
 
 # Find buttons only
-claude-code-skills macos-ui-inspector list -a "Finder" --role AXButton
+claude-code-skills ui-inspector list -a "Finder" --role AXButton
 
 # Find element by title
-claude-code-skills macos-ui-inspector find -a "Safari" --title "Downloads"
+claude-code-skills ui-inspector find -a "Safari" --title "Downloads"
 
 # Get click coordinates
-claude-code-skills macos-ui-inspector click -a "Safari" --title "Submit"
+claude-code-skills ui-inspector click -a "Safari" --title "Submit"
 
 # Press element (no mouse movement - works for native dialogs)
-claude-code-skills macos-ui-inspector press -a "Google Chrome" --title "Not now"
+claude-code-skills ui-inspector press -a "Google Chrome" --title "Not now"
 
 # JSON output for automation
-claude-code-skills macos-ui-inspector list -a "Finder" --json
+claude-code-skills ui-inspector list -a "Finder" --json
 ```
 
 ## Commands
@@ -37,15 +37,15 @@ List all UI elements in the frontmost window of an application.
 
 ```bash
 # All elements
-claude-code-skills macos-ui-inspector -a "Finder" -l
+claude-code-skills ui-inspector -a "Finder" -l
 
 # Filter by role
-claude-code-skills macos-ui-inspector -a "Safari" -l --role AXButton
-claude-code-skills macos-ui-inspector -a "Safari" -l --role AXTextField
-claude-code-skills macos-ui-inspector -a "Safari" -l --role AXStaticText
+claude-code-skills ui-inspector -a "Safari" -l --role AXButton
+claude-code-skills ui-inspector -a "Safari" -l --role AXTextField
+claude-code-skills ui-inspector -a "Safari" -l --role AXStaticText
 
 # JSON output
-claude-code-skills macos-ui-inspector -a "Finder" -l --json
+claude-code-skills ui-inspector -a "Finder" -l --json
 ```
 
 Example output:
@@ -66,16 +66,16 @@ Find a specific element by role, title, or identifier.
 
 ```bash
 # By title
-claude-code-skills macos-ui-inspector -a "Safari" --find --title "Downloads"
+claude-code-skills ui-inspector -a "Safari" --find --title "Downloads"
 
 # By role
-claude-code-skills macos-ui-inspector -a "Safari" --find --role AXButton
+claude-code-skills ui-inspector -a "Safari" --find --role AXButton
 
 # By role and title
-claude-code-skills macos-ui-inspector -a "Safari" --find --role AXButton --title "Back"
+claude-code-skills ui-inspector -a "Safari" --find --role AXButton --title "Back"
 
 # By identifier
-claude-code-skills macos-ui-inspector -a "Safari" --find --identifier "backButton"
+claude-code-skills ui-inspector -a "Safari" --find --identifier "backButton"
 ```
 
 Example output:
@@ -98,15 +98,15 @@ Get the center coordinates of an element for clicking.
 
 ```bash
 # By title
-claude-code-skills macos-ui-inspector -a "Safari" --click --title "Submit"
+claude-code-skills ui-inspector -a "Safari" --click --title "Submit"
 # Output: 490,72
 
 # By role
-claude-code-skills macos-ui-inspector -a "Finder" --click --role AXButton
+claude-code-skills ui-inspector -a "Finder" --click --role AXButton
 # Output: 14,47 (first button found)
 
 # JSON output
-claude-code-skills macos-ui-inspector -a "Safari" --click --title "OK" --json
+claude-code-skills ui-inspector -a "Safari" --click --title "OK" --json
 # Output: {"x": 490, "y": 72}
 ```
 
@@ -129,12 +129,12 @@ You can specify applications by name or bundle ID:
 
 ```bash
 # By name (localized)
-claude-code-skills macos-ui-inspector -a "Safari" -l
-claude-code-skills macos-ui-inspector -a "Finder" -l
+claude-code-skills ui-inspector -a "Safari" -l
+claude-code-skills ui-inspector -a "Finder" -l
 
 # By bundle ID
-claude-code-skills macos-ui-inspector -a "com.apple.finder" -l
-claude-code-skills macos-ui-inspector -a "com.apple.Safari" -l
+claude-code-skills ui-inspector -a "com.apple.finder" -l
+claude-code-skills ui-inspector -a "com.apple.Safari" -l
 ```
 
 ## Common Element Roles
@@ -194,7 +194,7 @@ claude-code-skills macos-ui-inspector -a "com.apple.Safari" -l
 
 ```bash
 # Find and click a button
-coords=$(claude-code-skills macos-ui-inspector -a "Safari" --click --title "Submit")
+coords=$(claude-code-skills ui-inspector -a "Safari" --click --title "Submit")
 # Use coords with cliclick or similar tool
 ```
 
@@ -202,7 +202,7 @@ coords=$(claude-code-skills macos-ui-inspector -a "Safari" --click --title "Subm
 
 ```bash
 # Check if a button is enabled
-claude-code-skills macos-ui-inspector -a "App" --find --title "Save" --json | jq '.enabled'
+claude-code-skills ui-inspector -a "App" --find --title "Save" --json | jq '.enabled'
 ```
 
 ### Cross-Skill Workflow
@@ -211,13 +211,13 @@ Combine with `ocr-finder` for comprehensive UI detection:
 
 ```bash
 # UI Inspector for known elements (fast, precise)
-claude-code-skills macos-ui-inspector -a "Safari" --click --role AXButton --title "Download"
+claude-code-skills ui-inspector -a "Safari" --click --role AXButton --title "Download"
 
 # OCR for text in graphics or non-accessible elements
 # Capture returns path in JSON, use that for ocr-finder
-claude-code-skills macos-verified-screenshot capture "Safari" --json
+claude-code-skills verified-screenshot capture "Safari" --json
 # Use the returned "path" field for subsequent OCR
-claude-code-skills macos-ocr-finder --click "Special Label" -i <path-from-json>
+claude-code-skills ocr-finder --click "Special Label" -i <path-from-json>
 ```
 
 ## Permissions Required
@@ -254,7 +254,7 @@ Unlike `ocr-finder`, coordinates are **screen-absolute**, meaning they work dire
 
 1. Ensure the app is running
 2. Check the exact app name: `ps aux | grep -i safari`
-3. Try bundle ID: `claude-code-skills macos-ui-inspector -a "com.apple.Safari" -l`
+3. Try bundle ID: `claude-code-skills ui-inspector -a "com.apple.Safari" -l`
 4. Grant Accessibility permission to your terminal
 
 ### "No windows found"

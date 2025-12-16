@@ -12,7 +12,7 @@ from typing import Annotated
 import typer
 
 # Skill name for artifact tracking
-SKILL_NAME = "macos-window-controller"
+SKILL_NAME = "window-controller"
 
 try:
     from _shared.artifacts import (

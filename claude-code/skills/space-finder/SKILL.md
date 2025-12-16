@@ -1,5 +1,5 @@
 ---
-name: macos-space-finder
+name: space-finder
 description: Find and switch to macOS Spaces/Desktops by application name. Use when asked to find which Space an app is on, switch to a Space containing a specific app (like GoLand, IntelliJ, VS Code), navigate between Mission Control Spaces, or detect full-screen application windows across desktops.
 ---
 
@@ -13,16 +13,16 @@ Find which macOS Space/Desktop contains a specific application and navigate to i
 
 ```bash
 # List all spaces
-claude-code-skills macos-space-finder list
+claude-code-skills space-finder list
 
 # Find space containing an app
-claude-code-skills macos-space-finder find "GoLand"
+claude-code-skills space-finder find "GoLand"
 
 # Show current space
-claude-code-skills macos-space-finder current
+claude-code-skills space-finder current
 
 # Go to app's space and return to original
-claude-code-skills macos-space-finder go "GoLand"
+claude-code-skills space-finder go "GoLand"
 ```
 
 ## How It Works
@@ -105,13 +105,13 @@ Verify the skill works by running:
 
 ```bash
 # Should list all your Spaces
-claude-code-skills macos-space-finder list
+claude-code-skills space-finder list
 
 # Should show current app (e.g., "Ghostty" or "Desktop")
-claude-code-skills macos-space-finder current
+claude-code-skills space-finder current
 
 # If you have GoLand in full-screen, this should work:
-claude-code-skills macos-space-finder go GoLand
+claude-code-skills space-finder go GoLand
 ```
 
 Expected `list` output:

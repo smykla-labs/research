@@ -13,14 +13,14 @@ resolution-markers = [
 [manifest]
 members = [
     "browser-controller",
-    "macos-ocr-finder",
-    "macos-screen-recorder",
-    "macos-space-finder",
-    "macos-ui-inspector",
-    "macos-verified-screenshot",
-    "macos-window-controller",
+    "ocr-finder",
+    "screen-recorder",
     "smykla-labs-research",
+    "space-finder",
+    "ui-inspector",
+    "verified-screenshot",
     "web-automation-investigation",
+    "window-controller",
 ]
 
 [[package]]
@@ -325,36 +325,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/6f/6b/c875b30a1ba490860
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/60/d497a310bde3f01cb805196ac61b7ad6dc5dcf8dce66634dc34364b20b4f/lazy_loader-0.4-py3-none-any.whl", hash = "sha256:342aa8e14d543a154047afb4ba8ef17f5563baad3fc610d7b15b213b0f119efc", size = 12097, upload-time = "2024-04-05T13:03:10.514Z" },
 ]
-
-[[package]]
-name = "macos-ocr-finder"
-version = "1.0.0"
-source = { editable = "claude-code/skills/macos-ocr-finder" }
-
-[[package]]
-name = "macos-screen-recorder"
-version = "1.0.0"
-source = { editable = "claude-code/skills/macos-screen-recorder" }
-
-[[package]]
-name = "macos-space-finder"
-version = "1.0.0"
-source = { editable = "claude-code/skills/macos-space-finder" }
-
-[[package]]
-name = "macos-ui-inspector"
-version = "1.0.0"
-source = { editable = "claude-code/skills/macos-ui-inspector" }
-
-[[package]]
-name = "macos-verified-screenshot"
-version = "1.0.0"
-source = { editable = "claude-code/skills/macos-verified-screenshot" }
-
-[[package]]
-name = "macos-window-controller"
-version = "1.0.0"
-source = { editable = "claude-code/skills/macos-window-controller" }
 
 [[package]]
 name = "marionette-driver"
@@ -837,6 +807,11 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/eb/86626c1bbc2edb86323022371c39aa48df6fd8b0a1647bc274577f72e90b/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f", size = 89954, upload-time = "2025-03-07T01:42:44.131Z" },
 ]
+
+[[package]]
+name = "ocr-finder"
+version = "1.0.0"
+source = { editable = "claude-code/skills/ocr-finder" }
 
 [[package]]
 name = "opencv-python-headless"
@@ -1581,6 +1556,11 @@ wheels = [
 ]
 
 [[package]]
+name = "screen-recorder"
+version = "1.0.0"
+source = { editable = "claude-code/skills/screen-recorder" }
+
+[[package]]
 name = "setuptools"
 version = "80.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1723,6 +1703,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/e8/c4/ba2f8066cceb6f233
 wheels = [
     { url = "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0", size = 29575, upload-time = "2021-05-16T22:03:41.177Z" },
 ]
+
+[[package]]
+name = "space-finder"
+version = "1.0.0"
+source = { editable = "claude-code/skills/space-finder" }
 
 [[package]]
 name = "sympy"
@@ -1927,6 +1912,16 @@ wheels = [
 ]
 
 [[package]]
+name = "ui-inspector"
+version = "1.0.0"
+source = { editable = "claude-code/skills/ui-inspector" }
+
+[[package]]
+name = "verified-screenshot"
+version = "1.0.0"
+source = { editable = "claude-code/skills/verified-screenshot" }
+
+[[package]]
 name = "wcwidth"
 version = "0.2.14"
 source = { registry = "https://pypi.org/simple" }
@@ -1981,3 +1976,8 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1b/6c/c65773d6cab416a64d191d6ee8a8b1c68a09970ea6909d16965d26bfed1e/websockets-15.0.1-cp313-cp313-win_amd64.whl", hash = "sha256:e09473f095a819042ecb2ab9465aee615bd9c2028e4ef7d933600a8401c79561", size = 176837, upload-time = "2025-03-05T20:02:55.237Z" },
     { url = "https://files.pythonhosted.org/packages/fa/a8/5b41e0da817d64113292ab1f8247140aac61cbf6cfd085d6a0fa77f4984f/websockets-15.0.1-py3-none-any.whl", hash = "sha256:f7a866fbc1e97b5c617ee4116daaa09b722101d4a3c170c787450ba409f9736f", size = 169743, upload-time = "2025-03-05T20:03:39.41Z" },
 ]
+
+[[package]]
+name = "window-controller"
+version = "1.0.0"
+source = { editable = "claude-code/skills/window-controller" }

@@ -1,12 +1,12 @@
 [project]
-name = "macos-ocr-finder"
+name = "space-finder"
 version = "1.0.0"
-description = "Find text in images using EasyOCR, returning click coordinates"
+description = "Find and navigate macOS Spaces by application name"
 requires-python = ">=3.11"
 dependencies = []  # Managed by workspace root
 
 [project.scripts]
-ocr-finder = "ocr_finder.cli:main"
+space-finder = "space_finder.cli:main"
 
 [tool.uv]
 package = true

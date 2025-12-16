@@ -67,11 +67,11 @@ claude-code-skills <skill-name> --help
 # Examples
 claude-code-skills browser-controller tabs
 claude-code-skills browser-controller start --dismiss-popups
-claude-code-skills macos-ui-inspector list --app Finder
-claude-code-skills macos-ui-inspector press --app "Google Chrome" --title "Not now"
-claude-code-skills macos-window-controller screenshot "GoLand"
-claude-code-skills macos-verified-screenshot capture "GoLand" --verify all
-claude-code-skills macos-screen-recorder record "GoLand" -d 5 --preset github
+claude-code-skills ui-inspector list --app Finder
+claude-code-skills ui-inspector press --app "Google Chrome" --title "Not now"
+claude-code-skills window-controller screenshot "GoLand"
+claude-code-skills verified-screenshot capture "GoLand" --verify all
+claude-code-skills screen-recorder record "GoLand" -d 5 --preset github
 ```
 
 ### Artifact Output (CRITICAL)
@@ -82,15 +82,15 @@ Skills that produce artifacts (screenshots, recordings) save to `claude-code/art
 
 ### Available Skills
 
-| Skill Name               | Description                                              |
-|:-------------------------|:---------------------------------------------------------|
-| browser-controller       | Control Chrome/Firefox via CDP/Marionette                |
-| macos-ui-inspector       | Inspect UI elements via Accessibility API                |
-| macos-ocr-finder         | Find text in images using OCR                            |
-| macos-space-finder       | Find/switch macOS Spaces by app name                     |
-| macos-window-controller  | Find/activate/screenshot windows                         |
-| macos-verified-screenshot| Capture screenshots with verification                    |
-| macos-screen-recorder    | Record screen with format conversion                     |
+| Skill Name           | Description                                              |
+|:---------------------|:---------------------------------------------------------|
+| browser-controller   | Control Chrome/Firefox via CDP/Marionette                |
+| ui-inspector         | Inspect UI elements via Accessibility API                |
+| ocr-finder           | Find text in images using OCR                            |
+| space-finder         | Find/switch macOS Spaces by app name                     |
+| window-controller    | Find/activate/screenshot windows                         |
+| verified-screenshot  | Capture screenshots with verification                    |
+| screen-recorder      | Record screen with format conversion                     |
 
 ### Alternative: PYTHONPATH Method
 
