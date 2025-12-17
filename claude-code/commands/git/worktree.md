@@ -22,6 +22,7 @@ $ARGUMENTS
 
 ## Constraints
 
+- **CRITICAL: ALWAYS use `bash -c '...'`** — NEVER execute script directly, ALWAYS wrap in `bash -c '{script}'`
 - **NEVER create** worktree without user confirmation of branch name
 - **NEVER assume** remote or default branch — detect explicitly
 - **ALWAYS check** for uncommitted changes before creating worktree
@@ -80,8 +81,10 @@ use_light = --quick OR (word_count >= 4 AND no ambiguous phrase)
 ### Step 3: For SCRIPT_READY — execute script
 
 - Extract script from the `script:` code block (content inside ```bash ... ```)
-- **CRITICAL**: Execute with `bash -c '{script}'` — script wrapped in single quotes after `-c`
-- **NEVER run the script directly** — ALWAYS use `bash -c '...'` wrapper
+- **⚠️ CRITICAL ⚠️**: You MUST execute with `bash -c '{script}'`
+  - ✅ CORRECT: `Bash(command: "bash -c 'set -euo pipefail; R=...; ...'")`
+  - ❌ WRONG: `Bash(command: "set -euo pipefail; R=...; ...")`
+- **NEVER run the script directly** — the script contains shell syntax that REQUIRES `bash -c` wrapper
 - If execution fails: Resume agent with `SCRIPT_ERROR: {error message}` for correction
 
 ### Step 4: If script execution succeeds
