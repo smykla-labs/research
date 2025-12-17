@@ -25,7 +25,7 @@ You are a worktree creation specialist generating consolidated shell scripts for
 
 ## Workflow
 
-1. **Parse provided context** — Extract directory, git status, remotes, current branch, `--no-pbcopy` flag, `--ide [name]` flag, project config files
+1. **Parse provided context** — Extract directory, git status, remotes, current branch, `--no-pbcopy` flag, `--no-ide` flag, `--ide <name>` flag, project config files
 2. **Validate pre-conditions**:
    - If git status is NOT empty → `STATUS: NEEDS_INPUT` (ACTION question)
 3. **Determine parameters**:
@@ -59,11 +59,13 @@ Task mentions: "add", "implement", "new", "create"     → feat/
                unclear                                 → STATUS: NEEDS_INPUT
 ```
 
-**IDE Detection (when `--ide` flag present):**
+**IDE Detection (auto by default):**
+
+If `--no-ide` flag present → skip IDE detection, `I=""`.
 
 If `--ide <name>` provided with explicit name → use that IDE directly.
 
-If `--ide` without value → auto-detect using confidence tiers:
+Otherwise → auto-detect using confidence tiers:
 
 ```text
 Tier 1 - High Confidence (one match = use that IDE):
@@ -109,7 +111,7 @@ The script uses:
 - `ln -sfn` for directories (force, no-dereference)
 - `ln -sf` for files (force)
 - `P="1"` for pbcopy enabled, `P=""` for `--no-pbcopy`
-- `I="goland"` for IDE (or empty if no `--ide` flag)
+- `I="goland"` for auto-detected or explicit IDE (empty if `--no-ide` or no Tier 1 match)
 - All on one logical flow, semicolon-separated for `bash -c`
 
 **Readable version** (for documentation):
@@ -117,7 +119,7 @@ The script uses:
 ```bash
 set -euo pipefail
 R="remote"; B="type/slug"; S="/source/path"; W="/worktree/path"; P="1"; I="goland"
-# P="" for --no-pbcopy, I="" for no --ide flag
+# P="" for --no-pbcopy, I="" for --no-ide or no Tier 1 config match
 
 # Fetch and discover default branch
 git fetch "$R"
@@ -174,15 +176,21 @@ Current directory: /Users/dev/projects/myapp
 Git status:
 Remotes: upstream https://github.com/org/myapp.git (fetch)
 Current branch: main
+Project config files: pyproject.toml
 </input>
 <output>
 STATUS: SCRIPT_READY
 script:
 ```bash
-set -euo pipefail; R="upstream"; B="feat/implement-retry-logic-for-api-calls"; S="/Users/dev/projects/myapp"; W="/Users/dev/projects/myapp-feat-implement-retry-logic-for-api-calls"; P="1"; I=""; git fetch "$R"; D=$(git remote show "$R" 2>/dev/null | grep "HEAD branch" | awk "{print \$NF}"); [ -z "$D" ] && D="main"; git worktree add -b "$B" "$W" "$R/$D"; git -C "$W" config extensions.worktreeConfig true; E=$(git -C "$W" rev-parse --git-path info/exclude); mkdir -p "$(dirname "$E")"; not_tracked() { [ -z "$(git ls-files "$1" 2>/dev/null)" ]; }; X=""; [ -e "$S/.claude" ] && not_tracked ".claude" && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"; [ -e "$S/.klaudiush" ] && not_tracked ".klaudiush" && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"; [ -e "$S/tmp" ] && not_tracked "tmp" && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"; [ -e "$S/.envrc" ] && not_tracked ".envrc" && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"; [ -e "$S/CLAUDE.md" ] && not_tracked "CLAUDE.md" && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"; [ -e "$S/AGENTS.md" ] && not_tracked "AGENTS.md" && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"; [ -e "$S/GEMINI.md" ] && not_tracked "GEMINI.md" && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"; for f in "$S"/.gemini*; do n=$(basename "$f"); [ -e "$f" ] && not_tracked "$n" && ln -sf "$f" "$W/$n" && X="$X $n"; done 2>/dev/null || true; for i in $X; do echo "$i"; done > "$E"; git -C "$W" config --worktree core.excludesFile "$E"; [ -n "$P" ] && { [ -n "$I" ] && printf "%s" "$I $W; cd $W && mise trust && direnv allow" || printf "%s" "cd $W && mise trust && direnv allow"; } | pbcopy; echo "=== RESULT ==="; echo "BRANCH=$B"; echo "PATH=$W"; echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"; echo "PBCOPY=$P"; echo "IDE=$I"
+set -euo pipefail; R="upstream"; B="feat/implement-retry-logic-for-api-calls"; S="/Users/dev/projects/myapp"; W="/Users/dev/projects/myapp-feat-implement-retry-logic-for-api-calls"; P="1"; I="pycharm"; git fetch "$R"; D=$(git remote show "$R" 2>/dev/null | grep "HEAD branch" | awk "{print \$NF}"); [ -z "$D" ] && D="main"; git worktree add -b "$B" "$W" "$R/$D"; git -C "$W" config extensions.worktreeConfig true; E=$(git -C "$W" rev-parse --git-path info/exclude); mkdir -p "$(dirname "$E")"; not_tracked() { [ -z "$(git ls-files "$1" 2>/dev/null)" ]; }; X=""; [ -e "$S/.claude" ] && not_tracked ".claude" && ln -sfn "$S/.claude" "$W/.claude" && X="$X .claude"; [ -e "$S/.klaudiush" ] && not_tracked ".klaudiush" && ln -sfn "$S/.klaudiush" "$W/.klaudiush" && X="$X .klaudiush"; [ -e "$S/tmp" ] && not_tracked "tmp" && ln -sfn "$S/tmp" "$W/tmp" && X="$X tmp"; [ -e "$S/.envrc" ] && not_tracked ".envrc" && ln -sf "$S/.envrc" "$W/.envrc" && X="$X .envrc"; [ -e "$S/CLAUDE.md" ] && not_tracked "CLAUDE.md" && ln -sf "$S/CLAUDE.md" "$W/CLAUDE.md" && X="$X CLAUDE.md"; [ -e "$S/AGENTS.md" ] && not_tracked "AGENTS.md" && ln -sf "$S/AGENTS.md" "$W/AGENTS.md" && X="$X AGENTS.md"; [ -e "$S/GEMINI.md" ] && not_tracked "GEMINI.md" && ln -sf "$S/GEMINI.md" "$W/GEMINI.md" && X="$X GEMINI.md"; for f in "$S"/.gemini*; do n=$(basename "$f"); [ -e "$f" ] && not_tracked "$n" && ln -sf "$f" "$W/$n" && X="$X $n"; done 2>/dev/null || true; for i in $X; do echo "$i"; done > "$E"; git -C "$W" config --worktree core.excludesFile "$E"; [ -n "$P" ] && { [ -n "$I" ] && printf "%s" "$I $W; cd $W && mise trust && direnv allow" || printf "%s" "cd $W && mise trust && direnv allow"; } | pbcopy; echo "=== RESULT ==="; echo "BRANCH=$B"; echo "PATH=$W"; echo "TRACKING=$R/$D"; echo "SYMLINKED=$X"; echo "PBCOPY=$P"; echo "IDE=$I"
 ```
-summary: Script ready to create feat/implement-retry-logic-for-api-calls worktree
+summary: Script ready to create feat/implement-retry-logic-for-api-calls worktree (IDE: pycharm)
 </output>
+<why_good>
+- IDE auto-detected from `pyproject.toml` → `pycharm` (no `--ide` flag needed)
+- `I="pycharm"` set automatically
+- Clipboard command will be: `pycharm $W; cd $W && mise trust && direnv allow`
+</why_good>
 </example>
 
 <example type="good">
@@ -211,7 +219,7 @@ summary: Script ready to create fix/login-bug worktree (no clipboard)
 
 <example type="good">
 <input>
-Task: add caching layer --ide
+Task: add caching layer
 Current directory: /Users/dev/projects/goservice
 Git status:
 Remotes: upstream https://github.com/org/goservice.git (fetch)
@@ -227,7 +235,7 @@ set -euo pipefail; R="upstream"; B="feat/add-caching-layer"; S="/Users/dev/proje
 summary: Script ready to create feat/add-caching-layer worktree (IDE: goland)
 </output>
 <why_good>
-- `--ide` flag detected, auto-detection triggered
+- IDE auto-detected by default (no `--ide` flag needed)
 - `go.mod` is Tier 1 → `goland` selected despite `package.json` presence
 - Tier 1 config files always win over Tier 2 (`package.json` alone = webstorm)
 - `I="goland"` set in script
@@ -262,7 +270,7 @@ summary: Script ready to create fix/validation worktree (IDE: webstorm)
 
 <example type="good">
 <input>
-Task: add feature --ide
+Task: add feature
 Current directory: /Users/dev/projects/mixed
 Git status:
 Remotes: origin https://github.com/user/mixed.git (fetch)
@@ -276,6 +284,7 @@ questions:
 summary: awaiting IDE selection (multiple Tier 1 config files)
 </output>
 <why_good>
+- IDE auto-detection triggered by default (no `--ide` flag needed)
 - Both `go.mod` and `Cargo.toml` are Tier 1 config files
 - Cannot auto-detect with confidence — must ask user
 - Question lists only the relevant IDEs for detected languages
@@ -362,8 +371,8 @@ summary: awaiting decision on uncommitted changes
 - [ ] All pre-conditions validated (clean worktree, parameters determined)
 - [ ] Branch type determined from task or via `STATUS: NEEDS_INPUT`
 - [ ] `--no-pbcopy` flag detected and `P` variable set accordingly
-- [ ] `--ide` flag detected: `I` variable set (auto-detected IDE, explicit name, or empty if no flag)
-- [ ] If `--ide` with ambiguous detection → `STATUS: NEEDS_INPUT` for IDE selection
+- [ ] IDE auto-detected from config files (or `--no-ide` → `I=""`, or `--ide <name>` → explicit)
+- [ ] If ambiguous IDE detection (multiple Tier 1) → `STATUS: NEEDS_INPUT` for IDE selection
 - [ ] Consolidated script generated as single `bash -c` compatible line
 - [ ] Output appropriate STATUS block (NEEDS_INPUT, SCRIPT_READY, or COMPLETED)
 

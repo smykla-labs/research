@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash(bash -c:*), Bash(pwd:*), Bash(git:*), Bash(ls:*)
-argument-hint: <task-description|@file> [--quick] [--no-pbcopy] [--ide [name]]
+argument-hint: <task-description|@file> [--quick] [--no-pbcopy] [--no-ide] [--ide <name>]
 description: Create git worktree with context transfer for feature branches
 ---
 
@@ -12,10 +12,13 @@ $ARGUMENTS
 
 - `--quick`: Use lightweight agent (no questions, sensible defaults, faster)
 - `--no-pbcopy`: Skip copying the cd command to clipboard
-- `--ide [name]`: Open worktree in JetBrains IDE
-  - Without value: Auto-detect IDE from project config files (go.mod → goland, pyproject.toml → pycharm, etc.)
-  - With value: Use specified IDE (e.g., `--ide webstorm`)
-  - Modifies clipboard command to: `<ide> <path>; cd <path> && mise trust && direnv allow`
+- `--no-ide`: Disable automatic IDE detection (clipboard won't include IDE command)
+- `--ide <name>`: Override auto-detected IDE with specified IDE (e.g., `--ide webstorm`)
+
+**IDE auto-detection** (enabled by default):
+- Detects from Tier 1 config files: go.mod → goland, pyproject.toml → pycharm, etc.
+- Clipboard command: `<ide> <path>; cd <path> && mise trust && direnv allow`
+- If ambiguous (multiple Tier 1 files): skips IDE, full agent asks user
 
 ## Constraints
 
@@ -55,14 +58,15 @@ use_light = --quick OR (word_count >= 4 AND no ambiguous phrase)
 
 **For LIGHT mode (`worktree-manager-light`):**
 - Include: task description, directory, remotes, project config files
-- Include: `--no-pbcopy` and `--ide` flags if present
+- Include: `--no-pbcopy`, `--no-ide`, `--ide <name>` flags if present
+- Agent auto-detects IDE from Tier 1 config files by default
 - Agent will output `STATUS: SCRIPT_READY` immediately (no questions)
 
 **For FULL mode (`worktree-manager`):**
 - Include: task description (`$ARGUMENTS` minus flags)
 - Include: all context from above (directory, git status, remotes, current branch, project config files)
-- Include: `--no-pbcopy` flag if present in arguments
-- Include: `--ide` flag if present (with or without IDE name)
+- Include: `--no-pbcopy`, `--no-ide`, `--ide <name>` flags if present
+- Agent auto-detects IDE; asks user if ambiguous (multiple Tier 1 files)
 - If no task description provided: ask agent to request details via `STATUS: NEEDS_INPUT`
 
 ### Step 2: Parse status block from output
@@ -107,8 +111,9 @@ The agent may request input for:
 - Script checks `git ls-files` before each symlink to determine if file is tracked
 - Worktree-specific git excludes are configured automatically for symlinked files
 - Clipboard contains ready-to-execute `cd && mise trust && direnv allow` command (unless `--no-pbcopy`)
-- With `--ide`: clipboard command starts with `<ide> <path>;` to open worktree in JetBrains IDE first
-- IDE auto-detection uses confidence tiers: Tier 1 config files (go.mod, Cargo.toml, etc.) always win over Tier 2 (package.json alone)
+- IDE auto-detection is ON by default — clipboard command starts with `<ide> <path>;` to open worktree
+- Use `--no-ide` to disable IDE auto-detection
+- IDE auto-detection uses Tier 1 config files (go.mod, Cargo.toml, pyproject.toml, etc.)
 
 ## Light Agent Behavior
 
@@ -118,4 +123,4 @@ When using `--quick` or auto-detected fast mode:
 - **Dirty worktree**: Ignored (proceeds anyway)
 - **Remote**: Auto-selects `upstream` else `origin`
 - **Default branch**: Detects or defaults to `main`
-- **IDE detection**: Tier 1 only, skips if ambiguous (no questions)
+- **IDE detection**: Auto-detects from Tier 1 config files by default; skips if ambiguous (no questions)
