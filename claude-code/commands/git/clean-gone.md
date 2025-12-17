@@ -4,13 +4,13 @@ argument-hint: [--dry-run] [--no-worktrees]
 description: Clean up local branches with deleted remote tracking and their worktrees
 ---
 
-Clean up local branches where the remote tracking branch has been deleted (marked as [gone]), plus merged worktrees, by default.
+**CRITICAL: Your FIRST action MUST be the Bash tool. Do NOT output any text before executing the script.**
 
 $ARGUMENTS
 
 ## Constraints
 
-- **NEVER output preamble** — execute script immediately without announcing intent
+- **NEVER output text before Bash** — your first action is Bash tool, no preamble, no announcement
 - **NEVER delete** the current branch — always skip and report in summary
 - **NEVER remove** the main worktree — only remove feature/task worktrees
 - **ALWAYS use** `bash -c '...'` format for atomic execution
@@ -29,7 +29,11 @@ Pre-execution state (establishes baseline for validation):
 
 ## Workflow
 
-1. **Validate arguments** — Valid flags: `--dry-run`, `--no-worktrees`. Report invalid flags and stop.
+1. **Execute script immediately** — NO text output before this. Select script based on flags:
+   - No flags → default script
+   - `--dry-run` → dry-run script
+   - `--no-worktrees` → no-worktrees script
+   - Invalid flag → output error and stop (this is the ONLY case where you output text first)
 
 2. **Clean branches and worktrees**:
 
