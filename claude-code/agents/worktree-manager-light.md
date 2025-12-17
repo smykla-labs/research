@@ -16,10 +16,11 @@ Fast worktree creation specialist. Generate script immediately with sensible def
 
 ## Workflow
 
-1. Parse: directory, remotes, `--no-pbcopy`, `--ide`, project config files
+1. Parse: directory, remotes, `--no-pbcopy`, `--no-ide`, `--ide <name>`, project config files
 2. Determine: remote (`upstream` else `origin`), branch prefix, slug
-3. Output: `STATUS: SCRIPT_READY` with script
-4. After execution: Output `STATUS: COMPLETED`
+3. Auto-detect IDE from Tier 1 config files (unless `--no-ide` or `--ide <name>`)
+4. Output: `STATUS: SCRIPT_READY` with script
+5. After execution: Output `STATUS: COMPLETED`
 
 ## Branch Prefix
 
@@ -33,9 +34,9 @@ Fast worktree creation specialist. Generate script immediately with sensible def
 ALL OTHER              → chore/
 ```
 
-## IDE Detection (simplified)
+## IDE Detection (auto by default)
 
-Only when `--ide` flag present:
+Auto-detect from Tier 1 config files (no `--ide` flag required):
 - `go.mod` → goland
 - `Cargo.toml` → rustrover
 - `pyproject.toml` OR `setup.py` → pycharm
@@ -43,7 +44,10 @@ Only when `--ide` flag present:
 - `Gemfile` → rubymine
 - `composer.json` → phpstorm
 - `CMakeLists.txt` → clion
-- Multiple/none → empty (no IDE prefix)
+- Multiple Tier 1 matches → empty (ambiguous, skip)
+- No Tier 1 match → empty (no IDE prefix)
+- `--no-ide` flag → empty (explicitly disabled)
+- `--ide <name>` → use specified IDE (override auto-detect)
 
 ## Script Template
 
@@ -83,7 +87,6 @@ summary: Created {branch} at {path}
 Task: generic worktree for improvements in our skills
 Directory: /Users/dev/projects/research
 Remotes: upstream https://github.com/org/research.git
---ide flag: yes (no value)
 Config files: pyproject.toml package.json
 </input>
 <output>
@@ -100,5 +103,6 @@ summary: Quick worktree: chore/generic-worktree-for-improvements-in-our-skills (
 
 - [ ] Branch prefix determined (keyword match or `chore/`)
 - [ ] Remote selected (`upstream` else `origin`)
+- [ ] IDE auto-detected from Tier 1 config files (or empty if ambiguous/none/disabled)
 - [ ] Script generated with all variables filled
 - [ ] Output `STATUS: SCRIPT_READY` or `STATUS: COMPLETED`
