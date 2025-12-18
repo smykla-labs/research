@@ -107,7 +107,7 @@ Need this to avoid wasting time?
 <!-- Strip comments before output -->
 
 ```markdown
-# Session Handover
+# Session Handover: {One-line summary — "Goal: status" format}
 
 <!-- INCLUDE THIS SECTION ONLY IF SKILLS WERE USED OR MENTIONED — OMIT ENTIRELY IF NONE -->
 ## Skill Activation
@@ -122,11 +122,6 @@ Need this to avoid wasting time?
 <!-- Skills user mentioned but handover started before invocation -->
 - `{skill-name}` — {why needed}
 <!-- END CONDITIONAL SECTION -->
-
-## Session Context
-
-<!-- "{Goal}: {status}" -->
-{One-line summary}
 
 <!-- INCLUDE ONLY IF WORK STEMS FROM A SPECIFIC USER PROMPT — OMIT IF CONTINUATION/FOLLOW-UP -->
 ## Original Request
