@@ -988,7 +988,7 @@ def _should_use_sck_video(ctx: _RecordingContext) -> bool:
             raise CaptureError("ScreenCaptureKit video requested but not available")
         return True
 
-    # AUTO: use SCK when available for window recording
+    # AUTO: use SCK when available for non-fullscreen window recording
     return (
         is_video_streaming_supported()
         and ctx.target is not None
@@ -1008,13 +1008,18 @@ def _execute_single_attempt(
     Raises:
         MaxRetriesError: If this was the last attempt and recording failed.
     """
-    _handle_window_activation(ctx.target, ctx.config, attempt)
+    # Check if we should use ScreenCaptureKit (before activation decision)
+    use_sck = _should_use_sck_video(ctx)
+
+    # Skip window activation for SCK - it doesn't require activation
+    if not use_sck:
+        _handle_window_activation(ctx.target, ctx.config, attempt)
 
     attempt_raw = ctx.raw_path.with_stem(f"{ctx.raw_path.stem}_attempt{attempt}")
 
     # Record screen
     try:
-        if _should_use_sck_video(ctx):
+        if use_sck:
             # Use ScreenCaptureKit video recording (works across Spaces)
             if ctx.target is None:
                 raise CaptureError("Target window required for SCK recording")

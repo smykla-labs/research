@@ -279,7 +279,14 @@ def parse_preset(preset_str: str | None) -> PlatformPreset | None:
 
 
 def parse_capture_backend(backend_str: str | None):
-    """Parse capture backend string to enum."""
+    """Parse capture backend string to enum.
+
+    Args:
+        backend_str: Backend name string or None.
+
+    Returns:
+        CaptureBackend enum value.
+    """
     from .models import CaptureBackend
 
     if not backend_str:

@@ -31,6 +31,22 @@ if TYPE_CHECKING:
 _SCK_MIN_MAJOR = 12
 _SCK_MIN_MINOR = 3
 
+# Retina display scale factor - macOS reports logical pixels, but ScreenCaptureKit
+# captures at native resolution. Multiply dimensions by 2 to get full Retina resolution.
+RETINA_SCALE_FACTOR = 2
+
+# Delay after calling startCaptureWithCompletionHandler_ before checking the result.
+# The completion handler may fire before the stream is fully ready to receive frames,
+# so we add a small delay to ensure stable capture initialization.
+STREAM_START_WAIT_SECONDS = 0.5
+
+# Pixel format for video capture: kCVPixelFormatType_32BGRA (0x42475241 = 1111970369)
+# BGRA format is optimal for ScreenCaptureKit as it matches the native display format.
+PIXEL_FORMAT_BGRA = 1111970369
+
+# Timeout for AVAssetWriter to finish writing the video file.
+ASSET_WRITER_FINISH_TIMEOUT_SECONDS = 5.0
+
 
 def _check_macos_version() -> tuple[int, int]:
     """Get macOS version as (major, minor) tuple."""
@@ -213,7 +229,11 @@ class _VideoWriter:
         return self.video_input.appendSampleBuffer_(sample_buffer)
 
     def finish(self) -> None:
-        """Finalize and close video file."""
+        """Finalize and close video file.
+
+        Raises:
+            CaptureError: If finishing times out or the asset writer has an error.
+        """
         if not self.is_writing:
             return
 
@@ -224,13 +244,25 @@ class _VideoWriter:
 
         if self.asset_writer:
             completion_event = threading.Event()
+            error_container: dict = {}
 
             def completion_handler():
+                # Check for error after finishing
+                try:
+                    error = self.asset_writer.error()
+                    if error:
+                        error_container["error"] = error
+                except Exception as exc:
+                    error_container["error"] = exc
                 completion_event.set()
 
             self.asset_writer.finishWritingWithCompletionHandler_(completion_handler)
 
-            completion_event.wait(timeout=5.0)
+            finished = completion_event.wait(timeout=ASSET_WRITER_FINISH_TIMEOUT_SECONDS)
+            if not finished:
+                raise CaptureError("Timed out waiting for video file to finish writing")
+            if error_container.get("error"):
+                raise CaptureError(f"Asset writer error: {error_container['error']}")
 
 
 class _SCStreamOutputHandler:
@@ -389,12 +421,12 @@ def _setup_stream_configuration(sc_window, fps: int):
     CM = _get_coremedia()
 
     config = SC.SCStreamConfiguration.alloc().init()
-    config.setWidth_(int(sc_window.frame().size.width * 2))
-    config.setHeight_(int(sc_window.frame().size.height * 2))
+    config.setWidth_(int(sc_window.frame().size.width * RETINA_SCALE_FACTOR))
+    config.setHeight_(int(sc_window.frame().size.height * RETINA_SCALE_FACTOR))
     config.setMinimumFrameInterval_(CM.CMTimeMake(1, fps))
     config.setQueueDepth_(5)
     config.setShowsCursor_(False)
-    config.setPixelFormat_(1111970369)
+    config.setPixelFormat_(PIXEL_FORMAT_BGRA)
 
     return config
 
@@ -426,10 +458,11 @@ def _start_stream_capture(stream, handler, recording_context: _RecordingContext)
 
     stream.startCaptureWithCompletionHandler_(start_handler)
 
-    # Wait for start completion
+    # Wait for start completion - the completion handler may return before the stream
+    # is fully ready to receive frames, so we add a small delay for stable initialization
     import time
 
-    time.sleep(0.5)
+    time.sleep(STREAM_START_WAIT_SECONDS)
 
     if start_error[0]:
         raise CaptureError(f"Failed to start capture: {start_error[0]}")
@@ -500,8 +533,8 @@ def record_window_with_sck(
     recording_context = _RecordingContext(output_path, duration_seconds)
     video_writer = _VideoWriter(
         output_path,
-        int(sc_window.frame().size.width * 2),
-        int(sc_window.frame().size.height * 2),
+        int(sc_window.frame().size.width * RETINA_SCALE_FACTOR),
+        int(sc_window.frame().size.height * RETINA_SCALE_FACTOR),
         float(fps),
     )
 
@@ -640,11 +673,11 @@ def capture_region_screenshot_sck(
         if region:
             source_rect = Q.CGRectMake(region.x, region.y, region.width, region.height)
             config.setSourceRect_(source_rect)
-            config.setWidth_(int(region.width * 2))
-            config.setHeight_(int(region.height * 2))
+            config.setWidth_(int(region.width * RETINA_SCALE_FACTOR))
+            config.setHeight_(int(region.height * RETINA_SCALE_FACTOR))
         else:
-            config.setWidth_(int(display.width() * 2))
-            config.setHeight_(int(display.height() * 2))
+            config.setWidth_(int(display.width() * RETINA_SCALE_FACTOR))
+            config.setHeight_(int(display.height() * RETINA_SCALE_FACTOR))
 
         config.setShowsCursor_(False)
 
