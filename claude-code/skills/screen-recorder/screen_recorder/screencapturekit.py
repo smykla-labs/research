@@ -40,6 +40,13 @@ RETINA_SCALE_FACTOR = 2
 # so we add a small delay to ensure stable capture initialization.
 STREAM_START_WAIT_SECONDS = 0.5
 
+# Pixel format for video capture: kCVPixelFormatType_32BGRA (0x42475241 = 1111970369)
+# BGRA format is optimal for ScreenCaptureKit as it matches the native display format.
+PIXEL_FORMAT_BGRA = 1111970369
+
+# Timeout for AVAssetWriter to finish writing the video file.
+ASSET_WRITER_FINISH_TIMEOUT_SECONDS = 5.0
+
 
 def _check_macos_version() -> tuple[int, int]:
     """Get macOS version as (major, minor) tuple."""
@@ -222,7 +229,11 @@ class _VideoWriter:
         return self.video_input.appendSampleBuffer_(sample_buffer)
 
     def finish(self) -> None:
-        """Finalize and close video file."""
+        """Finalize and close video file.
+
+        Raises:
+            CaptureError: If finishing times out or the asset writer has an error.
+        """
         if not self.is_writing:
             return
 
@@ -233,13 +244,25 @@ class _VideoWriter:
 
         if self.asset_writer:
             completion_event = threading.Event()
+            error_container: dict = {}
 
             def completion_handler():
+                # Check for error after finishing
+                try:
+                    error = self.asset_writer.error()
+                    if error:
+                        error_container["error"] = error
+                except Exception as exc:
+                    error_container["error"] = exc
                 completion_event.set()
 
             self.asset_writer.finishWritingWithCompletionHandler_(completion_handler)
 
-            completion_event.wait(timeout=5.0)
+            finished = completion_event.wait(timeout=ASSET_WRITER_FINISH_TIMEOUT_SECONDS)
+            if not finished:
+                raise CaptureError("Timed out waiting for video file to finish writing")
+            if error_container.get("error"):
+                raise CaptureError(f"Asset writer error: {error_container['error']}")
 
 
 class _SCStreamOutputHandler:
@@ -403,7 +426,7 @@ def _setup_stream_configuration(sc_window, fps: int):
     config.setMinimumFrameInterval_(CM.CMTimeMake(1, fps))
     config.setQueueDepth_(5)
     config.setShowsCursor_(False)
-    config.setPixelFormat_(1111970369)
+    config.setPixelFormat_(PIXEL_FORMAT_BGRA)
 
     return config
 

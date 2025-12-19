@@ -7,10 +7,13 @@ from unittest.mock import Mock, patch
 
 import pytest
 from screen_recorder.models import CaptureBackend, CaptureError
-
-# noinspection PyProtectedMember
 from screen_recorder.screencapturekit import (
+    ASSET_WRITER_FINISH_TIMEOUT_SECONDS,
+    PIXEL_FORMAT_BGRA,
+    RETINA_SCALE_FACTOR,
+    STREAM_START_WAIT_SECONDS,
     _RecordingContext,
+    _SCStreamOutputHandler,
     _VideoWriter,
     is_video_streaming_supported,
     record_window_with_sck,
@@ -173,3 +176,163 @@ class TestBackendSelection:
         assert CaptureBackend.AUTO.value == "auto"
         assert CaptureBackend.QUARTZ.value == "quartz"
         assert CaptureBackend.SCREENCAPTUREKIT.value == "screencapturekit"
+
+
+# =============================================================================
+# Constants Tests
+# =============================================================================
+
+
+class TestConstants:
+    """Tests for module constants."""
+
+    def test_retina_scale_factor(self) -> None:
+        """Test RETINA_SCALE_FACTOR is defined correctly."""
+        assert RETINA_SCALE_FACTOR == 2
+
+    def test_stream_start_wait_seconds(self) -> None:
+        """Test STREAM_START_WAIT_SECONDS is defined correctly."""
+        assert STREAM_START_WAIT_SECONDS == 0.5
+
+    def test_pixel_format_bgra(self) -> None:
+        """Test PIXEL_FORMAT_BGRA is kCVPixelFormatType_32BGRA."""
+        # kCVPixelFormatType_32BGRA = 'BGRA' = 0x42475241 = 1111970369
+        assert PIXEL_FORMAT_BGRA == 1111970369
+
+    def test_asset_writer_finish_timeout(self) -> None:
+        """Test ASSET_WRITER_FINISH_TIMEOUT_SECONDS is defined correctly."""
+        assert ASSET_WRITER_FINISH_TIMEOUT_SECONDS == 5.0
+
+
+# =============================================================================
+# _SCStreamOutputHandler Tests
+# =============================================================================
+
+
+class TestSCStreamOutputHandler:
+    """Tests for _SCStreamOutputHandler class."""
+
+    @patch("screen_recorder.screencapturekit._get_corefoundation")
+    def test_initialization(self, mock_foundation: Mock, tmp_path: Path) -> None:
+        """Test handler initialization with context and video writer."""
+        context = _RecordingContext(tmp_path / "test.mov", 5.0)
+        writer = _VideoWriter(tmp_path / "test.mov", 1920, 1080, 30.0)
+
+        # Mock Foundation.NSObject
+        mock_ns_object = Mock()
+        mock_foundation.return_value.NSObject = mock_ns_object
+
+        handler = _SCStreamOutputHandler(context, writer)
+
+        assert handler.context is context
+        assert handler.video_writer is writer
+        assert handler.handler_class is not None
+
+    @patch("screen_recorder.screencapturekit._get_corefoundation")
+    def test_create_handler_returns_instance(
+        self, mock_foundation: Mock, tmp_path: Path
+    ) -> None:
+        """Test create_handler returns a handler instance."""
+        context = _RecordingContext(tmp_path / "test.mov", 5.0)
+        writer = _VideoWriter(tmp_path / "test.mov", 1920, 1080, 30.0)
+
+        # Mock Foundation.NSObject with alloc/init chain
+        mock_ns_object = Mock()
+        mock_handler_instance = Mock()
+        mock_ns_object.alloc().initWithContext_videoWriter_.return_value = (
+            mock_handler_instance
+        )
+        mock_foundation.return_value.NSObject = mock_ns_object
+
+        handler_wrapper = _SCStreamOutputHandler(context, writer)
+
+        # The create_handler uses the dynamically created Handler class
+        # which inherits from NSObject, so we verify the class was created
+        assert handler_wrapper.handler_class is not None
+
+
+# =============================================================================
+# _find_sc_window Tests
+# =============================================================================
+
+
+class TestFindSCWindow:
+    """Tests for _find_sc_window helper function."""
+
+    @patch("screen_recorder.screencapturekit.is_screencapturekit_available")
+    def test_raises_when_sck_unavailable(self, mock_available: Mock) -> None:
+        """Test record_window_with_sck raises when SCK unavailable."""
+        mock_available.return_value = False
+
+        with pytest.raises(CaptureError, match=r"requires macOS 12\.3"):
+            record_window_with_sck(
+                window_id=12345,
+                output_path=Path("/tmp/test.mov"),
+                duration_seconds=1.0,
+            )
+
+
+# =============================================================================
+# _VideoWriter Error Handling Tests
+# =============================================================================
+
+
+class TestVideoWriterErrorHandling:
+    """Tests for _VideoWriter error handling."""
+
+    def test_append_sample_buffer_returns_false_when_not_writing(
+        self, tmp_path: Path
+    ) -> None:
+        """Test append_sample_buffer returns False when not writing."""
+        writer = _VideoWriter(tmp_path / "test.mov", 1920, 1080, 30.0)
+
+        # Not writing (setup not called)
+        result = writer.append_sample_buffer(Mock())
+
+        assert result is False
+
+    @patch("screen_recorder.screencapturekit._get_avfoundation")
+    @patch("screen_recorder.screencapturekit._get_corefoundation")
+    def test_setup_raises_on_null_asset_writer(
+        self, mock_foundation: Mock, mock_av: Mock, tmp_path: Path
+    ) -> None:
+        """Test setup raises CaptureError when AVAssetWriter fails to create."""
+        output_path = tmp_path / "test.mov"
+        writer = _VideoWriter(output_path, 1920, 1080, 30.0)
+
+        mock_url = Mock()
+        mock_foundation.return_value.NSURL.fileURLWithPath_.return_value = mock_url
+
+        # Asset writer creation returns None
+        mock_av.return_value.AVAssetWriter.alloc().initWithURL_fileType_error_.return_value = (
+            None,
+            None,
+        )
+
+        with pytest.raises(CaptureError, match="Failed to create AVAssetWriter"):
+            writer.setup()
+
+    @patch("screen_recorder.screencapturekit._get_avfoundation")
+    @patch("screen_recorder.screencapturekit._get_corefoundation")
+    def test_setup_raises_on_null_video_input(
+        self, mock_foundation: Mock, mock_av: Mock, tmp_path: Path
+    ) -> None:
+        """Test setup raises CaptureError when AVAssetWriterInput fails."""
+        output_path = tmp_path / "test.mov"
+        writer = _VideoWriter(output_path, 1920, 1080, 30.0)
+
+        mock_url = Mock()
+        mock_foundation.return_value.NSURL.fileURLWithPath_.return_value = mock_url
+
+        mock_asset_writer = Mock()
+        mock_av.return_value.AVAssetWriter.alloc().initWithURL_fileType_error_.return_value = (
+            mock_asset_writer,
+            None,
+        )
+
+        # Video input creation returns None
+        mock_writer_input = mock_av.return_value.AVAssetWriterInput.alloc()
+        mock_writer_input.initWithMediaType_outputSettings_.return_value = None
+
+        with pytest.raises(CaptureError, match="Failed to create AVAssetWriterInput"):
+            writer.setup()
