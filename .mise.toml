@@ -3,7 +3,7 @@ python = "3.14"  # Use mise mode (bypasses nix for faster loading)
 lefthook = "2.0.12"
 ruff = "0.14.10"
 shellspec = "0.28.1"
-uv = "0.9.18"
+uv = "0.9.21"
 
 [tasks.test]
 description = "Run all tests (shellspec + pytest)"
